@@ -20,6 +20,10 @@ The first release demonstrates a brewery enterprise with:
 - Operational plant capacity, utilization, staffing, and order context
 - Business-partner exposure, risk, blocking status, and category filters
 - A normalized read-only enterprise API at `/api/enterprise`
+- Three fiscal years of connected growth, procurement, production, quality,
+  maintenance, finance, sales, and compliance events
+- Historical SAP document chains with operational, inventory, and financial impact
+- A filterable simulation-history API at `/api/simulation/events`
 - Responsive desktop and mobile layouts
 
 The simulation follows a real business chain:
@@ -37,6 +41,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 The current enterprise snapshot is available at
 [http://localhost:3000/api/enterprise](http://localhost:3000/api/enterprise).
+
+Historical events can be queried by fiscal year, severity, and category:
+
+`/api/simulation/events?year=2025–2026&severity=Critical&category=Quality`
 
 ## Quality checks
 

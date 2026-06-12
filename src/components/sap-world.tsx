@@ -6,10 +6,13 @@ import {
   BookOpenCheck,
   Boxes,
   Building2,
+  CalendarDays,
   Check,
   ChevronRight,
   CircleHelp,
+  Clock3,
   Factory,
+  FileText,
   GraduationCap,
   Landmark,
   LayoutDashboard,
@@ -23,6 +26,7 @@ import {
   Send,
   Settings,
   Sparkles,
+  TrendingUp,
   TriangleAlert,
   Users,
   X,
@@ -34,6 +38,11 @@ import {
   enterpriseUnits,
   plants,
 } from "@/data/enterprise";
+import {
+  enterpriseEvents,
+  fiscalYearSummaries,
+  type FiscalYear,
+} from "@/data/history";
 import {
   activity,
   knowledgeCheck,
@@ -50,6 +59,7 @@ type View =
   | "academy"
   | "processes"
   | "tutor"
+  | "history"
   | "structure"
   | "plants"
   | "partners";
@@ -58,6 +68,7 @@ const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
   { id: "processes" as const, label: "Process explorer", icon: Boxes },
+  { id: "history" as const, label: "Simulation history", icon: CalendarDays },
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
 
@@ -72,6 +83,9 @@ export function SapWorld() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [partnerFilter, setPartnerFilter] = useState<"All" | "Supplier" | "Customer">("All");
+  const [selectedYear, setSelectedYear] = useState<FiscalYear>("2025–2026");
+  const [eventCategory, setEventCategory] = useState("All");
+  const [selectedEventId, setSelectedEventId] = useState("EVT-2604-035");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState(
     "I’m connected to the Burton Brewery simulation. Ask me about this goods receipt, its accounting impact, or what happens next.",
@@ -167,6 +181,12 @@ export function SapWorld() {
           subtitle: `${partner.category} · ${partner.city}`,
           target: "partners" as View,
         })),
+        ...enterpriseEvents.map((event) => ({
+          id: event.id,
+          title: event.title,
+          subtitle: `${event.category} · ${event.date}`,
+          target: "history" as View,
+        })),
       ]
         .filter((result) =>
           `${result.id} ${result.title} ${result.subtitle}`
@@ -182,6 +202,25 @@ export function SapWorld() {
     setSearchOpen(false);
     setSearchQuery("");
   }
+
+  const visibleEvents = enterpriseEvents.filter(
+    (event) =>
+      event.fiscalYear === selectedYear &&
+      (eventCategory === "All" || event.category === eventCategory),
+  );
+  const selectedEvent =
+    visibleEvents.find((event) => event.id === selectedEventId) ??
+    visibleEvents[0];
+  const eventCategories = [
+    "All",
+    ...Array.from(
+      new Set(
+        enterpriseEvents
+          .filter((event) => event.fiscalYear === selectedYear)
+          .map((event) => event.category),
+      ),
+    ),
+  ];
 
   return (
     <div className="app-shell">
@@ -473,6 +512,77 @@ export function SapWorld() {
             </section>
           )}
 
+          {view === "history" && (
+            <section className="history-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">Connected enterprise chronology</p><h1>Simulation history</h1><p>Trace how decisions, disruptions, and SAP documents changed the enterprise from 2023 to 2026.</p></div>
+                <span className="api-badge">API · /api/simulation/events</span>
+              </div>
+
+              <div className="year-comparison">
+                {fiscalYearSummaries.map((summary) => (
+                  <button
+                    className={`year-card panel ${selectedYear === summary.year ? "active" : ""}`}
+                    onClick={() => {
+                      setSelectedYear(summary.year);
+                      setEventCategory("All");
+                      const firstEvent = enterpriseEvents.find((event) => event.fiscalYear === summary.year);
+                      if (firstEvent) setSelectedEventId(firstEvent.id);
+                    }}
+                    key={summary.year}
+                  >
+                    <span>{summary.phase}</span>
+                    <h2>{summary.year}</h2>
+                    <div className="year-metrics"><div><small>Revenue</small><strong>{summary.revenue}</strong></div><div><small>Margin</small><strong>{summary.operatingMargin}</strong></div><div><small>Production</small><strong>{summary.production}</strong></div></div>
+                    <p>{summary.narrative}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="history-toolbar">
+                <div><span className="section-kicker">{selectedYear}</span><h2>Enterprise events</h2></div>
+                <div className="category-filters">
+                  {eventCategories.map((category) => <button className={eventCategory === category ? "active" : ""} onClick={() => setEventCategory(category)} key={category}>{category}</button>)}
+                </div>
+              </div>
+
+              <div className="history-layout">
+                <div className="timeline panel">
+                  {visibleEvents.map((event) => (
+                    <button className={`timeline-event ${selectedEvent?.id === event.id ? "selected" : ""}`} onClick={() => setSelectedEventId(event.id)} key={event.id}>
+                      <span className={`timeline-marker ${event.severity.toLowerCase()}`} />
+                      <div className="timeline-date"><strong>{new Date(`${event.date}T00:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</strong><span>{event.date.slice(0, 4)}</span></div>
+                      <div className="timeline-copy"><div><span className="event-category">{event.category}</span><span className={`severity-badge ${event.severity.toLowerCase()}`}>{event.severity}</span></div><h3>{event.title}</h3><p>{event.summary}</p><small>{event.modules.join(" · ")}</small></div>
+                      <ChevronRight size={17} />
+                    </button>
+                  ))}
+                  {visibleEvents.length === 0 && <div className="empty-events">No events match this category in {selectedYear}.</div>}
+                </div>
+
+                {selectedEvent && selectedEvent.fiscalYear === selectedYear && (
+                  <article className="event-detail panel">
+                    <div className="event-detail-header">
+                      <div><span className="section-kicker">{selectedEvent.id}</span><h2>{selectedEvent.title}</h2></div>
+                      <span className={`status-chip ${selectedEvent.status.toLowerCase()}`}>{selectedEvent.status}</span>
+                    </div>
+                    <div className="event-meta"><span><CalendarDays size={14} />{new Date(`${selectedEvent.date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span><span><Clock3 size={14} />{selectedEvent.fiscalYear}</span></div>
+                    <div className="cause-box"><TriangleAlert size={19} /><div><strong>Why did this happen?</strong><p>{selectedEvent.businessCause}</p></div></div>
+                    <div className="document-chain">
+                      <span className="section-kicker">Connected SAP documents</span>
+                      <div>{selectedEvent.documents.map((document, index) => <div className="document-node" key={`${document.type}-${document.number}`}><FileText size={15} /><span>{document.type}</span><strong>{document.number}</strong>{index < selectedEvent.documents.length - 1 && <ArrowRight size={14} />}</div>)}</div>
+                    </div>
+                    <div className="impact-stack">
+                      <div><span className="impact-icon operational"><Factory size={16} /></span><p><strong>Operational impact</strong>{selectedEvent.operationalImpact}</p></div>
+                      <div><span className="impact-icon inventory"><Package size={16} /></span><p><strong>Inventory impact</strong>{selectedEvent.inventoryImpact}</p></div>
+                      <div><span className="impact-icon financial"><TrendingUp size={16} /></span><p><strong>Financial impact</strong>{selectedEvent.financialImpact}</p></div>
+                    </div>
+                    <div className="resolution-box"><Check size={18} /><div><strong>SAP-enabled resolution</strong><p>{selectedEvent.resolution}</p></div></div>
+                  </article>
+                )}
+              </div>
+            </section>
+          )}
+
           {view === "processes" && (
             <section className="process-page">
               <div className="page-heading compact">
@@ -580,7 +690,17 @@ export function SapWorld() {
               {!normalizedQuery && <p>Try “BR01”, “Highland”, “customer”, or “storage”.</p>}
               {normalizedQuery && searchResults.length === 0 && <p>No SAP objects matched your search.</p>}
               {searchResults.map((result) => (
-                <button onClick={() => navigateTo(result.target)} key={`${result.target}-${result.id}`}>
+                <button onClick={() => {
+                  if (result.target === "history") {
+                    const event = enterpriseEvents.find((item) => item.id === result.id);
+                    if (event) {
+                      setSelectedYear(event.fiscalYear);
+                      setEventCategory("All");
+                      setSelectedEventId(event.id);
+                    }
+                  }
+                  navigateTo(result.target);
+                }} key={`${result.target}-${result.id}`}>
                   <span className="result-code">{result.id}</span><div><strong>{result.title}</strong><small>{result.subtitle}</small></div><ChevronRight size={16} />
                 </button>
               ))}
