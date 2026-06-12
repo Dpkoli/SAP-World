@@ -20,6 +20,8 @@ The first release demonstrates a brewery enterprise with:
 - A guided employee-onboarding lesson spanning HCM, SuccessFactors, payroll, FI, and CO
 - Interactive troubleshooting labs for P2P, O2C, production, close, quality,
   maintenance, and payroll failures
+- Implementation blueprints covering organizational structure, master data,
+  configuration, integration, testing, and go-live controls
 - Account-backed diagnostic attempts, exception completion, XP, and dynamic
   process-readiness scoring
 - Step-by-step explanations of why each action is performed
@@ -60,6 +62,10 @@ The current enterprise snapshot is available at
 The multi-industry catalogue and rollout status are available at:
 
 `/api/industries`
+
+Implementation-consultant blueprints can be queried by process:
+
+`/api/implementation?id=p2p`
 
 Historical events can be queried by fiscal year, severity, and category:
 

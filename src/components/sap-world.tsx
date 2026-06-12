@@ -50,6 +50,7 @@ import {
   mentorSuggestions,
   type MentorSource,
 } from "@/data/mentor";
+import { implementationBlueprintFor } from "@/data/implementation";
 import {
   defaultIndustryId,
   industryById,
@@ -107,7 +108,9 @@ export function SapWorld({
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
-  const [tutorMode, setTutorMode] = useState<"guided" | "troubleshoot">("guided");
+  const [tutorMode, setTutorMode] = useState<
+    "guided" | "troubleshoot" | "implementation"
+  >("guided");
   const [diagnosisAnswers, setDiagnosisAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "saved" | "offline">("loading");
@@ -284,6 +287,8 @@ export function SapWorld({
     diagnosisAnswer === troubleshootingCase.correctDiagnosis;
   const activeEnterprise = industryById(defaultIndustryId);
   const preferredIndustry = industryById(preferredIndustryId);
+  const implementationBlueprint =
+    implementationBlueprintFor(activeScenarioId);
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
   const lessonProgress = activeProgress.complete
     ? 100
@@ -848,8 +853,8 @@ export function SapWorld({
           {view === "tutor" && (
             <section className="tutor-page">
               <div className="page-heading compact">
-                <div><p className="eyebrow">{tutorMode === "guided" ? "Guided transaction" : "Troubleshooting lab"} · {activeScenario.module}</p><h1>{tutorMode === "guided" ? activeScenario.tutorTitle : troubleshootingCase.title}</h1><p>{tutorMode === "guided" ? activeScenario.tutorDescription : troubleshootingCase.businessContext}</p></div>
-                <span className="lesson-count">{tutorMode === "guided" ? `Step ${activeProgress.step + 1} of ${activeScenario.tutorSteps.length}` : troubleshootingCase.id}</span>
+                <div><p className="eyebrow">{tutorMode === "guided" ? "Guided transaction" : tutorMode === "troubleshoot" ? "Troubleshooting lab" : "Implementation blueprint"} · {activeScenario.module}</p><h1>{tutorMode === "guided" ? activeScenario.tutorTitle : tutorMode === "troubleshoot" ? troubleshootingCase.title : implementationBlueprint.title}</h1><p>{tutorMode === "guided" ? activeScenario.tutorDescription : tutorMode === "troubleshoot" ? troubleshootingCase.businessContext : implementationBlueprint.objective}</p></div>
+                <span className="lesson-count">{tutorMode === "guided" ? `Step ${activeProgress.step + 1} of ${activeScenario.tutorSteps.length}` : tutorMode === "troubleshoot" ? troubleshootingCase.id : implementationBlueprint.consultantRole}</span>
               </div>
               <div className="scenario-tabs tutor-scenario-tabs">
                 {processScenarios.map((scenario) => (
@@ -864,6 +869,7 @@ export function SapWorld({
               <div className="tutor-mode-switch" role="tablist" aria-label="Tutor mode">
                 <button className={tutorMode === "guided" ? "active" : ""} onClick={() => setTutorMode("guided")}><GraduationCap size={16} /><span><strong>Guided transaction</strong><small>Learn the correct SAP process step by step</small></span></button>
                 <button className={tutorMode === "troubleshoot" ? "active" : ""} onClick={() => setTutorMode("troubleshoot")}><TriangleAlert size={16} /><span><strong>Troubleshooting lab</strong><small>Diagnose a realistic process failure</small></span></button>
+                <button className={tutorMode === "implementation" ? "active" : ""} onClick={() => setTutorMode("implementation")}><Settings size={16} /><span><strong>Implementation blueprint</strong><small>Understand configuration and dependencies</small></span></button>
               </div>
               {tutorMode === "guided" ? (
               <div className="tutor-layout">
@@ -928,7 +934,7 @@ export function SapWorld({
                   </div>
                 </article>
               </div>
-              ) : (
+              ) : tutorMode === "troubleshoot" ? (
                 <div className="troubleshooting-layout">
                   <aside className="case-brief panel">
                     <div className="case-brief-header">
@@ -1001,6 +1007,85 @@ export function SapWorld({
                       </article>
                     )}
                   </div>
+                </div>
+              ) : (
+                <div className="implementation-workspace">
+                  <section className="implementation-summary panel">
+                    <div className="implementation-role">
+                      <span className="implementation-icon"><Settings size={20} /></span>
+                      <div><span className="section-kicker">Consulting responsibility</span><h2>{implementationBlueprint.consultantRole}</h2><p>{implementationBlueprint.objective}</p></div>
+                    </div>
+                    <div className="implementation-counts">
+                      <div><strong>{implementationBlueprint.organizationalUnits.length}</strong><span>Org dependencies</span></div>
+                      <div><strong>{implementationBlueprint.masterData.length}</strong><span>Master-data groups</span></div>
+                      <div><strong>{implementationBlueprint.configuration.length}</strong><span>Configuration controls</span></div>
+                      <div><strong>{implementationBlueprint.validationTests.length}</strong><span>Validation tests</span></div>
+                    </div>
+                  </section>
+
+                  <div className="implementation-foundation">
+                    <article className="panel implementation-card">
+                      <div className="diagnostic-heading"><Building2 size={19} /><div><span>Foundation 1</span><h2>Organizational structure</h2></div></div>
+                      <p>These assignments determine legal ownership, process responsibility, and where transactions are executed.</p>
+                      <div className="implementation-items">
+                        {implementationBlueprint.organizationalUnits.map((item) => (
+                          <div key={item.name}><span>{item.name}</span><strong>{item.example}</strong><p>{item.purpose}</p></div>
+                        ))}
+                      </div>
+                    </article>
+
+                    <article className="panel implementation-card">
+                      <div className="diagnostic-heading"><Boxes size={19} /><div><span>Foundation 2</span><h2>Master-data dependencies</h2></div></div>
+                      <p>Transactions work only when reusable enterprise records contain the required views, assignments, and control values.</p>
+                      <div className="implementation-items">
+                        {implementationBlueprint.masterData.map((item) => (
+                          <div key={item.name}><span>{item.name}</span><strong>{item.example}</strong><p>{item.purpose}</p></div>
+                        ))}
+                      </div>
+                    </article>
+                  </div>
+
+                  <article className="panel configuration-panel">
+                    <div className="diagnostic-heading"><Settings size={19} /><div><span>Design decisions</span><h2>Configuration controls</h2></div></div>
+                    <div className="configuration-table">
+                      <div className="configuration-head"><span>Area</span><span>Implementation decision</span><span>Business effect</span><span>Owner</span></div>
+                      {implementationBlueprint.configuration.map((control) => (
+                        <div className="configuration-row" key={control.area}>
+                          <strong>{control.area}</strong><p>{control.decision}</p><p>{control.businessEffect}</p><span>{control.owner}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="panel integration-panel">
+                    <div className="diagnostic-heading"><ArrowRight size={19} /><div><span>Cross-module design</span><h2>Integration triggers</h2></div></div>
+                    <div className="integration-flow">
+                      {implementationBlueprint.integrations.map((integration) => (
+                        <div key={`${integration.from}-${integration.to}`}>
+                          <span className="integration-system">{integration.from}</span>
+                          <div><small>{integration.trigger}</small><ArrowRight size={17} /></div>
+                          <span className="integration-system">{integration.to}</span>
+                          <p>{integration.result}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="panel validation-panel">
+                    <div className="diagnostic-heading"><BookOpenCheck size={19} /><div><span>Prove the design</span><h2>Integration test evidence</h2></div></div>
+                    <div className="validation-tests">
+                      {implementationBlueprint.validationTests.map((test) => (
+                        <div key={test.id}>
+                          <code>{test.id}</code>
+                          <div><strong>{test.test}</strong><p><span>Expected:</span> {test.expected}</p><small>Evidence: {test.evidence}</small></div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="go-live-controls">
+                      <span className="section-kicker">Go-live controls</span>
+                      <div>{implementationBlueprint.goLiveControls.map((control) => <span key={control}><Check size={13} />{control}</span>)}</div>
+                    </div>
+                  </article>
                 </div>
               )}
             </section>
