@@ -16,6 +16,10 @@ The first release demonstrates a brewery enterprise with:
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
 - Locally persisted lesson progress and completion status
 - An assessed knowledge check with corrective feedback
+- Searchable company structure, plants, storage locations, suppliers, and customers
+- Operational plant capacity, utilization, staffing, and order context
+- Business-partner exposure, risk, blocking status, and category filters
+- A normalized read-only enterprise API at `/api/enterprise`
 - Responsive desktop and mobile layouts
 
 The simulation follows a real business chain:
@@ -30,6 +34,9 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The current enterprise snapshot is available at
+[http://localhost:3000/api/enterprise](http://localhost:3000/api/enterprise).
 
 ## Quality checks
 

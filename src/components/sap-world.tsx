@@ -11,10 +11,13 @@ import {
   CircleHelp,
   Factory,
   GraduationCap,
+  Landmark,
   LayoutDashboard,
   Lock,
+  MapPin,
   Menu,
   MessageCircleMore,
+  Package,
   PlayCircle,
   Search,
   Send,
@@ -26,6 +29,12 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
+  businessPartners,
+  enterpriseSummary,
+  enterpriseUnits,
+  plants,
+} from "@/data/enterprise";
+import {
   activity,
   knowledgeCheck,
   kpis,
@@ -36,7 +45,14 @@ import {
   tutorSteps,
 } from "@/data/simulation";
 
-type View = "overview" | "academy" | "processes" | "tutor";
+type View =
+  | "overview"
+  | "academy"
+  | "processes"
+  | "tutor"
+  | "structure"
+  | "plants"
+  | "partners";
 
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
@@ -53,6 +69,9 @@ export function SapWorld() {
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [lessonComplete, setLessonComplete] = useState(false);
   const [progressLoaded, setProgressLoaded] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [partnerFilter, setPartnerFilter] = useState<"All" | "Supplier" | "Customer">("All");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState(
     "I’m connected to the Burton Brewery simulation. Ask me about this goods receipt, its accounting impact, or what happens next.",
@@ -88,6 +107,20 @@ export function SapWorld() {
     );
   }, [lessonComplete, lessonStep, progressLoaded]);
 
+  useEffect(() => {
+    function handleSearchShortcut(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleSearchShortcut);
+    return () => window.removeEventListener("keydown", handleSearchShortcut);
+  }, []);
+
   function askMentor(prompt: string) {
     const cleanPrompt = prompt.trim();
     if (!cleanPrompt) return;
@@ -113,6 +146,43 @@ export function SapWorld() {
     }
   }
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const searchResults = normalizedQuery
+    ? [
+        ...enterpriseUnits.map((unit) => ({
+          id: unit.code,
+          title: unit.name,
+          subtitle: `${unit.type} · ${unit.location ?? unit.parent ?? ""}`,
+          target: "structure" as View,
+        })),
+        ...plants.map((plant) => ({
+          id: plant.code,
+          title: plant.name,
+          subtitle: `Plant · ${plant.location}`,
+          target: "plants" as View,
+        })),
+        ...businessPartners.map((partner) => ({
+          id: partner.id,
+          title: partner.name,
+          subtitle: `${partner.category} · ${partner.city}`,
+          target: "partners" as View,
+        })),
+      ]
+        .filter((result) =>
+          `${result.id} ${result.title} ${result.subtitle}`
+            .toLowerCase()
+            .includes(normalizedQuery),
+        )
+        .slice(0, 8)
+    : [];
+
+  function navigateTo(viewId: View) {
+    setView(viewId);
+    setMobileOpen(false);
+    setSearchOpen(false);
+    setSearchQuery("");
+  }
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
@@ -134,8 +204,7 @@ export function SapWorld() {
               key={item.id}
               className={view === item.id ? "nav-item active" : "nav-item"}
               onClick={() => {
-                setView(item.id);
-                setMobileOpen(false);
+                navigateTo(item.id);
               }}
             >
               <item.icon size={18} />
@@ -143,9 +212,9 @@ export function SapWorld() {
             </button>
           ))}
           <p className="nav-label nav-spacer">Enterprise</p>
-          <button className="nav-item"><Building2 size={18} />Company structure</button>
-          <button className="nav-item"><Factory size={18} />Plants & operations</button>
-          <button className="nav-item"><Users size={18} />Business partners</button>
+          <button className={view === "structure" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("structure")}><Building2 size={18} />Company structure</button>
+          <button className={view === "plants" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("plants")}><Factory size={18} />Plants & operations</button>
+          <button className={view === "partners" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("partners")}><Users size={18} />Business partners</button>
         </nav>
 
         <div className="sidebar-footer">
@@ -171,7 +240,7 @@ export function SapWorld() {
             <ChevronRight size={17} />
           </div>
           <div className="topbar-actions">
-            <button className="search-button"><Search size={18} /><span>Search SAP objects</span><kbd>⌘ K</kbd></button>
+            <button className="search-button" onClick={() => setSearchOpen(true)}><Search size={18} /><span>Search SAP objects</span><kbd>Ctrl K</kbd></button>
             <button className="help-button"><CircleHelp size={20} /></button>
           </div>
         </header>
@@ -304,6 +373,106 @@ export function SapWorld() {
             </section>
           )}
 
+          {view === "structure" && (
+            <section className="enterprise-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">SAP organizational design</p><h1>Company structure</h1><p>Understand how legal, purchasing, sales, manufacturing, and inventory units connect.</p></div>
+                <span className="api-badge">API · /api/enterprise</span>
+              </div>
+              <div className="enterprise-stats">
+                <article className="panel"><Landmark size={19} /><div><span>Company code</span><strong>{enterpriseSummary.companyCode}</strong></div></article>
+                <article className="panel"><Factory size={19} /><div><span>Plants</span><strong>{enterpriseSummary.plants}</strong></div></article>
+                <article className="panel"><Users size={19} /><div><span>Active partners</span><strong>{enterpriseSummary.activePartners}</strong></div></article>
+                <article className="panel"><Users size={19} /><div><span>Employees</span><strong>{enterpriseSummary.employees}</strong></div></article>
+              </div>
+              <div className="org-layout">
+                <article className="panel org-tree">
+                  <div className="panel-header"><div><span className="section-kicker">Enterprise hierarchy</span><h2>Organizational units</h2></div></div>
+                  <div className="org-root">
+                    <span>Company code</span><strong>BCB1 · Burton Craft Beverages Ltd.</strong><small>GBP · Fiscal year K4</small>
+                  </div>
+                  <div className="org-branches">
+                    {["Purchasing Org", "Sales Org", "Plant"].map((type) => (
+                      <div className="org-branch" key={type}>
+                        <span>{type}</span>
+                        {enterpriseUnits.filter((unit) => unit.type === type).map((unit) => (
+                          <div className="org-node" key={unit.code}>
+                            <strong>{unit.code}</strong><span>{unit.name}</span><small className={unit.status.toLowerCase()}>{unit.status}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </article>
+                <article className="panel org-detail">
+                  <div className="panel-header"><div><span className="section-kicker">Plant BR01</span><h2>Storage locations</h2></div></div>
+                  {enterpriseUnits.filter((unit) => unit.type === "Storage Location").map((unit) => (
+                    <div className="storage-row" key={unit.code}>
+                      <span className="storage-icon"><Package size={16} /></span>
+                      <div><strong>{unit.code} · {unit.name}</strong><small>{unit.location}</small></div>
+                      <span className="status-chip active">{unit.status}</span>
+                    </div>
+                  ))}
+                  <div className="structure-note"><Sparkles size={18} /><p>These organizational assignments determine where materials are valued, purchased, stored, produced, and sold in SAP.</p></div>
+                </article>
+              </div>
+            </section>
+          )}
+
+          {view === "plants" && (
+            <section className="enterprise-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">Manufacturing and logistics network</p><h1>Plants & operations</h1><p>Monitor capacity, utilization, people, storage, and active operational demand.</p></div>
+              </div>
+              <div className="plant-grid">
+                {plants.map((plant) => (
+                  <article className="plant-card panel" key={plant.code}>
+                    <div className="plant-card-header">
+                      <span className="plant-symbol"><Factory size={21} /></span>
+                      <span className={`status-chip ${plant.status.toLowerCase()}`}>{plant.status}</span>
+                    </div>
+                    <span className="section-kicker">{plant.code}</span>
+                    <h2>{plant.name}</h2>
+                    <p className="plant-location"><MapPin size={14} />{plant.location}</p>
+                    <p className="plant-role">{plant.role}</p>
+                    <div className="utilization"><div><span>Capacity utilization</span><strong>{plant.utilization}%</strong></div><div className="utilization-track"><span style={{ width: `${plant.utilization}%` }} /></div></div>
+                    <div className="plant-metrics">
+                      <div><span>Capacity</span><strong>{plant.capacity}</strong></div>
+                      <div><span>Employees</span><strong>{plant.employees}</strong></div>
+                      <div><span>Storage locations</span><strong>{plant.storageLocations}</strong></div>
+                      <div><span>Active orders</span><strong>{plant.activeOrders}</strong></div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {view === "partners" && (
+            <section className="enterprise-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">SAP Business Partner master data</p><h1>Business partners</h1><p>Review suppliers and customers with commercial exposure, status, and risk context.</p></div>
+                <div className="filter-tabs">
+                  {(["All", "Supplier", "Customer"] as const).map((filter) => <button className={partnerFilter === filter ? "active" : ""} onClick={() => setPartnerFilter(filter)} key={filter}>{filter}</button>)}
+                </div>
+              </div>
+              <div className="partner-table panel">
+                <div className="partner-table-head"><span>Partner</span><span>Category</span><span>Location</span><span>Annual value</span><span>Open items</span><span>Risk</span><span>Status</span></div>
+                {businessPartners.filter((partner) => partnerFilter === "All" || partner.category === partnerFilter).map((partner) => (
+                  <div className="partner-row" key={partner.id}>
+                    <div><strong>{partner.name}</strong><small>{partner.id} · {partner.role}</small></div>
+                    <span className={`partner-category ${partner.category.toLowerCase()}`}>{partner.category}</span>
+                    <span>{partner.city}, {partner.country}</span>
+                    <strong>{partner.annualValue}</strong>
+                    <strong>{partner.openItems}</strong>
+                    <span className={`risk-chip ${partner.risk.toLowerCase()}`}>{partner.risk}</span>
+                    <span className={`status-chip ${partner.status.toLowerCase()}`}>{partner.status}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {view === "processes" && (
             <section className="process-page">
               <div className="page-heading compact">
@@ -402,6 +571,23 @@ export function SapWorld() {
           )}
         </div>
       </main>
+
+      {searchOpen && (
+        <div className="search-overlay" onClick={() => setSearchOpen(false)}>
+          <div className="search-dialog" onClick={(event) => event.stopPropagation()}>
+            <div className="search-input-row"><Search size={20} /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search code, company, plant, supplier, or customer..." /><button onClick={() => setSearchOpen(false)}><X size={18} /></button></div>
+            <div className="search-results">
+              {!normalizedQuery && <p>Try “BR01”, “Highland”, “customer”, or “storage”.</p>}
+              {normalizedQuery && searchResults.length === 0 && <p>No SAP objects matched your search.</p>}
+              {searchResults.map((result) => (
+                <button onClick={() => navigateTo(result.target)} key={`${result.target}-${result.id}`}>
+                  <span className="result-code">{result.id}</span><div><strong>{result.title}</strong><small>{result.subtitle}</small></div><ChevronRight size={16} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <button className="mentor-fab" onClick={() => setMentorOpen(true)}><MessageCircleMore size={21} /><span>Ask SAP Mentor</span></button>
       {mentorOpen && (
