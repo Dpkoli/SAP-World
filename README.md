@@ -20,6 +20,7 @@ The first release demonstrates a brewery enterprise with:
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
+- Learner registration and sign-in with hashed passwords and secure sessions
 - Server-backed lesson progress with an automatic browser fallback
 - An assessed knowledge check with corrective feedback
 - Searchable company structure, plants, storage locations, suppliers, and customers
@@ -59,15 +60,24 @@ Process flows and tutor content can be queried by process (`p2p`, `o2c`,
 
 `/api/simulation/processes?id=o2c`
 
-Learner progress can be loaded or updated through:
+Authenticated learner progress can be loaded or updated through:
 
-`/api/learning/progress?learner=deepa-koli`
+`/api/learning/progress`
 
-During local development, server progress is stored in the ignored
-`.data/learning-progress.json` file. The browser keeps a backup so lessons
-remain usable if the progress service is unavailable. Production deployment
-will replace this repository with authenticated PostgreSQL storage because
-serverless filesystems are not durable.
+During local development, accounts and sessions are stored in the ignored
+`.data/accounts.json` file, while server progress is stored in
+`.data/learning-progress.json`. Passwords use salted `scrypt` hashes and
+browser sessions use opaque, HTTP-only cookies. The browser keeps a
+learner-specific progress backup so lessons remain usable if the progress
+service is unavailable.
+
+The local repository adapters are intentionally isolated. Production
+deployment will replace them with a managed identity provider and PostgreSQL
+because serverless filesystems are not durable.
+
+Production cookies are secure by default. For HTTP-only local production
+testing, set `SAP_WORLD_INSECURE_COOKIES=true`; never use this override on a
+hosted environment.
 
 ## Quality checks
 
@@ -81,7 +91,7 @@ npm run build
 Planned phases include:
 
 1. Persistent PostgreSQL enterprise, document, and learning models
-2. Authenticated user accounts and role-based learning records
+2. Managed identity integration and role-based authorization
 3. Additional Procure-to-Pay lessons and exception scenarios
 4. Order-to-Cash, Plan-to-Produce, and Record-to-Report
 5. Configurable industry templates and multi-year simulation data

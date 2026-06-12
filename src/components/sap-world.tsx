@@ -25,6 +25,7 @@ import {
   Search,
   Send,
   Settings,
+  LogOut,
   Sparkles,
   TrendingUp,
   TriangleAlert,
@@ -32,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { learnerInitials, type LearnerProfile } from "@/data/auth";
 import {
   businessPartners,
   employees,
@@ -77,9 +79,13 @@ const navigation = [
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
 
-const learnerId = "deepa-koli";
-
-export function SapWorld() {
+export function SapWorld({
+  user,
+  onSignOut,
+}: {
+  user: LearnerProfile;
+  onSignOut: () => void;
+}) {
   const [view, setView] = useState<View>("overview");
   const [mentorOpen, setMentorOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -104,18 +110,19 @@ export function SapWorld() {
 
     async function loadProgress() {
       let localProgress: unknown = null;
-      const saved = window.localStorage.getItem("sap-world-progress");
+      const storageKey = `sap-world-progress:${user.id}`;
+      const saved = window.localStorage.getItem(storageKey);
       if (saved) {
         try {
           localProgress = JSON.parse(saved);
         } catch {
-          window.localStorage.removeItem("sap-world-progress");
+          window.localStorage.removeItem(storageKey);
         }
       }
 
       try {
         const response = await fetch(
-          `/api/learning/progress?learner=${learnerId}`,
+          "/api/learning/progress",
           { cache: "no-store" },
         );
         if (!response.ok) throw new Error("Progress service unavailable");
@@ -124,14 +131,14 @@ export function SapWorld() {
           progress: unknown;
         };
         const source = result.found ? result.progress : localProgress;
-        const normalized = normalizeLearnerProgress(learnerId, source);
+        const normalized = normalizeLearnerProgress(user.id, source);
         if (!cancelled) {
           setScenarioProgress(normalized.scenarios);
           setActiveScenarioId(normalized.activeScenarioId);
           setSyncStatus(result.found ? "saved" : "saving");
         }
       } catch {
-        const normalized = normalizeLearnerProgress(learnerId, localProgress);
+        const normalized = normalizeLearnerProgress(user.id, localProgress);
         if (!cancelled) {
           setScenarioProgress(normalized.scenarios);
           setActiveScenarioId(normalized.activeScenarioId);
@@ -146,18 +153,21 @@ export function SapWorld() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user.id]);
 
   useEffect(() => {
     if (!progressLoaded) return;
     const payload = { activeScenarioId, scenarios: scenarioProgress };
-    window.localStorage.setItem("sap-world-progress", JSON.stringify(payload));
+    window.localStorage.setItem(
+      `sap-world-progress:${user.id}`,
+      JSON.stringify(payload),
+    );
 
     const timer = window.setTimeout(async () => {
       setSyncStatus("saving");
       try {
         const response = await fetch(
-          `/api/learning/progress?learner=${learnerId}`,
+          "/api/learning/progress",
           {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -172,7 +182,7 @@ export function SapWorld() {
     }, 500);
 
     return () => window.clearTimeout(timer);
-  }, [activeScenarioId, progressLoaded, scenarioProgress]);
+  }, [activeScenarioId, progressLoaded, scenarioProgress, user.id]);
 
   useEffect(() => {
     function handleSearchShortcut(event: KeyboardEvent) {
@@ -329,9 +339,10 @@ export function SapWorld() {
 
         <div className="sidebar-footer">
           <button className="nav-item"><Settings size={18} />Settings</button>
+          <button className="nav-item" onClick={onSignOut}><LogOut size={18} />Sign out</button>
           <div className="user-card">
-            <div className="avatar">DK</div>
-            <div><strong>Deepa Koli</strong><span>SAP learner</span></div>
+            <div className="avatar">{learnerInitials(user.name)}</div>
+            <div><strong>{user.name}</strong><span>SAP learner</span></div>
           </div>
         </div>
       </aside>
@@ -371,7 +382,7 @@ export function SapWorld() {
               <section className="page-heading">
                 <div>
                   <p className="eyebrow">Thursday, 12 June 2026 · Period 03</p>
-                  <h1>Good morning, Deepa</h1>
+                  <h1>Good morning, {user.name.split(" ")[0]}</h1>
                   <p>Here is what is happening across your simulated enterprise today.</p>
                 </div>
                 <button className="primary-button" onClick={() => setView("tutor")}>

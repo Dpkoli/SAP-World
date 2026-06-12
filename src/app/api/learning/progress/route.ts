@@ -1,42 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   getLearnerProgress,
   saveLearnerProgress,
 } from "@/server/progress-repository";
+import { getCurrentLearner } from "@/server/auth-session";
 
 export const runtime = "nodejs";
 
-function getLearnerId(request: NextRequest) {
-  const learnerId =
-    request.nextUrl.searchParams.get("learner")?.trim() ?? "deepa-koli";
-  return /^[a-z0-9-]{3,64}$/.test(learnerId) ? learnerId : null;
-}
-
-export async function GET(request: NextRequest) {
-  const learnerId = getLearnerId(request);
-  if (!learnerId) {
-    return NextResponse.json(
-      { error: "Invalid learner identifier." },
-      { status: 400 },
-    );
+export async function GET() {
+  const learner = await getCurrentLearner();
+  if (!learner) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
-  const progress = await getLearnerProgress(learnerId);
+  const progress = await getLearnerProgress(learner.id);
   return NextResponse.json({
-    learnerId,
+    learnerId: learner.id,
     found: Boolean(progress),
     progress,
     storage: "local-json",
   });
 }
 
-export async function PUT(request: NextRequest) {
-  const learnerId = getLearnerId(request);
-  if (!learnerId) {
-    return NextResponse.json(
-      { error: "Invalid learner identifier." },
-      { status: 400 },
-    );
+export async function PUT(request: Request) {
+  const learner = await getCurrentLearner();
+  if (!learner) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
   let payload: unknown;
@@ -49,9 +38,9 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const progress = await saveLearnerProgress(learnerId, payload);
+  const progress = await saveLearnerProgress(learner.id, payload);
   return NextResponse.json({
-    learnerId,
+    learnerId: learner.id,
     progress,
     storage: "local-json",
   });

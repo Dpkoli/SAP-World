@@ -1,5 +1,5 @@
-import { SapWorld } from "@/components/sap-world";
+import { AuthGate } from "@/components/auth-gate";
 
 export default function Home() {
-  return <SapWorld />;
+  return <AuthGate />;
 }
