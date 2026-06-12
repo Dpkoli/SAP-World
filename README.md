@@ -15,6 +15,7 @@ The first release demonstrates a brewery enterprise with:
 - A guided SAP MRP and production-order lesson spanning PP, MM, EWM, CO, and FI
 - A guided month-end close lesson spanning FI-GL, AP, AR, CO, PP, and reporting
 - A guided incoming-inspection lesson spanning QM, MM, supplier quality, and stock disposition
+- A guided emergency-maintenance lesson spanning PM, MM, CO, safety, and reliability feedback
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
@@ -52,7 +53,7 @@ Historical events can be queried by fiscal year, severity, and category:
 `/api/simulation/events?year=2025–2026&severity=Critical&category=Quality`
 
 Process flows and tutor content can be queried by process (`p2p`, `o2c`,
-`ptp`, `r2r`, or `qm`):
+`ptp`, `r2r`, `qm`, or `pm`):
 
 `/api/simulation/processes?id=o2c`
 

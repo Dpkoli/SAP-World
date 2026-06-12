@@ -37,7 +37,7 @@ export type KnowledgeCheck = {
 };
 
 export type ProcessScenario = {
-  id: "p2p" | "o2c" | "ptp" | "r2r" | "qm";
+  id: "p2p" | "o2c" | "ptp" | "r2r" | "qm" | "pm";
   code: string;
   title: string;
   scenario: string;
@@ -467,6 +467,115 @@ export const qualityManagementTutorSteps: TutorStep[] = [
   },
 ];
 
+export const plantMaintenanceSteps: ProcessStep[] = [
+  { id: "NTF", label: "Maintenance Notification", document: "100000428", module: "PM", status: "complete" },
+  { id: "ORD", label: "Maintenance Order", document: "400001038", module: "PM / CO", status: "complete" },
+  { id: "RSV", label: "Spare-Part Reservation", document: "700000221", module: "PM / MM", status: "complete" },
+  { id: "REL", label: "Order Release", document: "Released", module: "PM / EHS", status: "active" },
+  { id: "EXE", label: "Execution & Confirmation", document: "Pending", module: "PM / MM / CO", status: "waiting" },
+  { id: "TEC", label: "Technical Completion", document: "Pending", module: "PM", status: "waiting" },
+  { id: "SET", label: "Cost Settlement", document: "Pending", module: "CO / FI", status: "waiting" },
+  { id: "PMF", label: "Maintenance Plan Update", document: "Pending", module: "PM", status: "waiting" },
+];
+
+export const plantMaintenanceTutorSteps: TutorStep[] = [
+  {
+    number: 1,
+    title: "Open the maintenance notification",
+    instruction:
+      "In SAP Fiori, open Manage Maintenance Notifications and search for 100000428. In SAP GUI, use IW22.",
+    why:
+      "The notification records the technical problem, affected equipment, symptoms, priority, safety context, reporter, and initial operational impact before work is authorized.",
+    result:
+      "SAP displays a high-priority vibration alarm for boiler feed pump PUMP-BR01-014 at functional location BR01-UTIL-BOIL.",
+    fields: [
+      { label: "Notification", value: "100000428" },
+      { label: "Equipment", value: "PUMP-BR01-014" },
+      { label: "Priority", value: "2 High" },
+    ],
+  },
+  {
+    number: 2,
+    title: "Assess safety and operational priority",
+    instruction:
+      "Review the malfunction start, downtime risk, safety notes, and production impact. Add the isolation requirement and confirm responsible work centre BR01-MECH.",
+    why:
+      "Maintenance priority must reflect safety, environment, production criticality, and redundancy. This controls scheduling and escalation rather than relying on urgency alone.",
+    result:
+      "The pump is classified as production-critical with lockout/tagout required before mechanical work.",
+    fields: [
+      { label: "Work centre", value: "BR01-MECH" },
+      { label: "Functional location", value: "BR01-UTIL-BOIL" },
+      { label: "Safety control", value: "LOTO required" },
+    ],
+  },
+  {
+    number: 3,
+    title: "Create and plan the maintenance order",
+    instruction:
+      "Create maintenance order 400001038 from the notification using order type PM02. Add bearing replacement, seal replacement, alignment, and test-run operations.",
+    why:
+      "The order turns a reported problem into controlled work with operations, labour, durations, materials, permits, responsibilities, and a cost collector.",
+    result:
+      "The order contains four operations, 14 planned labour hours, and a preliminary cost of £11,800.",
+    fields: [
+      { label: "Order type", value: "PM02" },
+      { label: "Maintenance order", value: "400001038" },
+      { label: "Planned cost", value: "£11,800" },
+    ],
+  },
+  {
+    number: 4,
+    title: "Reserve spare parts and release",
+    instruction:
+      "Add bearing BRG-6312 and seal kit SEAL-BFP-14 as components. Check availability, review the safety permit, then release the order.",
+    why:
+      "Reservation protects required spares from other demand. Release authorizes warehouse issue, labour confirmation, purchasing, and controlled execution.",
+    result:
+      "Reservation 700000221 is created, both parts are committed, and order status becomes REL.",
+    fields: [
+      { label: "Bearing", value: "BRG-6312 · 1 EA" },
+      { label: "Seal kit", value: "SEAL-BFP-14 · 1 EA" },
+      { label: "Reservation", value: "700000221" },
+    ],
+  },
+  {
+    number: 5,
+    title: "Confirm work and record technical findings",
+    instruction:
+      "After execution, confirm operation hours, issue the reserved components, enter malfunction end time, and record damage code BRG-WEAR with cause LUB-INT.",
+    why:
+      "Confirmations post actual labour and material costs while technical findings build failure history for reliability analysis and future maintenance strategy.",
+    result:
+      "The pump returns to service after 14 hours; actual labour, bearing, seal, and external alignment costs are posted to the order.",
+    fields: [
+      { label: "Damage code", value: "BRG-WEAR" },
+      { label: "Cause code", value: "LUB-INT" },
+      { label: "Downtime", value: "14 hours" },
+    ],
+  },
+  {
+    number: 6,
+    title: "Technically complete and settle",
+    instruction:
+      "Verify no open purchase commitments, choose Technically Complete, then settle the order to utility cost centre BR01-UTIL.",
+    why:
+      "Technical completion closes operational work and releases unused reservations. Settlement transfers the collected maintenance cost to its final responsibility object.",
+    result:
+      "Order 400001038 is TECO and £12,450 is settled to BR01-UTIL with zero residual balance.",
+  },
+  {
+    number: 7,
+    title: "Improve the preventive-maintenance plan",
+    instruction:
+      "Open the pump maintenance plan and reduce lubrication inspection frequency from 12 weeks to 8 weeks. Add vibration trend review to the task list.",
+    why:
+      "Closing the work without changing the strategy would preserve the root cause. Failure learning must feed preventive tasks and condition monitoring.",
+    result:
+      "The revised plan creates earlier inspections and a measurable reliability action against recurring bearing wear.",
+  },
+];
+
 export const activity = [
   { time: "09:42", title: "Goods receipt posted", detail: "20,000 KG Pale Ale Malt · PO 4500011842", module: "MM" },
   { time: "09:18", title: "Inspection lot created", detail: "Incoming raw material · Lot 0400001844", module: "QM" },
@@ -499,6 +608,12 @@ export const mentorAnswers: Record<string, string> = {
     "SAP values the characteristic as rejected. The inspector can record a defect and create a quality notification, while the stock remains unavailable until an authorized usage decision determines its disposition.",
   "Does the quality stock transfer create value?":
     "A transfer from quality inspection to unrestricted stock usually changes stock type, not total quantity or inventory value. Accounting postings occur only when the chosen disposition changes valuation, such as scrapping or returning stock.",
+  "Why create a maintenance order from a notification?":
+    "The notification describes the problem; the maintenance order authorizes and controls the response. It provides operations, labour, materials, permits, scheduling, purchasing, confirmations, and a cost collector.",
+  "When do maintenance costs post?":
+    "Reserved parts create commitments but not actual cost. Actual material cost posts at goods issue, labour and activity cost at confirmation, supplier cost at invoice, and settlement transfers the final balance to the responsible cost object.",
+  "Why technically complete the order?":
+    "Technical completion confirms operational work is finished, closes or flags remaining commitments, releases unused reservations, and prepares the order for final cost review and settlement.",
 };
 
 export const learningPaths: LearningPath[] = [
@@ -572,6 +687,20 @@ export const learningPaths: LearningPath[] = [
     description:
       "Record laboratory results, manage defects, make a usage decision, and update supplier quality performance.",
   },
+  {
+    id: "pm-breakdown",
+    title: "Repair a critical equipment breakdown",
+    process: "Plant Maintenance",
+    module: "PM + MM + CO + EHS",
+    role: "Maintenance Planner",
+    level: "Intermediate",
+    duration: "65 min",
+    lessons: 7,
+    progress: 0,
+    status: "available",
+    description:
+      "Plan and execute emergency work, reserve spares, capture failure history, settle cost, and improve prevention.",
+  },
 ];
 
 export const processCatalog = [
@@ -580,6 +709,7 @@ export const processCatalog = [
   { name: "Plan to Produce", code: "PTP", modules: "PP · MM · CO", scenarios: 7, readiness: 64 },
   { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 61 },
   { name: "Quality Management", code: "QM", modules: "QM · MM · FI", scenarios: 6, readiness: 66 },
+  { name: "Plant Maintenance", code: "PM", modules: "PM · MM · CO · EHS", scenarios: 6, readiness: 63 },
 ];
 
 export const knowledgeCheck: KnowledgeCheck = {
@@ -645,6 +775,19 @@ export const qualityManagementKnowledgeCheck: KnowledgeCheck = {
   correctIndex: 1,
   explanation:
     "Accepted results are evidence, but the usage decision is the formal stock-disposition authorization. Posting the decision moves the batch from quality inspection to unrestricted-use stock.",
+};
+
+export const plantMaintenanceKnowledgeCheck: KnowledgeCheck = {
+  question:
+    "Why does reserving the bearing not immediately post maintenance expense?",
+  options: [
+    "A reservation only commits stock; actual material cost posts when the part is issued",
+    "Maintenance materials never create accounting entries",
+    "The expense posts only when the equipment is sold",
+  ],
+  correctIndex: 0,
+  explanation:
+    "The reservation protects availability and records a commitment. Goods issue consumes the part, credits inventory, and debits the maintenance order with actual material cost.",
 };
 
 export const processScenarios: ProcessScenario[] = [
@@ -756,6 +899,28 @@ export const processScenarios: ProcessScenario[] = [
       { label: "Inventory impact", title: "20,000 KG quality stock controlled", description: "The batch remains unavailable until usage decision A1 posts it from quality inspection to unrestricted-use stock." },
       { label: "Accounting impact", title: "No value change on acceptance", description: "The stock-type transfer preserves inventory quantity and value; reject dispositions can create return, scrap, or claim postings." },
       { label: "Operational impact", title: "Recipe compliance protected", description: "Moisture, protein, extract, colour, and contamination results protect yield, product consistency, and food safety." },
+    ],
+  },
+  {
+    id: "pm",
+    code: "PM-2024-01038",
+    title: "Plant Maintenance",
+    scenario: "Boiler feed-pump breakdown",
+    partyLabel: "Equipment / functional location",
+    party: "PUMP-BR01-014 / BR01-UTIL-BOIL",
+    value: "14 hours downtime / £12,450 actual cost",
+    module: "SAP PM / EAM",
+    tutorTitle: "Repair and close a critical breakdown",
+    tutorDescription: "Convert a failure report into safe execution, traceable costs, and preventive improvement.",
+    appName: "Manage Maintenance Notifications",
+    transactionCode: "IW22 / IW32",
+    steps: plantMaintenanceSteps,
+    tutorSteps: plantMaintenanceTutorSteps,
+    knowledgeCheck: plantMaintenanceKnowledgeCheck,
+    impacts: [
+      { label: "Inventory impact", title: "Critical spares reserved and issued", description: "Bearing and seal-kit stock is protected by reservation, then consumed through goods issue to the maintenance order." },
+      { label: "Accounting impact", title: "£12,450 settled to utilities", description: "Material, labour, and service costs accumulate on the order before settlement to cost centre BR01-UTIL." },
+      { label: "Operational impact", title: "14-hour outage controlled", description: "Safety isolation, rescheduling, execution, testing, and preventive-plan feedback restore service and reduce recurrence risk." },
     ],
   },
 ];

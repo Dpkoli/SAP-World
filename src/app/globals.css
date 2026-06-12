@@ -122,7 +122,7 @@ button { cursor: pointer; }
 .learning-banner > button { display: flex; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--blue); font-size: 11px; font-weight: 700; }
 
 .process-map { padding: 8px 24px; }
-.scenario-tabs { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+.scenario-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
 .scenario-tabs > button { display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--muted); text-align: left; }
 .scenario-tabs > button:hover { border-color: #9bc7ec; }
 .scenario-tabs > button.active { border-color: var(--blue); background: #f1f7fd; box-shadow: 0 0 0 2px #e0f0fc; }
@@ -161,7 +161,7 @@ button { cursor: pointer; }
 .catalog-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 14px; }
 .catalog-heading h2 { margin: 4px 0 0; font-size: 18px; letter-spacing: -.025em; }
 .catalog-heading > span { color: var(--muted); font-size: 10px; }
-.path-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 15px; }
+.path-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 15px; }
 .path-card { position: relative; display: flex; flex-direction: column; min-height: 335px; padding: 17px; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease; }
 .path-card:not(.locked):hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(20,36,50,.08); }
 .path-card.locked { background: #fafbfc; }
