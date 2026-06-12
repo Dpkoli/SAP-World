@@ -122,6 +122,17 @@ button { cursor: pointer; }
 .learning-banner > button { display: flex; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--blue); font-size: 11px; font-weight: 700; }
 
 .process-map { padding: 8px 24px; }
+.scenario-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+.scenario-tabs > button { display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--muted); text-align: left; }
+.scenario-tabs > button:hover { border-color: #9bc7ec; }
+.scenario-tabs > button.active { border-color: var(--blue); background: #f1f7fd; box-shadow: 0 0 0 2px #e0f0fc; }
+.scenario-tabs span { grid-row: 1 / 3; align-self: center; padding: 5px 6px; border-radius: 5px; background: #edf1f4; color: #607080; font-family: var(--font-mono); font-size: 8px; font-weight: 800; }
+.scenario-tabs .active span { background: var(--blue); color: white; }
+.scenario-tabs strong, .scenario-tabs small { display: block; }
+.scenario-tabs strong { color: var(--foreground); font-size: 10px; }
+.scenario-tabs small { color: var(--muted); font-size: 8px; }
+.process-page-context { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.tutor-scenario-tabs { max-width: 680px; }
 .map-step { position: relative; display: grid; grid-template-columns: 42px 1fr 1.2fr; align-items: center; gap: 15px; min-height: 90px; border-bottom: 1px solid #edf0f2; }
 .map-step:last-child { border-bottom: 0; }
 .map-index { display: grid; place-items: center; width: 34px; height: 34px; border: 2px solid #cfd7de; border-radius: 50%; color: #758490; font-size: 12px; font-weight: 700; }
@@ -440,6 +451,7 @@ button { cursor: pointer; }
   .lesson-nav { display: none; }
   .map-step { grid-template-columns: 40px 1fr; padding: 14px 0; }
   .map-impact { grid-column: 2; }
+  .scenario-tabs { grid-template-columns: 1fr; }
   .curriculum-row { grid-template-columns: 45px 1fr; }
   .curriculum-row > span:nth-child(3), .readiness { grid-column: 2; }
   .org-layout { grid-template-columns: 1fr; }

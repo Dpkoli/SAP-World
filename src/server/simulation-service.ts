@@ -11,6 +11,7 @@ import {
   kpis,
   learningPaths,
   processCatalog,
+  processScenarios,
   processSteps,
 } from "@/data/simulation";
 
@@ -25,6 +26,7 @@ export function getEnterpriseSnapshot() {
       kpis,
       activity,
       activeProcess: processSteps,
+      processScenarios,
     },
     learning: {
       paths: learningPaths,

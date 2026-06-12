@@ -45,13 +45,11 @@ import {
 } from "@/data/history";
 import {
   activity,
-  knowledgeCheck,
   kpis,
   learningPaths,
   mentorAnswers,
   processCatalog,
-  processSteps,
-  tutorSteps,
+  processScenarios,
 } from "@/data/simulation";
 
 type View =
@@ -72,13 +70,21 @@ const navigation = [
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
 
+type ScenarioId = "p2p" | "o2c";
+type ScenarioProgress = Record<ScenarioId, { step: number; complete: boolean }>;
+
+const initialScenarioProgress: ScenarioProgress = {
+  p2p: { step: 0, complete: false },
+  o2c: { step: 0, complete: false },
+};
+
 export function SapWorld() {
   const [view, setView] = useState<View>("overview");
   const [mentorOpen, setMentorOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [lessonStep, setLessonStep] = useState(0);
-  const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
-  const [lessonComplete, setLessonComplete] = useState(false);
+  const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
+  const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(initialScenarioProgress);
+  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,11 +105,27 @@ export function SapWorld() {
           const progress = JSON.parse(saved) as {
             lessonStep?: number;
             lessonComplete?: boolean;
+            activeScenarioId?: ScenarioId;
+            scenarios?: Partial<ScenarioProgress>;
           };
-          setLessonStep(
-            Math.min(progress.lessonStep ?? 0, tutorSteps.length - 1),
-          );
-          setLessonComplete(Boolean(progress.lessonComplete));
+          const restored = {
+            p2p: progress.scenarios?.p2p ?? {
+              step: progress.lessonStep ?? 0,
+              complete: Boolean(progress.lessonComplete),
+            },
+            o2c: progress.scenarios?.o2c ?? initialScenarioProgress.o2c,
+          };
+          setScenarioProgress({
+            p2p: {
+              ...restored.p2p,
+              step: Math.min(restored.p2p.step, processScenarios[0].tutorSteps.length - 1),
+            },
+            o2c: {
+              ...restored.o2c,
+              step: Math.min(restored.o2c.step, processScenarios[1].tutorSteps.length - 1),
+            },
+          });
+          if (progress.activeScenarioId) setActiveScenarioId(progress.activeScenarioId);
         } catch {
           window.localStorage.removeItem("sap-world-progress");
         }
@@ -117,9 +139,9 @@ export function SapWorld() {
     if (!progressLoaded) return;
     window.localStorage.setItem(
       "sap-world-progress",
-      JSON.stringify({ lessonStep, lessonComplete }),
+      JSON.stringify({ activeScenarioId, scenarios: scenarioProgress }),
     );
-  }, [lessonComplete, lessonStep, progressLoaded]);
+  }, [activeScenarioId, progressLoaded, scenarioProgress]);
 
   useEffect(() => {
     function handleSearchShortcut(event: KeyboardEvent) {
@@ -145,18 +167,30 @@ export function SapWorld() {
     setQuestion("");
   }
 
-  const currentTutorStep = tutorSteps[lessonStep];
-  const lessonProgress = lessonComplete
+  const activeScenario =
+    processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
+    processScenarios[0];
+  const activeProgress = scenarioProgress[activeScenarioId];
+  const activeQuizAnswer = quizAnswers[activeScenarioId];
+  const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
+  const lessonProgress = activeProgress.complete
     ? 100
-    : Math.round(((lessonStep + 1) / tutorSteps.length) * 100);
+    : Math.round(((activeProgress.step + 1) / activeScenario.tutorSteps.length) * 100);
+
+  function updateActiveProgress(update: Partial<{ step: number; complete: boolean }>) {
+    setScenarioProgress((current) => ({
+      ...current,
+      [activeScenarioId]: { ...current[activeScenarioId], ...update },
+    }));
+  }
 
   function handleTutorNext() {
-    if (lessonStep < tutorSteps.length - 1) {
-      setLessonStep((step) => step + 1);
+    if (activeProgress.step < activeScenario.tutorSteps.length - 1) {
+      updateActiveProgress({ step: activeProgress.step + 1 });
       return;
     }
-    if (quizAnswer === knowledgeCheck.correctIndex) {
-      setLessonComplete(true);
+    if (activeQuizAnswer === activeScenario.knowledgeCheck.correctIndex) {
+      updateActiveProgress({ complete: true });
     }
   }
 
@@ -311,7 +345,7 @@ export function SapWorld() {
                 <article className="panel process-card">
                   <div className="panel-header">
                     <div><span className="section-kicker">Active process</span><h2>Procure to Pay</h2></div>
-                    <button onClick={() => setView("processes")}>View full flow <ArrowRight size={15} /></button>
+                    <button onClick={() => { setActiveScenarioId("p2p"); setView("processes"); }}>View full flow <ArrowRight size={15} /></button>
                   </div>
                   <div className="process-context">
                     <div><span>Business scenario</span><strong>Raw material replenishment</strong></div>
@@ -319,18 +353,18 @@ export function SapWorld() {
                     <div><span>Value</span><strong>£14,800.00</strong></div>
                   </div>
                   <div className="flow">
-                    {processSteps.map((step, index) => (
+                    {processScenarios[0].steps.map((step, index) => (
                       <div className={`flow-item ${step.status}`} key={step.id}>
                         <div className="flow-node">{step.status === "complete" ? <Check size={16} /> : index + 1}</div>
                         <div><strong>{step.label}</strong><span>{step.document}</span></div>
-                        {index < processSteps.length - 1 && <div className="flow-line" />}
+                        {index < processScenarios[0].steps.length - 1 && <div className="flow-line" />}
                       </div>
                     ))}
                   </div>
                   <div className="attention">
                     <TriangleAlert size={20} />
                     <div><strong>Action required: Complete quality inspection</strong><span>Inspection lot 0400001844 is blocking 20,000 KG from production use.</span></div>
-                    <button onClick={() => setView("tutor")}>Start guided task</button>
+                    <button onClick={() => { setActiveScenarioId("p2p"); setView("tutor"); }}>Start guided task</button>
                   </div>
                 </article>
 
@@ -350,7 +384,7 @@ export function SapWorld() {
 
               <section className="learning-banner">
                 <div className="lesson-icon"><BookOpenCheck size={24} /></div>
-                <div><span className="section-kicker">Your learning path</span><h3>Receiving materials with quality inspection</h3><p>{lessonComplete ? "Lesson complete · Knowledge check passed." : `Step ${lessonStep + 1} of ${tutorSteps.length} · Your progress is saved automatically.`}</p></div>
+                <div><span className="section-kicker">Your learning path</span><h3>{activeScenario.tutorTitle}</h3><p>{activeProgress.complete ? "Lesson complete · Knowledge check passed." : `Step ${activeProgress.step + 1} of ${activeScenario.tutorSteps.length} · Your progress is saved automatically.`}</p></div>
                 <div className="lesson-progress"><strong>{lessonProgress}%</strong><div><span style={{ width: `${lessonProgress}%` }} /></div></div>
                 <button onClick={() => setView("tutor")}>Resume lesson <ChevronRight size={16} /></button>
               </section>
@@ -361,20 +395,27 @@ export function SapWorld() {
             <section className="academy-page">
               <div className="page-heading compact">
                 <div><p className="eyebrow">Role-based SAP learning</p><h1>Learning centre</h1><p>Build practical skills through connected work performed inside the simulated enterprise.</p></div>
-                <div className="academy-score"><Award size={20} /><div><span>Learning score</span><strong>{lessonComplete ? "180" : "120"} XP</strong></div></div>
+                <div className="academy-score"><Award size={20} /><div><span>Learning score</span><strong>{120 + Object.values(scenarioProgress).filter((progress) => progress.complete).length * 60} XP</strong></div></div>
               </div>
 
               <div className="academy-summary">
                 <article className="panel"><span>Current role</span><strong>Warehouse Operative</strong><small>Burton Brewery · Plant BR01</small></article>
-                <article className="panel"><span>Lessons completed</span><strong>{lessonComplete ? "1 of 4" : "0 of 4"}</strong><small>Foundation pathway</small></article>
-                <article className="panel"><span>Process coverage</span><strong>3 modules</strong><small>MM · QM · FI</small></article>
+                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 2</strong><small>Available foundation pathways</small></article>
+                <article className="panel"><span>Process coverage</span><strong>6 modules</strong><small>MM · QM · FI · SD · EWM · PP</small></article>
               </div>
 
               <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>4 pathways</span></div>
               <div className="path-grid">
                 {learningPaths.map((path) => {
                   const available = path.status === "available";
-                  const progress = available ? lessonProgress : path.progress;
+                  const scenarioId: ScenarioId | null =
+                    path.id === "mm-goods-receipt" ? "p2p" :
+                    path.id === "sd-order-to-cash" ? "o2c" : null;
+                  const pathState = scenarioId ? scenarioProgress[scenarioId] : null;
+                  const scenario = scenarioId ? processScenarios.find((item) => item.id === scenarioId) : null;
+                  const progress = pathState && scenario
+                    ? pathState.complete ? 100 : Math.round(((pathState.step + 1) / scenario.tutorSteps.length) * 100)
+                    : path.progress;
                   return (
                     <article className={`path-card panel ${available ? "" : "locked"}`} key={path.id}>
                       <div className="path-card-top">
@@ -389,9 +430,12 @@ export function SapWorld() {
                       <div className="path-progress"><div><span style={{ width: `${progress}%` }} /></div><strong>{progress}%</strong></div>
                       <button
                         disabled={!available}
-                        onClick={() => setView("tutor")}
+                        onClick={() => {
+                          if (scenarioId) setActiveScenarioId(scenarioId);
+                          setView("tutor");
+                        }}
                       >
-                        {available ? <><PlayCircle size={16} /> {lessonComplete ? "Review lesson" : progress > 0 ? "Continue pathway" : "Start pathway"}</> : "Coming soon"}
+                        {available ? <><PlayCircle size={16} /> {pathState?.complete ? "Review lesson" : progress > 25 ? "Continue pathway" : "Start pathway"}</> : "Coming soon"}
                       </button>
                     </article>
                   );
@@ -586,25 +630,35 @@ export function SapWorld() {
           {view === "processes" && (
             <section className="process-page">
               <div className="page-heading compact">
-                <div><p className="eyebrow">Document flow · Scenario P2P-2026-0148</p><h1>Procure to Pay</h1><p>Trace every SAP document and business impact from demand to payment.</p></div>
+                <div><p className="eyebrow">Document flow · Scenario {activeScenario.code}</p><h1>{activeScenario.title}</h1><p>Trace every SAP document and business impact across the complete process.</p></div>
                 <button className="primary-button" onClick={() => setView("tutor")}><GraduationCap size={18} /> Learn this process</button>
               </div>
+              <div className="scenario-tabs">
+                {processScenarios.map((scenario) => (
+                  <button className={activeScenarioId === scenario.id ? "active" : ""} onClick={() => setActiveScenarioId(scenario.id)} key={scenario.id}>
+                    <span>{scenario.id.toUpperCase()}</span><strong>{scenario.title}</strong><small>{scenario.module}</small>
+                  </button>
+                ))}
+              </div>
+              <div className="process-context process-page-context">
+                <div><span>Business scenario</span><strong>{activeScenario.scenario}</strong></div>
+                <div><span>{activeScenario.partyLabel}</span><strong>{activeScenario.party}</strong></div>
+                <div><span>Value</span><strong>{activeScenario.value}</strong></div>
+              </div>
               <div className="process-map panel">
-                {processSteps.map((step, index) => (
+                {activeScenario.steps.map((step, index) => (
                   <div className={`map-step ${step.status}`} key={step.id}>
                     <div className="map-index">{step.status === "complete" ? <Check size={18} /> : index + 1}</div>
                     <div className="map-copy"><span>{step.module}</span><h3>{step.label}</h3><strong>{step.document}</strong></div>
                     <div className="map-impact">
-                      <span>{index < 2 ? "No accounting impact" : index === 2 ? "Inventory +£14,800 · GR/IR +£14,800" : "Awaiting preceding document"}</span>
+                      <span>{step.status === "waiting" ? "Awaiting preceding document" : activeScenario.id === "p2p" && index === 2 ? "Inventory +£14,800 · GR/IR +£14,800" : activeScenario.id === "o2c" && index === 0 ? "Commercial commitment · No FI posting" : "Process document completed"}</span>
                     </div>
-                    {index < processSteps.length - 1 && <ArrowRight className="map-arrow" size={20} />}
+                    {index < activeScenario.steps.length - 1 && <ArrowRight className="map-arrow" size={20} />}
                   </div>
                 ))}
               </div>
               <div className="impact-grid">
-                <article className="panel"><span className="section-kicker">Inventory impact</span><h3>20,000 KG received</h3><p>Pale Ale Malt is held in quality inspection stock at BR01 / RM01 until a usage decision is recorded.</p></article>
-                <article className="panel"><span className="section-kicker">Accounting impact</span><h3>Dr Inventory / Cr GR-IR</h3><p>The receipt recognizes the asset before the supplier invoice creates a payable.</p></article>
-                <article className="panel"><span className="section-kicker">Operational impact</span><h3>Production supply protected</h3><p>The batch covers seven days of planned brewing demand, subject to quality release.</p></article>
+                {activeScenario.impacts.map((impact) => <article className="panel" key={impact.label}><span className="section-kicker">{impact.label}</span><h3>{impact.title}</h3><p>{impact.description}</p></article>)}
               </div>
             </section>
           )}
@@ -612,23 +666,33 @@ export function SapWorld() {
           {view === "tutor" && (
             <section className="tutor-page">
               <div className="page-heading compact">
-                <div><p className="eyebrow">Guided mode · SAP MM</p><h1>Post a goods receipt</h1><p>Learn with real values from the Burton Brewery simulation.</p></div>
-                <span className="lesson-count">Step {lessonStep + 1} of {tutorSteps.length}</span>
+                <div><p className="eyebrow">Guided mode · {activeScenario.module}</p><h1>{activeScenario.tutorTitle}</h1><p>{activeScenario.tutorDescription}</p></div>
+                <span className="lesson-count">Step {activeProgress.step + 1} of {activeScenario.tutorSteps.length}</span>
+              </div>
+              <div className="scenario-tabs tutor-scenario-tabs">
+                {processScenarios.map((scenario) => (
+                  <button className={activeScenarioId === scenario.id ? "active" : ""} onClick={() => {
+                    setActiveScenarioId(scenario.id);
+                    setQuizAnswers((current) => ({ ...current, [scenario.id]: null }));
+                  }} key={scenario.id}>
+                    <span>{scenario.id.toUpperCase()}</span><strong>{scenario.title}</strong><small>{scenario.module}</small>
+                  </button>
+                ))}
               </div>
               <div className="tutor-layout">
                 <aside className="lesson-nav panel">
                   <div className="lesson-nav-title"><span>Lesson progress</span><strong>{lessonProgress}%</strong></div>
                   <div className="progress-track"><span style={{ width: `${lessonProgress}%` }} /></div>
-                  {tutorSteps.map((step, index) => (
-                    <button className={index === lessonStep ? "current" : index < lessonStep ? "done" : ""} onClick={() => setLessonStep(index)} key={step.number}>
-                      <span>{index < lessonStep ? <Check size={14} /> : step.number}</span>
+                  {activeScenario.tutorSteps.map((step, index) => (
+                    <button className={index === activeProgress.step ? "current" : index < activeProgress.step ? "done" : ""} onClick={() => updateActiveProgress({ step: index })} key={step.number}>
+                      <span>{index < activeProgress.step ? <Check size={14} /> : step.number}</span>
                       <div><small>Step {step.number}</small><strong>{step.title}</strong></div>
                     </button>
                   ))}
                 </aside>
 
                 <article className="lesson-content panel">
-                  <div className="transaction-bar"><span>Fiori app</span><strong>Post Goods Receipt for Purchasing Document</strong><code>MIGO</code></div>
+                  <div className="transaction-bar"><span>Fiori app</span><strong>{activeScenario.appName}</strong><code>{activeScenario.transactionCode}</code></div>
                   <span className="step-label">STEP {currentTutorStep.number}</span>
                   <h2>{currentTutorStep.title}</h2>
                   <p className="instruction">{currentTutorStep.instruction}</p>
@@ -639,20 +703,20 @@ export function SapWorld() {
                   )}
                   <div className="explanation-box why"><Sparkles size={20} /><div><strong>Why are we doing this?</strong><p>{currentTutorStep.why}</p></div></div>
                   <div className="explanation-box result"><Check size={20} /><div><strong>What will you achieve?</strong><p>{currentTutorStep.result}</p></div></div>
-                  {lessonStep === tutorSteps.length - 1 && (
+                  {activeProgress.step === activeScenario.tutorSteps.length - 1 && (
                     <div className="knowledge-check">
-                      <div className="knowledge-title"><Award size={20} /><div><span>Knowledge check</span><strong>{knowledgeCheck.question}</strong></div></div>
+                      <div className="knowledge-title"><Award size={20} /><div><span>Knowledge check</span><strong>{activeScenario.knowledgeCheck.question}</strong></div></div>
                       <div className="answer-list">
-                        {knowledgeCheck.options.map((option, index) => {
-                          const checked = quizAnswer === index;
-                          const isCorrect = checked && index === knowledgeCheck.correctIndex;
-                          const isWrong = checked && index !== knowledgeCheck.correctIndex;
+                        {activeScenario.knowledgeCheck.options.map((option, index) => {
+                          const checked = activeQuizAnswer === index;
+                          const isCorrect = checked && index === activeScenario.knowledgeCheck.correctIndex;
+                          const isWrong = checked && index !== activeScenario.knowledgeCheck.correctIndex;
                           return (
                             <button
                               className={isCorrect ? "correct" : isWrong ? "wrong" : checked ? "selected" : ""}
                               onClick={() => {
-                                setQuizAnswer(index);
-                                setLessonComplete(false);
+                                setQuizAnswers((current) => ({ ...current, [activeScenarioId]: index }));
+                                updateActiveProgress({ complete: false });
                               }}
                               key={option}
                             >
@@ -661,18 +725,18 @@ export function SapWorld() {
                           );
                         })}
                       </div>
-                      {quizAnswer !== null && (
-                        <p className={quizAnswer === knowledgeCheck.correctIndex ? "quiz-feedback correct" : "quiz-feedback wrong"}>
-                          {quizAnswer === knowledgeCheck.correctIndex ? knowledgeCheck.explanation : "Not quite. Think about when SAP creates an accounts-payable document and try again."}
+                      {activeQuizAnswer !== null && (
+                        <p className={activeQuizAnswer === activeScenario.knowledgeCheck.correctIndex ? "quiz-feedback correct" : "quiz-feedback wrong"}>
+                          {activeQuizAnswer === activeScenario.knowledgeCheck.correctIndex ? activeScenario.knowledgeCheck.explanation : "Not quite. Revisit the document and accounting sequence, then try again."}
                         </p>
                       )}
                     </div>
                   )}
-                  {lessonComplete && <div className="completion-banner"><Award size={22} /><div><strong>Lesson completed</strong><span>Your result and progress are saved on this device.</span></div></div>}
+                  {activeProgress.complete && <div className="completion-banner"><Award size={22} /><div><strong>Lesson completed</strong><span>Your result and progress are saved on this device.</span></div></div>}
                   <div className="lesson-actions">
-                    <button disabled={lessonStep === 0} onClick={() => setLessonStep((step) => step - 1)}>Previous</button>
-                    <button className="primary-button" disabled={lessonStep === tutorSteps.length - 1 && quizAnswer !== knowledgeCheck.correctIndex} onClick={handleTutorNext}>
-                      {lessonStep === tutorSteps.length - 1 ? "Complete lesson" : "Next step"} <ArrowRight size={16} />
+                    <button disabled={activeProgress.step === 0} onClick={() => updateActiveProgress({ step: activeProgress.step - 1 })}>Previous</button>
+                    <button className="primary-button" disabled={activeProgress.step === activeScenario.tutorSteps.length - 1 && activeQuizAnswer !== activeScenario.knowledgeCheck.correctIndex} onClick={handleTutorNext}>
+                      {activeProgress.step === activeScenario.tutorSteps.length - 1 ? "Complete lesson" : "Next step"} <ArrowRight size={16} />
                     </button>
                   </div>
                 </article>

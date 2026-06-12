@@ -11,6 +11,7 @@ The first release demonstrates a brewery enterprise with:
 - A connected Procure-to-Pay document flow
 - Inventory, accounting, and operational impact explanations
 - A guided SAP goods-receipt lesson using realistic business data
+- A guided SAP customer-sales-order lesson spanning SD, EWM, PP, and FI
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
@@ -24,6 +25,7 @@ The first release demonstrates a brewery enterprise with:
   maintenance, finance, sales, and compliance events
 - Historical SAP document chains with operational, inventory, and financial impact
 - A filterable simulation-history API at `/api/simulation/events`
+- Reusable P2P and O2C process definitions at `/api/simulation/processes`
 - Responsive desktop and mobile layouts
 
 The simulation follows a real business chain:
@@ -45,6 +47,10 @@ The current enterprise snapshot is available at
 Historical events can be queried by fiscal year, severity, and category:
 
 `/api/simulation/events?year=2025–2026&severity=Critical&category=Quality`
+
+Process flows and tutor content can be queried by process:
+
+`/api/simulation/processes?id=o2c`
 
 ## Quality checks
 

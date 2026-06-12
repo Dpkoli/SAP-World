@@ -29,6 +29,36 @@ export type LearningPath = {
   description: string;
 };
 
+export type KnowledgeCheck = {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+};
+
+export type ProcessScenario = {
+  id: "p2p" | "o2c";
+  code: string;
+  title: string;
+  scenario: string;
+  partyLabel: string;
+  party: string;
+  value: string;
+  module: string;
+  tutorTitle: string;
+  tutorDescription: string;
+  appName: string;
+  transactionCode: string;
+  steps: ProcessStep[];
+  tutorSteps: TutorStep[];
+  knowledgeCheck: KnowledgeCheck;
+  impacts: {
+    label: string;
+    title: string;
+    description: string;
+  }[];
+};
+
 export const kpis = [
   { label: "Revenue YTD", value: "£18.42M", change: "+8.4%", tone: "good" },
   { label: "Open purchase orders", value: "47", change: "£1.26M", tone: "neutral" },
@@ -97,6 +127,72 @@ export const tutorSteps: TutorStep[] = [
   },
 ];
 
+export const orderToCashSteps: ProcessStep[] = [
+  { id: "SO", label: "Sales Order", document: "182934", module: "SD", status: "complete" },
+  { id: "ATP", label: "Availability Check", document: "Confirmed", module: "SD / PP", status: "complete" },
+  { id: "DLV", label: "Outbound Delivery", document: "800018447", module: "SD / EWM", status: "active" },
+  { id: "PGI", label: "Post Goods Issue", document: "Pending", module: "SD / FI", status: "waiting" },
+  { id: "BIL", label: "Billing", document: "Pending", module: "SD / FI", status: "waiting" },
+  { id: "PAY", label: "Customer Payment", document: "Pending", module: "FI", status: "waiting" },
+];
+
+export const orderToCashTutorSteps: TutorStep[] = [
+  {
+    number: 1,
+    title: "Open Create Sales Orders",
+    instruction:
+      "In SAP Fiori, open Create Sales Orders. In SAP GUI, use transaction VA01 and choose order type OR.",
+    why:
+      "The sales order captures the customer commitment and becomes the controlling document for availability, delivery, billing, and revenue.",
+    result:
+      "SAP opens a standard sales-order document for the UK domestic sales area.",
+    fields: [
+      { label: "Order type", value: "OR" },
+      { label: "Sales area", value: "S100 / 10 / 00" },
+    ],
+  },
+  {
+    number: 2,
+    title: "Enter customer and reference data",
+    instruction:
+      "Enter sold-to party 2000017, customer reference NT-PO-8841, and requested delivery date 18 June 2026.",
+    why:
+      "The customer master supplies pricing, shipping, payment, tax, partner, and credit-control data. The reference supports customer-service traceability.",
+    result:
+      "SAP determines Northern Taverns Ltd, its ship-to location, payment terms, and applicable sales conditions.",
+    fields: [
+      { label: "Sold-to party", value: "2000017" },
+      { label: "Customer reference", value: "NT-PO-8841" },
+      { label: "Requested date", value: "18.06.2026" },
+    ],
+  },
+  {
+    number: 3,
+    title: "Enter products and check availability",
+    instruction:
+      "Add 240 kegs of FG-AMBER-KEG-50 and 160 kegs of FG-IPA-KEG-50. Review the confirmed quantities and delivery proposal.",
+    why:
+      "The availability check protects existing commitments and confirms whether inventory and planned receipts can satisfy the requested date.",
+    result:
+      "All 400 kegs are confirmed from DC01 for delivery on 18 June 2026.",
+    fields: [
+      { label: "Amber Ale", value: "240 EA" },
+      { label: "Session IPA", value: "160 EA" },
+      { label: "Delivering plant", value: "DC01" },
+    ],
+  },
+  {
+    number: 4,
+    title: "Review pricing, credit, and save",
+    instruction:
+      "Open the item conditions, verify the contract discount and UK VAT, review the credit status, then save the order.",
+    why:
+      "Pricing determines expected revenue while the credit check controls financial exposure before warehouse fulfilment begins.",
+    result:
+      "Sales order 182934 is created for £46,720 net value and becomes due for outbound-delivery creation.",
+  },
+];
+
 export const activity = [
   { time: "09:42", title: "Goods receipt posted", detail: "20,000 KG Pale Ale Malt · PO 4500011842", module: "MM" },
   { time: "09:18", title: "Inspection lot created", detail: "Incoming raw material · Lot 0400001844", module: "QM" },
@@ -135,10 +231,10 @@ export const learningPaths: LearningPath[] = [
     module: "SD + EWM + FI",
     role: "Sales Coordinator",
     level: "Foundation",
-    duration: "55 min",
-    lessons: 7,
+    duration: "45 min",
+    lessons: 4,
     progress: 0,
-    status: "coming-soon",
+    status: "available",
     description:
       "Move from customer demand through availability, delivery, goods issue, billing, and receivables.",
   },
@@ -174,12 +270,12 @@ export const learningPaths: LearningPath[] = [
 
 export const processCatalog = [
   { name: "Procure to Pay", code: "P2P", modules: "MM · QM · FI", scenarios: 8, readiness: 72 },
-  { name: "Order to Cash", code: "O2C", modules: "SD · EWM · FI", scenarios: 6, readiness: 38 },
+  { name: "Order to Cash", code: "O2C", modules: "SD · EWM · FI", scenarios: 6, readiness: 68 },
   { name: "Plan to Produce", code: "PTP", modules: "PP · MM · CO", scenarios: 7, readiness: 24 },
   { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 16 },
 ];
 
-export const knowledgeCheck = {
+export const knowledgeCheck: KnowledgeCheck = {
   question:
     "After posting this goods receipt, why is the supplier account not credited?",
   options: [
@@ -191,3 +287,63 @@ export const knowledgeCheck = {
   explanation:
     "Goods receipt recognizes inventory and credits GR/IR. The supplier payable is created only when the invoice is posted and matched.",
 };
+
+export const orderToCashKnowledgeCheck: KnowledgeCheck = {
+  question:
+    "When does SAP normally recognize the cost of goods sold for this order?",
+  options: [
+    "When the sales order is saved",
+    "When the outbound delivery is created",
+    "When post goods issue reduces finished-goods inventory",
+  ],
+  correctIndex: 2,
+  explanation:
+    "Post goods issue credits finished-goods inventory and debits cost of goods sold. Billing later records customer receivables and revenue.",
+};
+
+export const processScenarios: ProcessScenario[] = [
+  {
+    id: "p2p",
+    code: "P2P-2026-0148",
+    title: "Procure to Pay",
+    scenario: "Raw material replenishment",
+    partyLabel: "Supplier",
+    party: "Highland Maltings PLC",
+    value: "£14,800.00",
+    module: "SAP MM",
+    tutorTitle: "Post a goods receipt",
+    tutorDescription: "Learn with real values from the Burton Brewery simulation.",
+    appName: "Post Goods Receipt for Purchasing Document",
+    transactionCode: "MIGO",
+    steps: processSteps,
+    tutorSteps,
+    knowledgeCheck,
+    impacts: [
+      { label: "Inventory impact", title: "20,000 KG received", description: "Pale Ale Malt is held in quality inspection stock at BR01 / RM01 until a usage decision is recorded." },
+      { label: "Accounting impact", title: "Dr Inventory / Cr GR-IR", description: "The receipt recognizes the asset before the supplier invoice creates a payable." },
+      { label: "Operational impact", title: "Production supply protected", description: "The batch covers seven days of planned brewing demand, subject to quality release." },
+    ],
+  },
+  {
+    id: "o2c",
+    code: "O2C-2026-0094",
+    title: "Order to Cash",
+    scenario: "On-trade customer replenishment",
+    partyLabel: "Customer",
+    party: "Northern Taverns Ltd",
+    value: "£46,720.00",
+    module: "SAP SD",
+    tutorTitle: "Create a customer sales order",
+    tutorDescription: "Capture demand, confirm supply, apply pricing, and control customer credit.",
+    appName: "Create Sales Orders",
+    transactionCode: "VA01",
+    steps: orderToCashSteps,
+    tutorSteps: orderToCashTutorSteps,
+    knowledgeCheck: orderToCashKnowledgeCheck,
+    impacts: [
+      { label: "Inventory impact", title: "400 kegs allocated", description: "Available-to-promise confirms finished goods at DC01; stock is reduced only when goods issue is posted." },
+      { label: "Accounting impact", title: "No posting at order entry", description: "Sales-order creation records a commercial commitment without posting to the general ledger." },
+      { label: "Operational impact", title: "Warehouse demand created", description: "The confirmed schedule lines become due for outbound delivery, picking, loading, and transport planning." },
+    ],
+  },
+];
