@@ -17,6 +17,7 @@ import {
   workCenters,
 } from "@/data/master-data";
 import { enterpriseEvents } from "@/data/history";
+import { workflowAuditTrail, workflowDefinitions } from "@/data/workflows";
 import {
   mentorSuggestions,
   type MentorResponse,
@@ -48,6 +49,7 @@ const sapDomainTerms = new Set([
   "production", "purchase", "quality", "receipt", "sales", "settlement",
   "packing", "picking", "routing", "shipment", "specification", "stock",
   "supplier", "usage", "valuation", "vendor", "warehouse", "wave", "workcenter",
+  "approval", "approver", "authority", "audit", "release", "workflow",
 ]);
 
 function tokens(value: string) {
@@ -115,6 +117,31 @@ function scenarioDocuments(scenario: ProcessScenario): MentorDocument[] {
 
 const mentorDocuments: MentorDocument[] = [
   ...processScenarios.flatMap(scenarioDocuments),
+  ...workflowDefinitions.map((workflow) => ({
+    id: `workflow-${workflow.id}`,
+    type: "Workflow" as const,
+    title: workflow.title,
+    reference: `${workflow.id} / ${workflow.documentType} ${workflow.documentNumber}`,
+    scenarioId: workflow.scenarioId,
+    content: [
+      `status ${workflow.status}`,
+      `current approver ${workflow.steps.find((step) => step.status === "Current")?.role ?? "complete"}`,
+      workflow.businessReason,
+      workflow.policyRule,
+      workflow.risk,
+      workflow.blockingImpact,
+      ...workflow.controlEvidence,
+      ...workflow.steps.map((step) => `${step.sequence} ${step.role} ${step.assignee} ${step.status} ${step.decision ?? ""}`),
+    ].join(" "),
+  })),
+  ...workflowAuditTrail.map((entry) => ({
+    id: `workflow-audit-${entry.id}`,
+    type: "Workflow" as const,
+    title: `${entry.action}: ${entry.workflowId}`,
+    reference: `${entry.workflowId} / ${entry.at}`,
+    scenarioId: workflowDefinitions.find((workflow) => workflow.id === entry.workflowId)?.scenarioId,
+    content: `${entry.actor} ${entry.actorRole} ${entry.action} ${entry.comment}`,
+  })),
   ...documentFlows.flatMap((flow) =>
     flow.nodes.map((node) => ({
       id: `document-${flow.processId}-${node.id}`,
@@ -328,6 +355,11 @@ export function answerMentorQuestion(input: {
       normalizedQuestion.includes(workCenter.id.toLowerCase()) ||
       normalizedQuestion.includes(workCenter.name.toLowerCase()),
   );
+  const referencedWorkflow = workflowDefinitions.find(
+    (workflow) =>
+      normalizedQuestion.includes(workflow.id.toLowerCase()) ||
+      normalizedQuestion.includes(workflow.documentNumber.toLowerCase()),
+  );
   const step =
     typeof input.step === "number" && Number.isFinite(input.step)
       ? Math.min(
@@ -339,6 +371,11 @@ export function answerMentorQuestion(input: {
   let answer: string;
   if (exactAnswer) {
     answer = exactAnswer;
+  } else if (referencedWorkflow) {
+    const currentApprover = referencedWorkflow.steps.find(
+      (workflowStep) => workflowStep.status === "Current",
+    );
+    answer = `${referencedWorkflow.documentType} ${referencedWorkflow.documentNumber} is ${referencedWorkflow.status.toLowerCase()} in ${referencedWorkflow.id}. ${currentApprover ? `${currentApprover.role} (${currentApprover.assignee}) must act next. ` : "The approval route is complete. "}${referencedWorkflow.policyRule} ${referencedWorkflow.blockingImpact}`;
   } else if (referencedMaterial) {
     answer = `${referencedMaterial.id} is ${referencedMaterial.description}, a ${referencedMaterial.type} material at ${referencedMaterial.plant}/${referencedMaterial.storageLocation}. It uses MRP type ${referencedMaterial.mrpType}, ${referencedMaterial.lotSize.toLowerCase()}, a ${referencedMaterial.leadTimeDays}-day lead time, valuation class ${referencedMaterial.valuationClass}, and standard price ${referencedMaterial.standardPrice}. Batch management is ${referencedMaterial.batchManaged ? "active" : "not active"} and quality inspection is ${referencedMaterial.qualityInspection ? "required" : "not required"}.`;
   } else if (referencedBom) {
@@ -419,6 +456,7 @@ export function answerMentorQuestion(input: {
     referencedRouting ? `routing-${referencedRouting.id}` : null,
     referencedBatch ? `batch-${referencedBatch.id}` : null,
     referencedWorkCenter ? `work-center-${referencedWorkCenter.id}` : null,
+    referencedWorkflow ? `workflow-${referencedWorkflow.id}` : null,
   ].filter((id): id is string => Boolean(id));
   const directReferences = mentorDocuments.filter((document) =>
     directReferenceIds.includes(document.id),

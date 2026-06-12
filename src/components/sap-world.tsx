@@ -10,6 +10,7 @@ import {
   Check,
   ChevronRight,
   CircleHelp,
+  ClipboardCheck,
   Clock3,
   Factory,
   FileText,
@@ -86,6 +87,10 @@ import {
   processScenarios,
 } from "@/data/simulation";
 import { troubleshootingCaseFor } from "@/data/troubleshooting";
+import type {
+  WorkflowAction,
+  WorkflowCase,
+} from "@/data/workflows";
 
 type View =
   | "overview"
@@ -93,6 +98,7 @@ type View =
   | "processes"
   | "tutor"
   | "history"
+  | "workflows"
   | "structure"
   | "masterdata"
   | "plants"
@@ -103,6 +109,7 @@ const navigation = [
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
   { id: "processes" as const, label: "Process explorer", icon: Boxes },
   { id: "history" as const, label: "Simulation history", icon: CalendarDays },
+  { id: "workflows" as const, label: "Approval inbox", icon: ClipboardCheck },
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
 
@@ -137,6 +144,13 @@ export function SapWorld({
   const [partnerFilter, setPartnerFilter] = useState<"All" | "Supplier" | "Customer">("All");
   const [selectedMaterialId, setSelectedMaterialId] = useState("FG-AMBER-KEG-50");
   const [materialTypeFilter, setMaterialTypeFilter] = useState("All");
+  const [workflows, setWorkflows] = useState<WorkflowCase[]>([]);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState("WF-O2C-CREDIT-001");
+  const [workflowFilter, setWorkflowFilter] = useState("All");
+  const [workflowComment, setWorkflowComment] = useState("");
+  const [workflowLoading, setWorkflowLoading] = useState(true);
+  const [workflowError, setWorkflowError] = useState("");
+  const [workflowOverdue, setWorkflowOverdue] = useState(0);
   const [selectedYear, setSelectedYear] = useState<FiscalYear>("2025–2026");
   const [eventCategory, setEventCategory] = useState("All");
   const [selectedEventId, setSelectedEventId] = useState("EVT-2604-035");
@@ -197,6 +211,45 @@ export function SapWorld({
     }
 
     void loadProgress();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkflows() {
+      setWorkflowLoading(true);
+      try {
+        const response = await fetch("/api/workflows", { cache: "no-store" });
+        const result = (await response.json()) as {
+          workflows?: WorkflowCase[];
+          overdue?: number;
+          error?: string;
+        };
+        if (!response.ok || !result.workflows) {
+          throw new Error(result.error ?? "Workflow service unavailable.");
+        }
+        if (!cancelled) {
+          setWorkflows(result.workflows);
+          setWorkflowOverdue(result.overdue ?? 0);
+          setWorkflowError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setWorkflowError(
+            error instanceof Error
+              ? error.message
+              : "Workflow service unavailable.",
+          );
+        }
+      } finally {
+        if (!cancelled) setWorkflowLoading(false);
+      }
+    }
+
+    void loadWorkflows();
     return () => {
       cancelled = true;
     };
@@ -294,6 +347,52 @@ export function SapWorld({
     }
   }
 
+  async function submitWorkflowDecision(action: WorkflowAction) {
+    if (!selectedWorkflow || workflowComment.trim().length < 5) return;
+    setWorkflowLoading(true);
+    setWorkflowError("");
+    try {
+      const response = await fetch("/api/workflows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workflowId: selectedWorkflow.id,
+          action,
+          comment: workflowComment,
+        }),
+      });
+      const result = (await response.json()) as {
+        workflow?: WorkflowCase;
+        wasOverdue?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !result.workflow) {
+        throw new Error(result.error ?? "Workflow decision could not be saved.");
+      }
+      setWorkflows((current) =>
+        current.map((workflow) =>
+          workflow.id === result.workflow!.id ? result.workflow! : workflow,
+        ),
+      );
+      if (
+        selectedWorkflow.status === "Pending" &&
+        result.workflow.status !== "Pending" &&
+        result.wasOverdue
+      ) {
+        setWorkflowOverdue((current) => Math.max(0, current - 1));
+      }
+      setWorkflowComment("");
+    } catch (error) {
+      setWorkflowError(
+        error instanceof Error
+          ? error.message
+          : "Workflow decision could not be saved.",
+      );
+    } finally {
+      setWorkflowLoading(false);
+    }
+  }
+
   const activeScenario =
     processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
     processScenarios[0];
@@ -333,6 +432,19 @@ export function SapWorld({
   const selectedSources = sourceRecords.filter(
     (source) => source.materialId === selectedMaterial.id,
   );
+  const visibleWorkflows = workflows.filter(
+    (workflow) =>
+      workflowFilter === "All" || workflow.status === workflowFilter,
+  );
+  const selectedWorkflow =
+    workflows.find((workflow) => workflow.id === selectedWorkflowId) ??
+    visibleWorkflows[0] ??
+    workflows[0];
+  const activeScenarioWorkflow = workflows.find(
+    (workflow) =>
+      workflow.scenarioId === activeScenarioId &&
+      workflow.status === "Pending",
+  ) ?? workflows.find((workflow) => workflow.scenarioId === activeScenarioId);
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
   const lessonProgress = activeProgress.complete
     ? 100
@@ -424,6 +536,13 @@ export function SapWorld({
           title: material.description,
           subtitle: `${material.type} Â· ${material.plant} Â· ${material.standardPrice}`,
           target: "masterdata" as View,
+        })),
+        ...workflows.map((workflow) => ({
+          id: workflow.documentNumber,
+          title: workflow.title,
+          subtitle: `${workflow.status} / ${workflow.module}`,
+          target: "workflows" as View,
+          workflowId: workflow.id,
         })),
       ]
         .filter((result) =>
@@ -923,6 +1042,104 @@ export function SapWorld({
             </section>
           )}
 
+          {view === "workflows" && (
+            <section className="workflow-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">SAP controls and delegated authority</p><h1>Approval inbox and audit trail</h1><p>Inspect business evidence, follow the approval route, and practise controlled SAP decisions.</p></div>
+                <span className="api-badge">API /api/workflows</span>
+              </div>
+              <div className="workflow-summary">
+                <article className="panel"><ClipboardCheck size={18} /><div><span>Total cases</span><strong>{workflows.length}</strong></div></article>
+                <article className="panel"><Clock3 size={18} /><div><span>Pending</span><strong>{workflows.filter((workflow) => workflow.status === "Pending").length}</strong></div></article>
+                <article className="panel"><TriangleAlert size={18} /><div><span>Overdue</span><strong>{workflowOverdue}</strong></div></article>
+                <article className="panel"><Check size={18} /><div><span>Approved</span><strong>{workflows.filter((workflow) => workflow.status === "Approved").length}</strong></div></article>
+              </div>
+              <div className="workflow-toolbar">
+                <div><span className="section-kicker">Learner workspace</span><h2>Delegated approval cases</h2></div>
+                <div className="filter-tabs">
+                  {(["All", "Pending", "Approved", "Rejected", "Information required"] as const).map((filter) => (
+                    <button className={workflowFilter === filter ? "active" : ""} onClick={() => setWorkflowFilter(filter)} key={filter}>{filter}</button>
+                  ))}
+                </div>
+              </div>
+              {workflowError && <p className="workflow-error">{workflowError}</p>}
+              <div className="workflow-layout">
+                <aside className="workflow-list panel">
+                  {visibleWorkflows.map((workflow) => (
+                    <button className={selectedWorkflow?.id === workflow.id ? "selected" : ""} onClick={() => {
+                      setSelectedWorkflowId(workflow.id);
+                      setWorkflowComment("");
+                      setWorkflowError("");
+                    }} key={workflow.id}>
+                      <span className={`workflow-priority ${workflow.priority.toLowerCase()}`}>{workflow.priority}</span>
+                      <div><strong>{workflow.title}</strong><code>{workflow.documentType} {workflow.documentNumber}</code><small>{workflow.module}</small></div>
+                      <span className={`workflow-list-status ${workflow.status.toLowerCase().replaceAll(" ", "-")}`}>{workflow.status}</span>
+                    </button>
+                  ))}
+                  {!visibleWorkflows.length && <p className="workflow-empty">No cases match this filter.</p>}
+                </aside>
+                {selectedWorkflow && (
+                  <div className="workflow-workspace">
+                    <article className="workflow-brief panel">
+                      <div className="workflow-brief-header">
+                        <div><span className="section-kicker">{selectedWorkflow.id}</span><h2>{selectedWorkflow.title}</h2><code>{selectedWorkflow.documentType} {selectedWorkflow.documentNumber}</code></div>
+                        <span className={`workflow-decision-status ${selectedWorkflow.status.toLowerCase().replaceAll(" ", "-")}`}>{selectedWorkflow.status}</span>
+                      </div>
+                      <div className="workflow-facts">
+                        <div><span>Requested by</span><strong>{selectedWorkflow.requestedBy}</strong></div>
+                        <div><span>Requested</span><strong>{new Date(selectedWorkflow.requestedAt).toLocaleString("en-GB")}</strong></div>
+                        <div><span>Due</span><strong>{new Date(selectedWorkflow.dueAt).toLocaleString("en-GB")}</strong></div>
+                        <div><span>Value / exposure</span><strong>{selectedWorkflow.amount}</strong></div>
+                      </div>
+                      <div className="workflow-reason"><strong>Business reason</strong><p>{selectedWorkflow.businessReason}</p></div>
+                      <div className="workflow-risk-grid">
+                        <div><span>Policy rule</span><p>{selectedWorkflow.policyRule}</p></div>
+                        <div><span>Decision risk</span><p>{selectedWorkflow.risk}</p></div>
+                        <div><span>Blocked outcome</span><p>{selectedWorkflow.blockingImpact}</p></div>
+                      </div>
+                    </article>
+                    <div className="workflow-detail-grid">
+                      <article className="workflow-control panel">
+                        <div className="panel-header"><div><span className="section-kicker">Control evidence</span><h2>What should be checked?</h2></div></div>
+                        <div className="workflow-evidence">
+                          {selectedWorkflow.controlEvidence.map((evidence) => <div key={evidence}><Check size={15} /><span>{evidence}</span></div>)}
+                        </div>
+                      </article>
+                      <article className="workflow-route panel">
+                        <div className="panel-header"><div><span className="section-kicker">Approval route</span><h2>Who acts next?</h2></div></div>
+                        {selectedWorkflow.steps.map((step) => (
+                          <div className={`workflow-step ${step.status.toLowerCase()}`} key={step.sequence}>
+                            <span>{step.sequence}</span>
+                            <div><strong>{step.role}</strong><small>{step.assignee}</small>{step.comment && <p>{step.comment}</p>}</div>
+                            <b>{step.decision ?? step.status}</b>
+                          </div>
+                        ))}
+                      </article>
+                    </div>
+                    {selectedWorkflow.allowedActions.length > 0 && (
+                      <article className="workflow-decision panel">
+                        <div><span className="section-kicker">Simulation decision</span><h2>Act as {selectedWorkflow.steps.find((step) => step.status === "Current")?.role}</h2><p>Record a clear rationale. Approval advances to the next required approver; rejection or an information request stops the workflow.</p></div>
+                        <textarea value={workflowComment} onChange={(event) => setWorkflowComment(event.target.value)} maxLength={500} placeholder="Explain the evidence reviewed and the reason for your decision..." />
+                        <div>
+                          <small>{workflowComment.trim().length}/500 characters</small>
+                          {selectedWorkflow.allowedActions.includes("request-information") && <button disabled={workflowLoading || workflowComment.trim().length < 5} onClick={() => submitWorkflowDecision("request-information")}>Request information</button>}
+                          {selectedWorkflow.allowedActions.includes("reject") && <button className="reject" disabled={workflowLoading || workflowComment.trim().length < 5} onClick={() => submitWorkflowDecision("reject")}>Reject</button>}
+                          {selectedWorkflow.allowedActions.includes("approve") && <button className="approve" disabled={workflowLoading || workflowComment.trim().length < 5} onClick={() => submitWorkflowDecision("approve")}>{workflowLoading ? "Saving..." : "Approve"}</button>}
+                        </div>
+                      </article>
+                    )}
+                    <article className="workflow-audit panel">
+                      <div className="panel-header"><div><span className="section-kicker">Immutable evidence</span><h2>Workflow audit trail</h2></div><strong>{selectedWorkflow.auditTrail.length} events</strong></div>
+                      {selectedWorkflow.auditTrail.map((entry) => (
+                        <div key={entry.id}><span>{new Date(entry.at).toLocaleString("en-GB")}</span><div><strong>{entry.action}</strong><small>{entry.actor} / {entry.actorRole}</small><p>{entry.comment}</p></div></div>
+                      ))}
+                    </article>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           {view === "history" && (
             <section className="history-page">
               <div className="page-heading compact">
@@ -1095,6 +1312,20 @@ export function SapWorld({
                   <div><span>Work centres / sources</span><strong>{scenarioMasterData.workCenters.length + scenarioMasterData.sourceRecords.length}</strong><p>{[...scenarioMasterData.workCenters.map((item) => item.id), ...scenarioMasterData.sourceRecords.map((item) => item.id)].join(" / ") || "Not applicable"}</p></div>
                 </div>
               </article>
+              {activeScenarioWorkflow && (
+                <article className="process-workflow panel">
+                  <div>
+                    <span className={`workflow-priority ${activeScenarioWorkflow.priority.toLowerCase()}`}>{activeScenarioWorkflow.priority}</span>
+                    <div><span className="section-kicker">Connected approval</span><h2>{activeScenarioWorkflow.title}</h2><p>{activeScenarioWorkflow.blockingImpact}</p></div>
+                  </div>
+                  <div><span>Status</span><strong>{activeScenarioWorkflow.status}</strong></div>
+                  <div><span>Current approver</span><strong>{activeScenarioWorkflow.steps.find((step) => step.status === "Current")?.role ?? "Workflow complete"}</strong></div>
+                  <button onClick={() => {
+                    setSelectedWorkflowId(activeScenarioWorkflow.id);
+                    setView("workflows");
+                  }}>Open workflow <ArrowRight size={15} /></button>
+                </article>
+              )}
               <div className="impact-grid">
                 {activeScenario.impacts.map((impact) => <article className="panel" key={impact.label}><span className="section-kicker">{impact.label}</span><h3>{impact.title}</h3><p>{impact.description}</p></article>)}
               </div>
@@ -1421,6 +1652,13 @@ export function SapWorld({
                   }
                   if (result.target === "masterdata") {
                     setSelectedMaterialId(result.id);
+                  }
+                  if (
+                    result.target === "workflows" &&
+                    "workflowId" in result &&
+                    typeof result.workflowId === "string"
+                  ) {
+                    setSelectedWorkflowId(result.workflowId);
                   }
                   navigateTo(result.target);
                 }} key={`${result.target}-${result.id}`}>

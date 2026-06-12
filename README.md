@@ -45,6 +45,8 @@ The first release demonstrates a brewery enterprise with:
 - Historical SAP document chains with operational, inventory, and financial impact
 - A normalized document-flow explorer with upstream/downstream links, workflow,
   approvals, inventory movements, and journal-entry evidence
+- An account-backed approval inbox with multi-step routing, evidence review,
+  simulated approve/reject/request-information decisions, and audit trails
 - A filterable simulation-history API at `/api/simulation/events`
 - A filterable cross-module document API at `/api/simulation/documents`
 - Reusable definitions for all eight processes at `/api/simulation/processes`
@@ -97,6 +99,10 @@ Material master data can be queried by material, plant, or SAP material type:
 
 `/api/master-data?plant=BR01&type=ROH`
 
+Authenticated approval cases can be read and filtered through `/api/workflows`.
+Learner decisions are submitted to the same endpoint and advance multi-step
+routes one approver at a time.
+
 Authenticated mentor questions are handled through `POST /api/mentor`. Answers
 include the simulation records used as evidence, and the service does not
 invent facts when the local data cannot support a precise response.
@@ -110,7 +116,8 @@ Authenticated learner progress can be loaded or updated through:
 
 During local development, accounts and sessions are stored in the ignored
 `.data/accounts.json` file, while server progress is stored in
-`.data/learning-progress.json`. Passwords use salted `scrypt` hashes and
+`.data/learning-progress.json` and workflow decisions are stored in
+`.data/workflow-decisions.json`. Passwords use salted `scrypt` hashes and
 browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
 service is unavailable.

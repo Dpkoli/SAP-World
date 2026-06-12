@@ -25,6 +25,7 @@ import {
   processScenarios,
   processSteps,
 } from "@/data/simulation";
+import { workflowAuditTrail, workflowDefinitions } from "@/data/workflows";
 
 export function getEnterpriseSnapshot() {
   return {
@@ -49,6 +50,8 @@ export function getEnterpriseSnapshot() {
       activeProcess: processSteps,
       processScenarios,
       documentFlows,
+      workflows: workflowDefinitions,
+      workflowAuditTrail,
     },
     learning: {
       paths: learningPaths,
