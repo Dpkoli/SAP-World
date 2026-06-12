@@ -7,10 +7,16 @@ export type ScenarioProgress = Record<
   { step: number; complete: boolean }
 >;
 
+export type DiagnosticProgress = Record<
+  ScenarioId,
+  { attempts: number; complete: boolean; completedAt: string | null }
+>;
+
 export type LearnerProgress = {
   learnerId: string;
   activeScenarioId: ScenarioId;
   scenarios: ScenarioProgress;
+  diagnostics: DiagnosticProgress;
   updatedAt: string;
 };
 
@@ -20,6 +26,18 @@ export const defaultScenarioProgress = processScenarios.reduce(
     return result;
   },
   {} as ScenarioProgress,
+);
+
+export const defaultDiagnosticProgress = processScenarios.reduce(
+  (result, scenario) => {
+    result[scenario.id] = {
+      attempts: 0,
+      complete: false,
+      completedAt: null,
+    };
+    return result;
+  },
+  {} as DiagnosticProgress,
 );
 
 export function isScenarioId(value: unknown): value is ScenarioId {
@@ -72,6 +90,7 @@ export function normalizeLearnerProgress(
       ? (value as {
           activeScenarioId?: unknown;
           scenarios?: unknown;
+          diagnostics?: unknown;
           lessonStep?: number;
           lessonComplete?: boolean;
           updatedAt?: unknown;
@@ -87,9 +106,39 @@ export function normalizeLearnerProgress(
       lessonStep: input.lessonStep,
       lessonComplete: input.lessonComplete,
     }),
+    diagnostics: normalizeDiagnosticProgress(input.diagnostics),
     updatedAt:
       typeof input.updatedAt === "string"
         ? input.updatedAt
         : new Date().toISOString(),
   };
+}
+
+export function normalizeDiagnosticProgress(
+  value: unknown,
+): DiagnosticProgress {
+  const saved =
+    typeof value === "object" && value !== null
+      ? (value as Partial<DiagnosticProgress>)
+      : undefined;
+
+  return processScenarios.reduce((result, scenario) => {
+    const candidate = saved?.[scenario.id];
+    const attempts =
+      typeof candidate?.attempts === "number" &&
+      Number.isFinite(candidate.attempts)
+        ? Math.max(0, Math.trunc(candidate.attempts))
+        : 0;
+    const complete = Boolean(candidate?.complete);
+
+    result[scenario.id] = {
+      attempts,
+      complete,
+      completedAt:
+        complete && typeof candidate?.completedAt === "string"
+          ? candidate.completedAt
+          : null,
+    };
+    return result;
+  }, {} as DiagnosticProgress);
 }

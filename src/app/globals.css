@@ -211,6 +211,8 @@ button { cursor: pointer; }
 .path-progress > div, .readiness > div { height: 5px; overflow: hidden; border-radius: 10px; background: #e3e8ec; }
 .path-progress > div span, .readiness > div span { display: block; height: 100%; border-radius: inherit; background: var(--blue); }
 .path-progress strong { color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+.diagnostic-status { display: flex; align-items: center; gap: 6px; min-height: 28px; margin: -5px 0 12px; padding: 7px 8px; border-radius: 6px; background: #fff5e5; color: var(--amber); font-size: 8px; }
+.diagnostic-status.complete { background: #eaf7f0; color: var(--green); }
 .path-card > button { min-height: 36px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--blue); border-radius: 7px; background: white; color: var(--blue); font-size: 10px; font-weight: 700; }
 .path-card > button:hover:not(:disabled) { background: var(--blue); color: white; }
 .path-card > button:disabled { border-color: #d8dee3; background: #f1f3f4; color: #8b969f; cursor: not-allowed; }
@@ -468,6 +470,7 @@ button { cursor: pointer; }
 .diagnosis-options button.correct > span { background: var(--green); color: white; }
 .diagnosis-options button.wrong { border-color: #e5a89d; background: #fdf2f0; color: #a83b29; }
 .diagnosis-options button.wrong > span { background: #c84d38; color: white; }
+.diagnosis-options button:disabled { cursor: default; }
 .diagnosis-feedback { display: flex; align-items: flex-start; gap: 9px; margin-top: 13px; padding: 12px; border-radius: 7px; }
 .diagnosis-feedback.correct { background: #eaf7f0; color: var(--green); }
 .diagnosis-feedback.wrong { background: #fdf0ee; color: #a33b29; }

@@ -47,8 +47,10 @@ import {
   type FiscalYear,
 } from "@/data/history";
 import {
+  defaultDiagnosticProgress,
   defaultScenarioProgress,
   normalizeLearnerProgress,
+  type DiagnosticProgress,
   type ScenarioId,
   type ScenarioProgress,
 } from "@/data/progress";
@@ -92,6 +94,7 @@ export function SapWorld({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
+  const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
   const [tutorMode, setTutorMode] = useState<"guided" | "troubleshoot">("guided");
   const [diagnosisAnswers, setDiagnosisAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
@@ -137,6 +140,7 @@ export function SapWorld({
         const normalized = normalizeLearnerProgress(user.id, source);
         if (!cancelled) {
           setScenarioProgress(normalized.scenarios);
+          setDiagnosticProgress(normalized.diagnostics);
           setActiveScenarioId(normalized.activeScenarioId);
           setSyncStatus(result.found ? "saved" : "saving");
         }
@@ -144,6 +148,7 @@ export function SapWorld({
         const normalized = normalizeLearnerProgress(user.id, localProgress);
         if (!cancelled) {
           setScenarioProgress(normalized.scenarios);
+          setDiagnosticProgress(normalized.diagnostics);
           setActiveScenarioId(normalized.activeScenarioId);
           setSyncStatus("offline");
         }
@@ -160,7 +165,11 @@ export function SapWorld({
 
   useEffect(() => {
     if (!progressLoaded) return;
-    const payload = { activeScenarioId, scenarios: scenarioProgress };
+    const payload = {
+      activeScenarioId,
+      scenarios: scenarioProgress,
+      diagnostics: diagnosticProgress,
+    };
     window.localStorage.setItem(
       `sap-world-progress:${user.id}`,
       JSON.stringify(payload),
@@ -185,7 +194,13 @@ export function SapWorld({
     }, 500);
 
     return () => window.clearTimeout(timer);
-  }, [activeScenarioId, progressLoaded, scenarioProgress, user.id]);
+  }, [
+    activeScenarioId,
+    diagnosticProgress,
+    progressLoaded,
+    scenarioProgress,
+    user.id,
+  ]);
 
   useEffect(() => {
     function handleSearchShortcut(event: KeyboardEvent) {
@@ -219,6 +234,7 @@ export function SapWorld({
   const troubleshootingCase = troubleshootingCaseFor(activeScenarioId);
   const diagnosisAnswer = diagnosisAnswers[activeScenarioId];
   const diagnosisCorrect =
+    diagnosticProgress[activeScenarioId].complete ||
     diagnosisAnswer === troubleshootingCase.correctDiagnosis;
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
   const lessonProgress = activeProgress.complete
@@ -240,6 +256,37 @@ export function SapWorld({
     if (activeQuizAnswer === activeScenario.knowledgeCheck.correctIndex) {
       updateActiveProgress({ complete: true });
     }
+  }
+
+  function recordDiagnosis(index: number) {
+    if (diagnosticProgress[activeScenarioId].complete) return;
+
+    const correct = index === troubleshootingCase.correctDiagnosis;
+    setDiagnosisAnswers((current) => ({
+      ...current,
+      [activeScenarioId]: index,
+    }));
+    setDiagnosticProgress((current) => ({
+      ...current,
+      [activeScenarioId]: {
+        attempts: current[activeScenarioId].attempts + 1,
+        complete: correct,
+        completedAt: correct ? new Date().toISOString() : null,
+      },
+    }));
+  }
+
+  function readinessFor(scenarioId: ScenarioId) {
+    const scenario = processScenarios.find((item) => item.id === scenarioId)!;
+    const lesson = scenarioProgress[scenarioId];
+    const guidedProgress = lesson.complete
+      ? 100
+      : Math.round(((lesson.step + 1) / scenario.tutorSteps.length) * 100);
+    const guidedScore = Math.round(guidedProgress * 0.6);
+    return Math.min(
+      100,
+      guidedScore + (diagnosticProgress[scenarioId].complete ? 40 : 0),
+    );
   }
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -460,13 +507,13 @@ export function SapWorld({
             <section className="academy-page">
               <div className="page-heading compact">
                 <div><p className="eyebrow">Role-based SAP learning</p><h1>Learning centre</h1><p>Build practical skills through connected work performed inside the simulated enterprise.</p></div>
-                <div className="academy-score"><Award size={20} /><div><span>Learning score</span><strong>{120 + Object.values(scenarioProgress).filter((progress) => progress.complete).length * 60} XP</strong></div></div>
+                <div className="academy-score"><Award size={20} /><div><span>Learning score</span><strong>{120 + Object.values(scenarioProgress).filter((progress) => progress.complete).length * 60 + Object.values(diagnosticProgress).filter((progress) => progress.complete).length * 40} XP</strong></div></div>
               </div>
 
               <div className="academy-summary">
                 <article className="panel"><span>Current role</span><strong>Warehouse Operative</strong><small>Burton Brewery · Plant BR01</small></article>
                 <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 7</strong><small>Available learning pathways</small></article>
-                <article className="panel"><span>Process coverage</span><strong>10 modules</strong><small>MM · QM · FI · SD · EWM · PP · CO · PM · HCM · SF</small></article>
+                <article className="panel"><span>Exceptions diagnosed</span><strong>{Object.values(diagnosticProgress).filter((progress) => progress.complete).length} of 7</strong><small>{Object.values(diagnosticProgress).reduce((sum, progress) => sum + progress.attempts, 0)} diagnostic attempts</small></article>
               </div>
 
               <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>{learningPaths.length} pathways</span></div>
@@ -486,6 +533,7 @@ export function SapWorld({
                   const progress = pathState && scenario
                     ? pathState.complete ? 100 : Math.round(((pathState.step + 1) / scenario.tutorSteps.length) * 100)
                     : path.progress;
+                  const diagnostic = scenarioId ? diagnosticProgress[scenarioId] : null;
                   return (
                     <article className={`path-card panel ${available ? "" : "locked"}`} key={path.id}>
                       <div className="path-card-top">
@@ -498,6 +546,12 @@ export function SapWorld({
                       <p>{path.description}</p>
                       <div className="path-meta"><span>{path.role}</span><span>{path.duration}</span><span>{path.lessons} lessons</span></div>
                       <div className="path-progress"><div><span style={{ width: `${progress}%` }} /></div><strong>{progress}%</strong></div>
+                      {diagnostic && (
+                        <div className={diagnostic.complete ? "diagnostic-status complete" : "diagnostic-status"}>
+                          <TriangleAlert size={14} />
+                          <span>{diagnostic.complete ? `Troubleshooting passed in ${diagnostic.attempts} ${diagnostic.attempts === 1 ? "attempt" : "attempts"}` : diagnostic.attempts > 0 ? `${diagnostic.attempts} diagnostic ${diagnostic.attempts === 1 ? "attempt" : "attempts"} · Continue lab` : "Troubleshooting lab not attempted"}</span>
+                        </div>
+                      )}
                       <button
                         disabled={!available}
                         onClick={() => {
@@ -514,14 +568,18 @@ export function SapWorld({
 
               <div className="catalog-heading process-catalog-heading"><div><span className="section-kicker">Enterprise coverage</span><h2>End-to-end process curriculum</h2></div></div>
               <div className="curriculum-table panel">
-                {processCatalog.map((process) => (
+                {processCatalog.map((process, index) => {
+                  const scenarioId = processScenarios[index].id;
+                  const readiness = readinessFor(scenarioId);
+                  return (
                   <div className="curriculum-row" key={process.name}>
                     <span className="process-code">{process.code}</span>
                     <div><strong>{process.name}</strong><small>{process.modules}</small></div>
                     <span>{process.scenarios} scenarios</span>
-                    <div className="readiness"><div><span style={{ width: `${process.readiness}%` }} /></div><strong>{process.readiness}% ready</strong></div>
+                    <div className="readiness"><div><span style={{ width: `${readiness}%` }} /></div><strong>{readiness}% ready</strong></div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
@@ -821,7 +879,7 @@ export function SapWorld({
                   <aside className="case-brief panel">
                     <div className="case-brief-header">
                       <span className={`severity-badge ${troubleshootingCase.severity.toLowerCase()}`}>{troubleshootingCase.severity}</span>
-                      <code>{troubleshootingCase.id}</code>
+                      <code>{troubleshootingCase.id} · {diagnosticProgress[activeScenarioId].attempts} {diagnosticProgress[activeScenarioId].attempts === 1 ? "attempt" : "attempts"}</code>
                     </div>
                     <span className="section-kicker">System symptom</span>
                     <h2>{troubleshootingCase.symptom}</h2>
@@ -849,11 +907,15 @@ export function SapWorld({
                       <div className="diagnosis-options">
                         {troubleshootingCase.diagnoses.map((diagnosis, index) => {
                           const selected = diagnosisAnswer === index;
-                          const correct = selected && diagnosisCorrect;
+                          const correct =
+                            (selected && diagnosisCorrect) ||
+                            (diagnosticProgress[activeScenarioId].complete &&
+                              index === troubleshootingCase.correctDiagnosis);
                           return (
                             <button
                               className={correct ? "correct" : selected ? "wrong" : ""}
-                              onClick={() => setDiagnosisAnswers((current) => ({ ...current, [activeScenarioId]: index }))}
+                              disabled={diagnosticProgress[activeScenarioId].complete}
+                              onClick={() => recordDiagnosis(index)}
                               key={diagnosis}
                             >
                               <span>{String.fromCharCode(65 + index)}</span>{diagnosis}
@@ -861,7 +923,8 @@ export function SapWorld({
                           );
                         })}
                       </div>
-                      {diagnosisAnswer !== null && (
+                      {(diagnosisAnswer !== null ||
+                        diagnosticProgress[activeScenarioId].complete) && (
                         <div className={diagnosisCorrect ? "diagnosis-feedback correct" : "diagnosis-feedback wrong"}>
                           {diagnosisCorrect ? <Check size={18} /> : <TriangleAlert size={18} />}
                           <p><strong>{diagnosisCorrect ? "Root cause confirmed" : "That does not explain all the evidence"}</strong>{diagnosisCorrect ? troubleshootingCase.explanation : "Compare the proposed cause with each SAP finding, then choose again."}</p>

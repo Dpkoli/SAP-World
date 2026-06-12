@@ -19,6 +19,8 @@ The first release demonstrates a brewery enterprise with:
 - A guided employee-onboarding lesson spanning HCM, SuccessFactors, payroll, FI, and CO
 - Interactive troubleshooting labs for P2P, O2C, production, close, quality,
   maintenance, and payroll failures
+- Account-backed diagnostic attempts, exception completion, XP, and dynamic
+  process-readiness scoring
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
@@ -80,6 +82,10 @@ because serverless filesystems are not durable.
 Production cookies are secure by default. For HTTP-only local production
 testing, set `SAP_WORLD_INSECURE_COOKIES=true`; never use this override on a
 hosted environment.
+
+Learner readiness is calculated from demonstrated performance rather than a
+static catalogue value: guided transaction progress contributes 60%, and a
+successfully diagnosed troubleshooting case contributes the remaining 40%.
 
 ## Quality checks
 
