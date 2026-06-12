@@ -47,6 +47,10 @@ import {
   type FiscalYear,
 } from "@/data/history";
 import {
+  mentorSuggestions,
+  type MentorSource,
+} from "@/data/mentor";
+import {
   defaultIndustryId,
   industryById,
   industryEnterprises,
@@ -64,7 +68,6 @@ import {
   activity,
   kpis,
   learningPaths,
-  mentorAnswers,
   processCatalog,
   processScenarios,
 } from "@/data/simulation";
@@ -117,8 +120,11 @@ export function SapWorld({
   const [selectedEventId, setSelectedEventId] = useState("EVT-2604-035");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState(
-    "I’m connected to the Burton Brewery simulation. Ask me about this goods receipt, its accounting impact, or what happens next.",
+    "I’m grounded in the Burton Brewery simulation. Ask about the active transaction, its document flow, accounting or inventory impact, or a process exception.",
   );
+  const [mentorSources, setMentorSources] = useState<MentorSource[]>([]);
+  const [mentorLoading, setMentorLoading] = useState(false);
+  const [mentorError, setMentorError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -229,14 +235,41 @@ export function SapWorld({
     return () => window.removeEventListener("keydown", handleSearchShortcut);
   }, []);
 
-  function askMentor(prompt: string) {
+  async function askMentor(prompt: string) {
     const cleanPrompt = prompt.trim();
-    if (!cleanPrompt) return;
-    setAnswer(
-      mentorAnswers[cleanPrompt] ??
-        `This question relates to ${activeScenario.code}, the active ${activeScenario.title} scenario. SAP connects its operational documents, inventory movements, and financial postings so you can trace the complete business impact.`,
-    );
+    if (cleanPrompt.length < 3 || mentorLoading) return;
+    setMentorLoading(true);
+    setMentorError("");
     setQuestion("");
+    try {
+      const response = await fetch("/api/mentor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: cleanPrompt,
+          scenarioId: activeScenarioId,
+          step: activeProgress.step,
+        }),
+      });
+      const result = (await response.json()) as {
+        answer?: string;
+        sources?: MentorSource[];
+        error?: string;
+      };
+      if (!response.ok || !result.answer) {
+        throw new Error(result.error ?? "Mentor response unavailable.");
+      }
+      setAnswer(result.answer);
+      setMentorSources(result.sources ?? []);
+    } catch (error) {
+      setMentorError(
+        error instanceof Error
+          ? error.message
+          : "Mentor response unavailable.",
+      );
+    } finally {
+      setMentorLoading(false);
+    }
   }
 
   const activeScenario =
@@ -1065,18 +1098,33 @@ export function SapWorld({
         <aside className="mentor-panel">
           <div className="mentor-header">
             <div className="mentor-avatar"><Sparkles size={19} /></div>
-            <div><strong>SAP Mentor</strong><span><i /> Context-aware assistant</span></div>
+            <div><strong>SAP Mentor</strong><span><i /> Grounded in simulation data</span></div>
             <button onClick={() => setMentorOpen(false)}><X size={19} /></button>
           </div>
-          <div className="mentor-context"><Factory size={16} /> Burton Brewery · {activeScenario.code}</div>
+          <div className="mentor-context"><Factory size={16} /> {activeEnterprise.enterprise} · {activeScenario.code}</div>
           <div className="mentor-body">
-            <div className="mentor-message">{answer}</div>
+            <div className={mentorLoading ? "mentor-message loading" : "mentor-message"}>
+              {mentorLoading ? "Reviewing the connected SAP records..." : answer}
+            </div>
+            {mentorError && <div className="mentor-error" role="alert">{mentorError}</div>}
+            {mentorSources.length > 0 && (
+              <div className="mentor-sources">
+                <span>Evidence used</span>
+                {mentorSources.map((source) => (
+                  <div key={source.id}>
+                    <span>{source.type}</span>
+                    <strong>{source.title}</strong>
+                    <code>{source.reference}</code>
+                  </div>
+                ))}
+              </div>
+            )}
             <p>Suggested questions</p>
-            {Object.keys(mentorAnswers).map((prompt) => <button key={prompt} onClick={() => askMentor(prompt)}>{prompt}<ChevronRight size={14} /></button>)}
+            {mentorSuggestions[activeScenarioId].map((prompt) => <button disabled={mentorLoading} key={prompt} onClick={() => void askMentor(prompt)}>{prompt}<ChevronRight size={14} /></button>)}
           </div>
-          <form className="mentor-input" onSubmit={(event) => { event.preventDefault(); askMentor(question); }}>
-            <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about this transaction..." />
-            <button type="submit" aria-label="Send question"><Send size={17} /></button>
+          <form className="mentor-input" onSubmit={(event) => { event.preventDefault(); void askMentor(question); }}>
+            <input maxLength={500} disabled={mentorLoading} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about this transaction..." />
+            <button disabled={mentorLoading || question.trim().length < 3} type="submit" aria-label="Send question"><Send size={17} /></button>
           </form>
         </aside>
       )}

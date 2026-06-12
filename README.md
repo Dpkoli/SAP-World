@@ -23,7 +23,8 @@ The first release demonstrates a brewery enterprise with:
 - Account-backed diagnostic attempts, exception completion, XP, and dynamic
   process-readiness scoring
 - Step-by-step explanations of why each action is performed
-- A context-aware SAP mentor prototype
+- An authenticated SAP mentor grounded in process, exception, enterprise, and
+  historical simulation evidence
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
 - Learner registration and sign-in with hashed passwords and secure sessions
 - Server-backed lesson progress with an automatic browser fallback
@@ -68,6 +69,13 @@ Process flows and tutor content can be queried by process (`p2p`, `o2c`,
 `ptp`, `r2r`, `qm`, `pm`, or `h2r`):
 
 `/api/simulation/processes?id=o2c`
+
+Authenticated mentor questions are handled through `POST /api/mentor`. Answers
+include the simulation records used as evidence, and the service does not
+invent facts when the local data cannot support a precise response.
+The current implementation uses deterministic local retrieval, so it requires
+no external AI key; a production model can later consume the same grounded
+response contract.
 
 Authenticated learner progress can be loaded or updated through:
 
