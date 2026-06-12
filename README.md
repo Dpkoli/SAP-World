@@ -17,6 +17,8 @@ The first release demonstrates a brewery enterprise with:
 - A guided incoming-inspection lesson spanning QM, MM, supplier quality, and stock disposition
 - A guided emergency-maintenance lesson spanning PM, MM, CO, safety, and reliability feedback
 - A guided employee-onboarding lesson spanning HCM, SuccessFactors, payroll, FI, and CO
+- Interactive troubleshooting labs for P2P, O2C, production, close, quality,
+  maintenance, and payroll failures
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM

@@ -60,6 +60,7 @@ import {
   processCatalog,
   processScenarios,
 } from "@/data/simulation";
+import { troubleshootingCaseFor } from "@/data/troubleshooting";
 
 type View =
   | "overview"
@@ -92,6 +93,8 @@ export function SapWorld({
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
+  const [tutorMode, setTutorMode] = useState<"guided" | "troubleshoot">("guided");
+  const [diagnosisAnswers, setDiagnosisAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "saved" | "offline">("loading");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -213,6 +216,10 @@ export function SapWorld({
     processScenarios[0];
   const activeProgress = scenarioProgress[activeScenarioId];
   const activeQuizAnswer = quizAnswers[activeScenarioId];
+  const troubleshootingCase = troubleshootingCaseFor(activeScenarioId);
+  const diagnosisAnswer = diagnosisAnswers[activeScenarioId];
+  const diagnosisCorrect =
+    diagnosisAnswer === troubleshootingCase.correctDiagnosis;
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
   const lessonProgress = activeProgress.complete
     ? 100
@@ -729,8 +736,8 @@ export function SapWorld({
           {view === "tutor" && (
             <section className="tutor-page">
               <div className="page-heading compact">
-                <div><p className="eyebrow">Guided mode · {activeScenario.module}</p><h1>{activeScenario.tutorTitle}</h1><p>{activeScenario.tutorDescription}</p></div>
-                <span className="lesson-count">Step {activeProgress.step + 1} of {activeScenario.tutorSteps.length}</span>
+                <div><p className="eyebrow">{tutorMode === "guided" ? "Guided transaction" : "Troubleshooting lab"} · {activeScenario.module}</p><h1>{tutorMode === "guided" ? activeScenario.tutorTitle : troubleshootingCase.title}</h1><p>{tutorMode === "guided" ? activeScenario.tutorDescription : troubleshootingCase.businessContext}</p></div>
+                <span className="lesson-count">{tutorMode === "guided" ? `Step ${activeProgress.step + 1} of ${activeScenario.tutorSteps.length}` : troubleshootingCase.id}</span>
               </div>
               <div className="scenario-tabs tutor-scenario-tabs">
                 {processScenarios.map((scenario) => (
@@ -742,6 +749,11 @@ export function SapWorld({
                   </button>
                 ))}
               </div>
+              <div className="tutor-mode-switch" role="tablist" aria-label="Tutor mode">
+                <button className={tutorMode === "guided" ? "active" : ""} onClick={() => setTutorMode("guided")}><GraduationCap size={16} /><span><strong>Guided transaction</strong><small>Learn the correct SAP process step by step</small></span></button>
+                <button className={tutorMode === "troubleshoot" ? "active" : ""} onClick={() => setTutorMode("troubleshoot")}><TriangleAlert size={16} /><span><strong>Troubleshooting lab</strong><small>Diagnose a realistic process failure</small></span></button>
+              </div>
+              {tutorMode === "guided" ? (
               <div className="tutor-layout">
                 <aside className="lesson-nav panel">
                   <div className="lesson-nav-title"><span>Lesson progress</span><strong>{lessonProgress}%</strong></div>
@@ -795,7 +807,7 @@ export function SapWorld({
                       )}
                     </div>
                   )}
-                  {activeProgress.complete && <div className="completion-banner"><Award size={22} /><div><strong>Lesson completed</strong><span>Your result and progress are saved on this device.</span></div></div>}
+                  {activeProgress.complete && <div className="completion-banner"><Award size={22} /><div><strong>Lesson completed</strong><span>Your result and progress are saved to your learner account.</span></div></div>}
                   <div className="lesson-actions">
                     <button disabled={activeProgress.step === 0} onClick={() => updateActiveProgress({ step: activeProgress.step - 1 })}>Previous</button>
                     <button className="primary-button" disabled={activeProgress.step === activeScenario.tutorSteps.length - 1 && activeQuizAnswer !== activeScenario.knowledgeCheck.correctIndex} onClick={handleTutorNext}>
@@ -804,6 +816,76 @@ export function SapWorld({
                   </div>
                 </article>
               </div>
+              ) : (
+                <div className="troubleshooting-layout">
+                  <aside className="case-brief panel">
+                    <div className="case-brief-header">
+                      <span className={`severity-badge ${troubleshootingCase.severity.toLowerCase()}`}>{troubleshootingCase.severity}</span>
+                      <code>{troubleshootingCase.id}</code>
+                    </div>
+                    <span className="section-kicker">System symptom</span>
+                    <h2>{troubleshootingCase.symptom}</h2>
+                    <p>{troubleshootingCase.businessContext}</p>
+                    <div className="case-impact-preview">
+                      <div><Factory size={16} /><span><strong>Operational</strong>{troubleshootingCase.impact.operational}</span></div>
+                      <div><Package size={16} /><span><strong>Inventory</strong>{troubleshootingCase.impact.inventory}</span></div>
+                      <div><TrendingUp size={16} /><span><strong>Financial</strong>{troubleshootingCase.impact.financial}</span></div>
+                    </div>
+                  </aside>
+
+                  <div className="diagnostic-workspace">
+                    <article className="panel evidence-panel">
+                      <div className="diagnostic-heading"><Search size={19} /><div><span>Step 1</span><h2>Inspect the SAP evidence</h2></div></div>
+                      <div className="evidence-grid">
+                        {troubleshootingCase.evidence.map((item) => (
+                          <div key={item.source}><span>{item.source}</span><strong>{item.finding}</strong></div>
+                        ))}
+                      </div>
+                    </article>
+
+                    <article className="panel diagnosis-panel">
+                      <div className="diagnostic-heading"><TriangleAlert size={19} /><div><span>Step 2</span><h2>Identify the root cause</h2></div></div>
+                      <p>Which diagnosis best explains all the evidence without inventing a transaction?</p>
+                      <div className="diagnosis-options">
+                        {troubleshootingCase.diagnoses.map((diagnosis, index) => {
+                          const selected = diagnosisAnswer === index;
+                          const correct = selected && diagnosisCorrect;
+                          return (
+                            <button
+                              className={correct ? "correct" : selected ? "wrong" : ""}
+                              onClick={() => setDiagnosisAnswers((current) => ({ ...current, [activeScenarioId]: index }))}
+                              key={diagnosis}
+                            >
+                              <span>{String.fromCharCode(65 + index)}</span>{diagnosis}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {diagnosisAnswer !== null && (
+                        <div className={diagnosisCorrect ? "diagnosis-feedback correct" : "diagnosis-feedback wrong"}>
+                          {diagnosisCorrect ? <Check size={18} /> : <TriangleAlert size={18} />}
+                          <p><strong>{diagnosisCorrect ? "Root cause confirmed" : "That does not explain all the evidence"}</strong>{diagnosisCorrect ? troubleshootingCase.explanation : "Compare the proposed cause with each SAP finding, then choose again."}</p>
+                        </div>
+                      )}
+                    </article>
+
+                    {diagnosisCorrect && (
+                      <article className="panel recovery-panel">
+                        <div className="diagnostic-heading"><Check size={19} /><div><span>Step 3</span><h2>Execute the controlled recovery</h2></div></div>
+                        <div className="recovery-steps">
+                          {troubleshootingCase.recoverySteps.map((step, index) => (
+                            <div key={step.action}>
+                              <span>{index + 1}</span>
+                              <div><h3>{step.action}</h3><code>{step.sap}</code><p>{step.why}</p></div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="prevention-note"><Sparkles size={18} /><p><strong>Prevent recurrence</strong>{troubleshootingCase.prevention}</p></div>
+                      </article>
+                    )}
+                  </div>
+                </div>
+              )}
             </section>
           )}
         </div>
