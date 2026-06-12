@@ -37,7 +37,7 @@ export type KnowledgeCheck = {
 };
 
 export type ProcessScenario = {
-  id: "p2p" | "o2c" | "ptp";
+  id: "p2p" | "o2c" | "ptp" | "r2r";
   code: string;
   title: string;
   scenario: string;
@@ -276,6 +276,104 @@ export const planToProduceTutorSteps: TutorStep[] = [
   },
 ];
 
+export const recordToReportSteps: ProcessStep[] = [
+  { id: "SUB", label: "Subledger Reconciliation", document: "REC-P03-0626", module: "FI-AP / FI-AR", status: "complete" },
+  { id: "ACC", label: "Accruals & Deferrals", document: "1900005184", module: "FI-GL", status: "complete" },
+  { id: "ALL", label: "Cost Allocations", document: "CO-CYC-P03", module: "CO", status: "complete" },
+  { id: "VAR", label: "Variance Calculation", document: "VAR-BR01-P03", module: "CO / PP", status: "active" },
+  { id: "SET", label: "Order Settlement", document: "Pending", module: "CO / FI", status: "waiting" },
+  { id: "CLS", label: "Period Close", document: "Pending", module: "FI / CO", status: "waiting" },
+  { id: "RPT", label: "Financial Reporting", document: "Pending", module: "FI / BW", status: "waiting" },
+];
+
+export const recordToReportTutorSteps: TutorStep[] = [
+  {
+    number: 1,
+    title: "Review the closing task list",
+    instruction:
+      "Open Schedule General Ledger Jobs and review closing task list BCB1-P03-2026. Confirm that AP, AR, inventory, and asset subledger tasks are ready.",
+    why:
+      "The general ledger can only be trusted when the operational subledgers are complete and reconciled. The task list controls ownership, dependencies, and evidence.",
+    result:
+      "SAP shows AP, AR, inventory, and bank reconciliations complete, with production variance and settlement still outstanding.",
+    fields: [
+      { label: "Company code", value: "BCB1" },
+      { label: "Fiscal period", value: "03 / 2026" },
+      { label: "Closing task list", value: "BCB1-P03-2026" },
+    ],
+  },
+  {
+    number: 2,
+    title: "Post the utilities accrual",
+    instruction:
+      "Open Post General Journal Entries, use document type SA, and accrue £84,600 of unbilled electricity and gas to cost centre BR01-UTIL.",
+    why:
+      "The expense belongs to the current period even though the supplier invoice has not arrived. Accrual accounting matches cost to the period that consumed the service.",
+    result:
+      "Journal entry 1900005184 debits utilities expense and credits accrued liabilities, with automatic reversal on 1 July 2026.",
+    fields: [
+      { label: "Debit", value: "610410 Utilities £84,600" },
+      { label: "Credit", value: "219100 Accrued liabilities £84,600" },
+      { label: "Reversal date", value: "01.07.2026" },
+    ],
+  },
+  {
+    number: 3,
+    title: "Execute cost-centre allocations",
+    instruction:
+      "Run allocation cycle CO-CYC-P03 for canteen, utilities, maintenance support, and shared warehouse costs. Review sender credits and receiver debits.",
+    why:
+      "Shared service costs must move to the production and commercial areas that consumed them so product and departmental profitability are complete.",
+    result:
+      "£312,400 is allocated across brewing, packaging, warehousing, sales, and administration cost centres.",
+    fields: [
+      { label: "Controlling area", value: "BCB1" },
+      { label: "Allocation cycle", value: "CO-CYC-P03" },
+      { label: "Allocated value", value: "£312,400" },
+    ],
+  },
+  {
+    number: 4,
+    title: "Calculate production variances",
+    instruction:
+      "Open Schedule Product Costing Jobs and run variance calculation for plant BR01, period 03, order group BREW-CLOSED.",
+    why:
+      "Variance calculation explains the difference between the standard cost credited at goods receipt and the actual material, labour, machine, and overhead debits on each order.",
+    result:
+      "SAP identifies £42,780 total variance, including £18,600 adverse material usage and £9,400 favourable efficiency variance.",
+    fields: [
+      { label: "Plant", value: "BR01" },
+      { label: "Order group", value: "BREW-CLOSED" },
+      { label: "Net variance", value: "£42,780 adverse" },
+    ],
+  },
+  {
+    number: 5,
+    title: "Settle production orders",
+    instruction:
+      "Run settlement for the technically completed production orders and review the FI and CO documents before releasing the job.",
+    why:
+      "Settlement clears remaining production-order balances to price-difference, inventory, or profitability objects according to the settlement rule.",
+    result:
+      "Production variances are posted to the appropriate accounts and all 38 eligible orders have zero residual balance.",
+  },
+  {
+    number: 6,
+    title: "Close the period and validate reports",
+    instruction:
+      "Confirm all close checks, restrict postings for period 03, then review the trial balance, profit and loss statement, balance sheet, and profit-centre report.",
+    why:
+      "Period control prevents late operational postings from changing approved results. Financial statements confirm that the enterprise is balanced and performance is explainable.",
+    result:
+      "Period 03 closes with £5.14M revenue, 31.6% gross margin, £0.61M operating profit, and balanced debit/credit totals.",
+    fields: [
+      { label: "Revenue", value: "£5.14M" },
+      { label: "Gross margin", value: "31.6%" },
+      { label: "Operating profit", value: "£0.61M" },
+    ],
+  },
+];
+
 export const activity = [
   { time: "09:42", title: "Goods receipt posted", detail: "20,000 KG Pale Ale Malt · PO 4500011842", module: "MM" },
   { time: "09:18", title: "Inspection lot created", detail: "Incoming raw material · Lot 0400001844", module: "QM" },
@@ -296,6 +394,12 @@ export const mentorAnswers: Record<string, string> = {
     "The preliminary cost estimate is calculated when the production order is created. Actual material costs post at goods issue, activity costs post during confirmation, and the remaining balance is analyzed and settled through CO.",
   "When does finished-goods inventory increase?":
     "Finished-goods inventory increases when a goods receipt is posted against the production order. SAP debits finished-goods inventory and credits the production order, normally at the material's standard price.",
+  "Why do we post an accrual?":
+    "An accrual recognizes an expense and liability in the period that consumed the service even when the supplier invoice has not arrived. This prevents profit from being overstated and supports a reliable period close.",
+  "Why are production orders settled?":
+    "Goods issues, confirmations, overhead, and goods receipts leave costs and credits on production orders. Variance calculation explains the difference, and settlement transfers the remaining balance to the correct inventory, price-difference, or profitability object.",
+  "Why lock the accounting period?":
+    "After close checks and reporting are approved, posting-period control prevents late transactions from changing published results. Authorized finance roles can open controlled adjustment periods when necessary.",
 };
 
 export const learningPaths: LearningPath[] = [
@@ -349,9 +453,9 @@ export const learningPaths: LearningPath[] = [
     role: "Financial Accountant",
     level: "Advanced",
     duration: "90 min",
-    lessons: 11,
+    lessons: 6,
     progress: 0,
-    status: "coming-soon",
+    status: "available",
     description:
       "Reconcile subledgers, post accruals, allocate costs, review variances, and close the period.",
   },
@@ -361,7 +465,7 @@ export const processCatalog = [
   { name: "Procure to Pay", code: "P2P", modules: "MM · QM · FI", scenarios: 8, readiness: 72 },
   { name: "Order to Cash", code: "O2C", modules: "SD · EWM · FI", scenarios: 6, readiness: 68 },
   { name: "Plan to Produce", code: "PTP", modules: "PP · MM · CO", scenarios: 7, readiness: 64 },
-  { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 16 },
+  { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 61 },
 ];
 
 export const knowledgeCheck: KnowledgeCheck = {
@@ -401,6 +505,19 @@ export const planToProduceKnowledgeCheck: KnowledgeCheck = {
   correctIndex: 0,
   explanation:
     "MRP uses the bill of material to calculate component quantities and dates from the planned finished-product supply. Procurement proposals then cover any component shortages.",
+};
+
+export const recordToReportKnowledgeCheck: KnowledgeCheck = {
+  question:
+    "Why is the unbilled utilities cost accrued before closing the period?",
+  options: [
+    "To recognize the expense in the period that consumed the utilities",
+    "To create a purchase order automatically for the energy supplier",
+    "To increase finished-goods inventory by the same amount",
+  ],
+  correctIndex: 0,
+  explanation:
+    "The accrual follows the matching principle: current-period operations consumed the utilities, so the expense and liability are recognized now and reversed when the supplier invoice is expected.",
 };
 
 export const processScenarios: ProcessScenario[] = [
@@ -468,6 +585,28 @@ export const processScenarios: ProcessScenario[] = [
       { label: "Inventory impact", title: "Requirements and reservations created", description: "BOM explosion creates dated component demand; production-order conversion reserves materials for execution." },
       { label: "Accounting impact", title: "Planned cost baseline £31,480", description: "The production order carries planned material, labour, machine, and overhead costs; actual postings begin during execution." },
       { label: "Operational impact", title: "Brew House 2 scheduled", description: "Capacity, component availability, operation dates, and warehouse staging are coordinated before release." },
+    ],
+  },
+  {
+    id: "r2r",
+    code: "R2R-2026-P03",
+    title: "Record to Report",
+    scenario: "June month-end close",
+    partyLabel: "Company code / period",
+    party: "BCB1 / 03-2026",
+    value: "£5.14M revenue / £0.61M operating profit",
+    module: "SAP FI / CO",
+    tutorTitle: "Complete the month-end close",
+    tutorDescription: "Reconcile operations, recognize period costs, settle production, and publish trusted financial results.",
+    appName: "Schedule General Ledger Jobs",
+    transactionCode: "FAGL_FCV / F.01",
+    steps: recordToReportSteps,
+    tutorSteps: recordToReportTutorSteps,
+    knowledgeCheck: recordToReportKnowledgeCheck,
+    impacts: [
+      { label: "Inventory impact", title: "Valuation and variances finalized", description: "Inventory balances reconcile to the material ledger while production variances are calculated and settled." },
+      { label: "Accounting impact", title: "Period 03 results completed", description: "Accruals, allocations, settlements, and subledger balances produce a balanced and period-complete general ledger." },
+      { label: "Operational impact", title: "Performance becomes explainable", description: "Profit-centre, product, customer, and cost-centre reporting show how operations created the period result." },
     ],
   },
 ];
