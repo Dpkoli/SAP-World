@@ -37,7 +37,7 @@ export type KnowledgeCheck = {
 };
 
 export type ProcessScenario = {
-  id: "p2p" | "o2c";
+  id: "p2p" | "o2c" | "ptp";
   code: string;
   title: string;
   scenario: string;
@@ -193,6 +193,89 @@ export const orderToCashTutorSteps: TutorStep[] = [
   },
 ];
 
+export const planToProduceSteps: ProcessStep[] = [
+  { id: "DEM", label: "Planned Demand", document: "VSF-260624", module: "PP / IBP", status: "complete" },
+  { id: "MRP", label: "MRP Run", document: "MRP-BR01-0612", module: "PP / MM", status: "complete" },
+  { id: "PLN", label: "Planned Order", document: "3000048217", module: "PP", status: "complete" },
+  { id: "PRD", label: "Production Order", document: "1000051842", module: "PP / CO", status: "active" },
+  { id: "STG", label: "Component Staging", document: "Pending", module: "MM / EWM", status: "waiting" },
+  { id: "CNF", label: "Confirmation & Receipt", document: "Pending", module: "PP / MM", status: "waiting" },
+  { id: "SET", label: "Order Settlement", document: "Pending", module: "CO / FI", status: "waiting" },
+];
+
+export const planToProduceTutorSteps: TutorStep[] = [
+  {
+    number: 1,
+    title: "Open Schedule MRP Runs",
+    instruction:
+      "In SAP Fiori, open Schedule MRP Runs. Create a planning run for plant BR01 using scope MRP Live. In SAP GUI, use MD01N.",
+    why:
+      "MRP compares independent demand, customer requirements, current stock, receipts, lead times, and lot sizes to calculate what must be produced or purchased.",
+    result:
+      "A plant-level planning job is prepared for the Burton Brewery without changing master data.",
+    fields: [
+      { label: "Plant", value: "BR01" },
+      { label: "Planning scope", value: "MRP Live" },
+      { label: "Planning mode", value: "Adapt planning data" },
+    ],
+  },
+  {
+    number: 2,
+    title: "Execute and review MRP results",
+    instruction:
+      "Start the run and open its material results. Review FG-AMBER-KEG-50 and the shortage date caused by planned demand for 1,000 kegs.",
+    why:
+      "The planner must validate the system proposal before committing capacity and materials. Exception messages identify timing or quantity risks.",
+    result:
+      "SAP creates planned order 3000048217 for 500 HL of Amber Ale and dependent requirements for malt, hops, yeast, kegs, and labels.",
+    fields: [
+      { label: "Finished product", value: "FG-AMBER-KEG-50" },
+      { label: "Planned quantity", value: "500 HL" },
+      { label: "Finish date", value: "24.06.2026" },
+    ],
+  },
+  {
+    number: 3,
+    title: "Check capacity and component availability",
+    instruction:
+      "Open the planned order, review Brew House 2 capacity, then run the component availability check for the BOM requirements.",
+    why:
+      "A feasible order needs both work-centre capacity and available components. Releasing an infeasible order would create shop-floor disruption.",
+    result:
+      "Capacity is available for the selected dates and all components are confirmed except CO2, which has a rescheduling proposal.",
+    fields: [
+      { label: "Work centre", value: "BR01-BREW-02" },
+      { label: "Recipe / BOM", value: "AMBER-ALE-01" },
+      { label: "Exception", value: "Reschedule CO2 receipt" },
+    ],
+  },
+  {
+    number: 4,
+    title: "Convert to a production order",
+    instruction:
+      "Choose Convert, use production-order type PP01, verify the scheduling dates and batch requirement, then save.",
+    why:
+      "Conversion changes a planning proposal into an executable and cost-controlled manufacturing order with reservations and operations.",
+    result:
+      "Production order 1000051842 is created with component reservations, operation dates, and a preliminary cost estimate.",
+    fields: [
+      { label: "Order type", value: "PP01" },
+      { label: "Production order", value: "1000051842" },
+      { label: "Planned cost", value: "£31,480" },
+    ],
+  },
+  {
+    number: 5,
+    title: "Release the production order",
+    instruction:
+      "Open Manage Production Orders, select order 1000051842, run the final availability check, and choose Release.",
+    why:
+      "Release authorizes component issue, shop-floor confirmation, activity posting, goods receipt, and quality processing.",
+    result:
+      "The order status becomes REL and warehouse staging requirements are generated for the brewing components.",
+  },
+];
+
 export const activity = [
   { time: "09:42", title: "Goods receipt posted", detail: "20,000 KG Pale Ale Malt · PO 4500011842", module: "MM" },
   { time: "09:18", title: "Inspection lot created", detail: "Incoming raw material · Lot 0400001844", module: "QM" },
@@ -207,6 +290,12 @@ export const mentorAnswers: Record<string, string> = {
     "At goods receipt, SAP debits Raw Material Inventory and credits the GR/IR clearing account using the purchase order value. The supplier liability is not posted until invoice verification.",
   "What happens next?":
     "A quality technician records moisture, protein, and contamination results. If accepted, a usage decision moves the batch to unrestricted stock. Invoice verification can then match the PO, receipt, and supplier invoice.",
+  "Why did MRP create this planned order?":
+    "Demand for Amber Ale exceeded available stock and already scheduled receipts by the shortage date. MRP used the material master lot size, in-house production time, BOM, and routing to create planned order 3000048217 for 500 HL.",
+  "When are production costs posted?":
+    "The preliminary cost estimate is calculated when the production order is created. Actual material costs post at goods issue, activity costs post during confirmation, and the remaining balance is analyzed and settled through CO.",
+  "When does finished-goods inventory increase?":
+    "Finished-goods inventory increases when a goods receipt is posted against the production order. SAP debits finished-goods inventory and credits the production order, normally at the material's standard price.",
 };
 
 export const learningPaths: LearningPath[] = [
@@ -245,10 +334,10 @@ export const learningPaths: LearningPath[] = [
     module: "PP + MM + CO",
     role: "Production Planner",
     level: "Intermediate",
-    duration: "70 min",
-    lessons: 9,
+    duration: "60 min",
+    lessons: 5,
     progress: 0,
-    status: "coming-soon",
+    status: "available",
     description:
       "Run MRP, convert planned supply, stage components, confirm production, and settle the order.",
   },
@@ -271,7 +360,7 @@ export const learningPaths: LearningPath[] = [
 export const processCatalog = [
   { name: "Procure to Pay", code: "P2P", modules: "MM · QM · FI", scenarios: 8, readiness: 72 },
   { name: "Order to Cash", code: "O2C", modules: "SD · EWM · FI", scenarios: 6, readiness: 68 },
-  { name: "Plan to Produce", code: "PTP", modules: "PP · MM · CO", scenarios: 7, readiness: 24 },
+  { name: "Plan to Produce", code: "PTP", modules: "PP · MM · CO", scenarios: 7, readiness: 64 },
   { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 16 },
 ];
 
@@ -299,6 +388,19 @@ export const orderToCashKnowledgeCheck: KnowledgeCheck = {
   correctIndex: 2,
   explanation:
     "Post goods issue credits finished-goods inventory and debits cost of goods sold. Billing later records customer receivables and revenue.",
+};
+
+export const planToProduceKnowledgeCheck: KnowledgeCheck = {
+  question:
+    "Why does MRP create dependent requirements for malt and packaging when it proposes the finished-product planned order?",
+  options: [
+    "The BOM explodes the finished-product quantity into required components",
+    "The sales order directly creates purchase orders for every component",
+    "The work centre automatically owns all raw-material stock",
+  ],
+  correctIndex: 0,
+  explanation:
+    "MRP uses the bill of material to calculate component quantities and dates from the planned finished-product supply. Procurement proposals then cover any component shortages.",
 };
 
 export const processScenarios: ProcessScenario[] = [
@@ -344,6 +446,28 @@ export const processScenarios: ProcessScenario[] = [
       { label: "Inventory impact", title: "400 kegs allocated", description: "Available-to-promise confirms finished goods at DC01; stock is reduced only when goods issue is posted." },
       { label: "Accounting impact", title: "No posting at order entry", description: "Sales-order creation records a commercial commitment without posting to the general ledger." },
       { label: "Operational impact", title: "Warehouse demand created", description: "The confirmed schedule lines become due for outbound delivery, picking, loading, and transport planning." },
+    ],
+  },
+  {
+    id: "ptp",
+    code: "PTP-2026-0068",
+    title: "Plan to Produce",
+    scenario: "Amber Ale replenishment",
+    partyLabel: "Finished product",
+    party: "FG-AMBER-KEG-50",
+    value: "500 HL / £31,480 planned cost",
+    module: "SAP PP",
+    tutorTitle: "Run MRP and release production",
+    tutorDescription: "Turn demand into a feasible, cost-controlled brewery production order.",
+    appName: "Schedule MRP Runs",
+    transactionCode: "MD01N",
+    steps: planToProduceSteps,
+    tutorSteps: planToProduceTutorSteps,
+    knowledgeCheck: planToProduceKnowledgeCheck,
+    impacts: [
+      { label: "Inventory impact", title: "Requirements and reservations created", description: "BOM explosion creates dated component demand; production-order conversion reserves materials for execution." },
+      { label: "Accounting impact", title: "Planned cost baseline £31,480", description: "The production order carries planned material, labour, machine, and overhead costs; actual postings begin during execution." },
+      { label: "Operational impact", title: "Brew House 2 scheduled", description: "Capacity, component availability, operation dates, and warehouse staging are coordinated before release." },
     ],
   },
 ];

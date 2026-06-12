@@ -70,13 +70,35 @@ const navigation = [
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
 
-type ScenarioId = "p2p" | "o2c";
+type ScenarioId = (typeof processScenarios)[number]["id"];
 type ScenarioProgress = Record<ScenarioId, { step: number; complete: boolean }>;
 
 const initialScenarioProgress: ScenarioProgress = {
   p2p: { step: 0, complete: false },
   o2c: { step: 0, complete: false },
+  ptp: { step: 0, complete: false },
 };
+
+function restoreScenarioProgress(
+  saved: Partial<ScenarioProgress> | undefined,
+  legacy?: { lessonStep?: number; lessonComplete?: boolean },
+) {
+  return processScenarios.reduce((result, scenario) => {
+    const previous =
+      saved?.[scenario.id] ??
+      (scenario.id === "p2p"
+        ? {
+            step: legacy?.lessonStep ?? 0,
+            complete: Boolean(legacy?.lessonComplete),
+          }
+        : initialScenarioProgress[scenario.id]);
+    result[scenario.id] = {
+      step: Math.min(Math.max(previous.step, 0), scenario.tutorSteps.length - 1),
+      complete: Boolean(previous.complete),
+    };
+    return result;
+  }, {} as ScenarioProgress);
+}
 
 export function SapWorld() {
   const [view, setView] = useState<View>("overview");
@@ -84,7 +106,7 @@ export function SapWorld() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(initialScenarioProgress);
-  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null });
+  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -108,24 +130,15 @@ export function SapWorld() {
             activeScenarioId?: ScenarioId;
             scenarios?: Partial<ScenarioProgress>;
           };
-          const restored = {
-            p2p: progress.scenarios?.p2p ?? {
-              step: progress.lessonStep ?? 0,
-              complete: Boolean(progress.lessonComplete),
-            },
-            o2c: progress.scenarios?.o2c ?? initialScenarioProgress.o2c,
-          };
-          setScenarioProgress({
-            p2p: {
-              ...restored.p2p,
-              step: Math.min(restored.p2p.step, processScenarios[0].tutorSteps.length - 1),
-            },
-            o2c: {
-              ...restored.o2c,
-              step: Math.min(restored.o2c.step, processScenarios[1].tutorSteps.length - 1),
-            },
-          });
-          if (progress.activeScenarioId) setActiveScenarioId(progress.activeScenarioId);
+          setScenarioProgress(
+            restoreScenarioProgress(progress.scenarios, {
+              lessonStep: progress.lessonStep,
+              lessonComplete: progress.lessonComplete,
+            }),
+          );
+          if (processScenarios.some((scenario) => scenario.id === progress.activeScenarioId)) {
+            setActiveScenarioId(progress.activeScenarioId as ScenarioId);
+          }
         } catch {
           window.localStorage.removeItem("sap-world-progress");
         }
@@ -162,7 +175,7 @@ export function SapWorld() {
     if (!cleanPrompt) return;
     setAnswer(
       mentorAnswers[cleanPrompt] ??
-        `This question relates to the active goods receipt for PO 4500011842. In this simulation, SAP connects the purchasing document, material movement, inspection lot, and FI posting so you can trace the full business impact.`,
+        `This question relates to ${activeScenario.code}, the active ${activeScenario.title} scenario. SAP connects its operational documents, inventory movements, and financial postings so you can trace the complete business impact.`,
     );
     setQuestion("");
   }
@@ -400,8 +413,8 @@ export function SapWorld() {
 
               <div className="academy-summary">
                 <article className="panel"><span>Current role</span><strong>Warehouse Operative</strong><small>Burton Brewery · Plant BR01</small></article>
-                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 2</strong><small>Available foundation pathways</small></article>
-                <article className="panel"><span>Process coverage</span><strong>6 modules</strong><small>MM · QM · FI · SD · EWM · PP</small></article>
+                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 3</strong><small>Available learning pathways</small></article>
+                <article className="panel"><span>Process coverage</span><strong>7 modules</strong><small>MM · QM · FI · SD · EWM · PP · CO</small></article>
               </div>
 
               <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>4 pathways</span></div>
@@ -410,7 +423,8 @@ export function SapWorld() {
                   const available = path.status === "available";
                   const scenarioId: ScenarioId | null =
                     path.id === "mm-goods-receipt" ? "p2p" :
-                    path.id === "sd-order-to-cash" ? "o2c" : null;
+                    path.id === "sd-order-to-cash" ? "o2c" :
+                    path.id === "pp-brew-plan" ? "ptp" : null;
                   const pathState = scenarioId ? scenarioProgress[scenarioId] : null;
                   const scenario = scenarioId ? processScenarios.find((item) => item.id === scenarioId) : null;
                   const progress = pathState && scenario
@@ -781,7 +795,7 @@ export function SapWorld() {
             <div><strong>SAP Mentor</strong><span><i /> Context-aware assistant</span></div>
             <button onClick={() => setMentorOpen(false)}><X size={19} /></button>
           </div>
-          <div className="mentor-context"><Factory size={16} /> Burton Brewery · PO 4500011842</div>
+          <div className="mentor-context"><Factory size={16} /> Burton Brewery · {activeScenario.code}</div>
           <div className="mentor-body">
             <div className="mentor-message">{answer}</div>
             <p>Suggested questions</p>
