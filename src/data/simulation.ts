@@ -15,6 +15,20 @@ export type TutorStep = {
   fields?: { label: string; value: string }[];
 };
 
+export type LearningPath = {
+  id: string;
+  title: string;
+  process: string;
+  module: string;
+  role: string;
+  level: "Foundation" | "Intermediate" | "Advanced";
+  duration: string;
+  lessons: number;
+  progress: number;
+  status: "available" | "coming-soon";
+  description: string;
+};
+
 export const kpis = [
   { label: "Revenue YTD", value: "£18.42M", change: "+8.4%", tone: "good" },
   { label: "Open purchase orders", value: "47", change: "£1.26M", tone: "neutral" },
@@ -97,4 +111,83 @@ export const mentorAnswers: Record<string, string> = {
     "At goods receipt, SAP debits Raw Material Inventory and credits the GR/IR clearing account using the purchase order value. The supplier liability is not posted until invoice verification.",
   "What happens next?":
     "A quality technician records moisture, protein, and contamination results. If accepted, a usage decision moves the batch to unrestricted stock. Invoice verification can then match the PO, receipt, and supplier invoice.",
+};
+
+export const learningPaths: LearningPath[] = [
+  {
+    id: "mm-goods-receipt",
+    title: "Receive materials with quality inspection",
+    process: "Procure to Pay",
+    module: "MM + QM + FI",
+    role: "Warehouse Operative",
+    level: "Foundation",
+    duration: "35 min",
+    lessons: 4,
+    progress: 50,
+    status: "available",
+    description:
+      "Post a purchase-order receipt, create the inspection lot, and understand the stock and accounting impact.",
+  },
+  {
+    id: "sd-order-to-cash",
+    title: "Fulfil a customer sales order",
+    process: "Order to Cash",
+    module: "SD + EWM + FI",
+    role: "Sales Coordinator",
+    level: "Foundation",
+    duration: "55 min",
+    lessons: 7,
+    progress: 0,
+    status: "coming-soon",
+    description:
+      "Move from customer demand through availability, delivery, goods issue, billing, and receivables.",
+  },
+  {
+    id: "pp-brew-plan",
+    title: "Plan and execute a brewing run",
+    process: "Plan to Produce",
+    module: "PP + MM + CO",
+    role: "Production Planner",
+    level: "Intermediate",
+    duration: "70 min",
+    lessons: 9,
+    progress: 0,
+    status: "coming-soon",
+    description:
+      "Run MRP, convert planned supply, stage components, confirm production, and settle the order.",
+  },
+  {
+    id: "fi-month-close",
+    title: "Complete month-end financial close",
+    process: "Record to Report",
+    module: "FI + CO",
+    role: "Financial Accountant",
+    level: "Advanced",
+    duration: "90 min",
+    lessons: 11,
+    progress: 0,
+    status: "coming-soon",
+    description:
+      "Reconcile subledgers, post accruals, allocate costs, review variances, and close the period.",
+  },
+];
+
+export const processCatalog = [
+  { name: "Procure to Pay", code: "P2P", modules: "MM · QM · FI", scenarios: 8, readiness: 72 },
+  { name: "Order to Cash", code: "O2C", modules: "SD · EWM · FI", scenarios: 6, readiness: 38 },
+  { name: "Plan to Produce", code: "PTP", modules: "PP · MM · CO", scenarios: 7, readiness: 24 },
+  { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 16 },
+];
+
+export const knowledgeCheck = {
+  question:
+    "After posting this goods receipt, why is the supplier account not credited?",
+  options: [
+    "The material has not passed quality inspection",
+    "The supplier liability is created during invoice verification",
+    "The purchase order has already paid the supplier",
+  ],
+  correctIndex: 1,
+  explanation:
+    "Goods receipt recognizes inventory and credits GR/IR. The supplier payable is created only when the invoice is posted and matched.",
 };

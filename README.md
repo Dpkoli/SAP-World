@@ -13,6 +13,9 @@ The first release demonstrates a brewery enterprise with:
 - A guided SAP goods-receipt lesson using realistic business data
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
+- A role-based learning centre across MM, SD, PP, FI, QM, and EWM
+- Locally persisted lesson progress and completion status
+- An assessed knowledge check with corrective feedback
 - Responsive desktop and mobile layouts
 
 The simulation follows a real business chain:
@@ -40,7 +43,7 @@ npm run build
 Planned phases include:
 
 1. Persistent PostgreSQL enterprise and document models
-2. User accounts, roles, progress, and assessments
+2. User accounts and server-backed learning records
 3. Additional Procure-to-Pay lessons and exception scenarios
 4. Order-to-Cash, Plan-to-Produce, and Record-to-Report
 5. Configurable industry templates and multi-year simulation data

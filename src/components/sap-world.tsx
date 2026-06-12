@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Award,
   ArrowRight,
   BookOpenCheck,
   Boxes,
@@ -11,8 +12,10 @@ import {
   Factory,
   GraduationCap,
   LayoutDashboard,
+  Lock,
   Menu,
   MessageCircleMore,
+  PlayCircle,
   Search,
   Send,
   Settings,
@@ -21,19 +24,23 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   activity,
+  knowledgeCheck,
   kpis,
+  learningPaths,
   mentorAnswers,
+  processCatalog,
   processSteps,
   tutorSteps,
 } from "@/data/simulation";
 
-type View = "overview" | "processes" | "tutor";
+type View = "overview" | "academy" | "processes" | "tutor";
 
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
+  { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
   { id: "processes" as const, label: "Process explorer", icon: Boxes },
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
@@ -43,10 +50,43 @@ export function SapWorld() {
   const [mentorOpen, setMentorOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lessonStep, setLessonStep] = useState(0);
+  const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
+  const [lessonComplete, setLessonComplete] = useState(false);
+  const [progressLoaded, setProgressLoaded] = useState(false);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState(
     "I’m connected to the Burton Brewery simulation. Ask me about this goods receipt, its accounting impact, or what happens next.",
   );
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const saved = window.localStorage.getItem("sap-world-progress");
+      if (saved) {
+        try {
+          const progress = JSON.parse(saved) as {
+            lessonStep?: number;
+            lessonComplete?: boolean;
+          };
+          setLessonStep(
+            Math.min(progress.lessonStep ?? 0, tutorSteps.length - 1),
+          );
+          setLessonComplete(Boolean(progress.lessonComplete));
+        } catch {
+          window.localStorage.removeItem("sap-world-progress");
+        }
+      }
+      setProgressLoaded(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    if (!progressLoaded) return;
+    window.localStorage.setItem(
+      "sap-world-progress",
+      JSON.stringify({ lessonStep, lessonComplete }),
+    );
+  }, [lessonComplete, lessonStep, progressLoaded]);
 
   function askMentor(prompt: string) {
     const cleanPrompt = prompt.trim();
@@ -59,6 +99,19 @@ export function SapWorld() {
   }
 
   const currentTutorStep = tutorSteps[lessonStep];
+  const lessonProgress = lessonComplete
+    ? 100
+    : Math.round(((lessonStep + 1) / tutorSteps.length) * 100);
+
+  function handleTutorNext() {
+    if (lessonStep < tutorSteps.length - 1) {
+      setLessonStep((step) => step + 1);
+      return;
+    }
+    if (quizAnswer === knowledgeCheck.correctIndex) {
+      setLessonComplete(true);
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -189,11 +242,66 @@ export function SapWorld() {
 
               <section className="learning-banner">
                 <div className="lesson-icon"><BookOpenCheck size={24} /></div>
-                <div><span className="section-kicker">Your learning path</span><h3>Receiving materials with quality inspection</h3><p>Lesson 4 of 8 · Understand the inventory and financial impact of a goods receipt.</p></div>
-                <div className="lesson-progress"><strong>50%</strong><div><span /></div></div>
+                <div><span className="section-kicker">Your learning path</span><h3>Receiving materials with quality inspection</h3><p>{lessonComplete ? "Lesson complete · Knowledge check passed." : `Step ${lessonStep + 1} of ${tutorSteps.length} · Your progress is saved automatically.`}</p></div>
+                <div className="lesson-progress"><strong>{lessonProgress}%</strong><div><span style={{ width: `${lessonProgress}%` }} /></div></div>
                 <button onClick={() => setView("tutor")}>Resume lesson <ChevronRight size={16} /></button>
               </section>
             </>
+          )}
+
+          {view === "academy" && (
+            <section className="academy-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">Role-based SAP learning</p><h1>Learning centre</h1><p>Build practical skills through connected work performed inside the simulated enterprise.</p></div>
+                <div className="academy-score"><Award size={20} /><div><span>Learning score</span><strong>{lessonComplete ? "180" : "120"} XP</strong></div></div>
+              </div>
+
+              <div className="academy-summary">
+                <article className="panel"><span>Current role</span><strong>Warehouse Operative</strong><small>Burton Brewery · Plant BR01</small></article>
+                <article className="panel"><span>Lessons completed</span><strong>{lessonComplete ? "1 of 4" : "0 of 4"}</strong><small>Foundation pathway</small></article>
+                <article className="panel"><span>Process coverage</span><strong>3 modules</strong><small>MM · QM · FI</small></article>
+              </div>
+
+              <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>4 pathways</span></div>
+              <div className="path-grid">
+                {learningPaths.map((path) => {
+                  const available = path.status === "available";
+                  const progress = available ? lessonProgress : path.progress;
+                  return (
+                    <article className={`path-card panel ${available ? "" : "locked"}`} key={path.id}>
+                      <div className="path-card-top">
+                        <span className="module-pill">{path.module}</span>
+                        <span className="level-pill">{path.level}</span>
+                      </div>
+                      <div className="path-icon">{available ? <GraduationCap size={23} /> : <Lock size={20} />}</div>
+                      <span className="path-process">{path.process}</span>
+                      <h3>{path.title}</h3>
+                      <p>{path.description}</p>
+                      <div className="path-meta"><span>{path.role}</span><span>{path.duration}</span><span>{path.lessons} lessons</span></div>
+                      <div className="path-progress"><div><span style={{ width: `${progress}%` }} /></div><strong>{progress}%</strong></div>
+                      <button
+                        disabled={!available}
+                        onClick={() => setView("tutor")}
+                      >
+                        {available ? <><PlayCircle size={16} /> {lessonComplete ? "Review lesson" : progress > 0 ? "Continue pathway" : "Start pathway"}</> : "Coming soon"}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="catalog-heading process-catalog-heading"><div><span className="section-kicker">Enterprise coverage</span><h2>End-to-end process curriculum</h2></div></div>
+              <div className="curriculum-table panel">
+                {processCatalog.map((process) => (
+                  <div className="curriculum-row" key={process.name}>
+                    <span className="process-code">{process.code}</span>
+                    <div><strong>{process.name}</strong><small>{process.modules}</small></div>
+                    <span>{process.scenarios} scenarios</span>
+                    <div className="readiness"><div><span style={{ width: `${process.readiness}%` }} /></div><strong>{process.readiness}% ready</strong></div>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
 
           {view === "processes" && (
@@ -230,8 +338,8 @@ export function SapWorld() {
               </div>
               <div className="tutor-layout">
                 <aside className="lesson-nav panel">
-                  <div className="lesson-nav-title"><span>Lesson progress</span><strong>{Math.round(((lessonStep + 1) / tutorSteps.length) * 100)}%</strong></div>
-                  <div className="progress-track"><span style={{ width: `${((lessonStep + 1) / tutorSteps.length) * 100}%` }} /></div>
+                  <div className="lesson-nav-title"><span>Lesson progress</span><strong>{lessonProgress}%</strong></div>
+                  <div className="progress-track"><span style={{ width: `${lessonProgress}%` }} /></div>
                   {tutorSteps.map((step, index) => (
                     <button className={index === lessonStep ? "current" : index < lessonStep ? "done" : ""} onClick={() => setLessonStep(index)} key={step.number}>
                       <span>{index < lessonStep ? <Check size={14} /> : step.number}</span>
@@ -252,9 +360,39 @@ export function SapWorld() {
                   )}
                   <div className="explanation-box why"><Sparkles size={20} /><div><strong>Why are we doing this?</strong><p>{currentTutorStep.why}</p></div></div>
                   <div className="explanation-box result"><Check size={20} /><div><strong>What will you achieve?</strong><p>{currentTutorStep.result}</p></div></div>
+                  {lessonStep === tutorSteps.length - 1 && (
+                    <div className="knowledge-check">
+                      <div className="knowledge-title"><Award size={20} /><div><span>Knowledge check</span><strong>{knowledgeCheck.question}</strong></div></div>
+                      <div className="answer-list">
+                        {knowledgeCheck.options.map((option, index) => {
+                          const checked = quizAnswer === index;
+                          const isCorrect = checked && index === knowledgeCheck.correctIndex;
+                          const isWrong = checked && index !== knowledgeCheck.correctIndex;
+                          return (
+                            <button
+                              className={isCorrect ? "correct" : isWrong ? "wrong" : checked ? "selected" : ""}
+                              onClick={() => {
+                                setQuizAnswer(index);
+                                setLessonComplete(false);
+                              }}
+                              key={option}
+                            >
+                              <span>{String.fromCharCode(65 + index)}</span>{option}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {quizAnswer !== null && (
+                        <p className={quizAnswer === knowledgeCheck.correctIndex ? "quiz-feedback correct" : "quiz-feedback wrong"}>
+                          {quizAnswer === knowledgeCheck.correctIndex ? knowledgeCheck.explanation : "Not quite. Think about when SAP creates an accounts-payable document and try again."}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {lessonComplete && <div className="completion-banner"><Award size={22} /><div><strong>Lesson completed</strong><span>Your result and progress are saved on this device.</span></div></div>}
                   <div className="lesson-actions">
                     <button disabled={lessonStep === 0} onClick={() => setLessonStep((step) => step - 1)}>Previous</button>
-                    <button className="primary-button" onClick={() => setLessonStep((step) => Math.min(step + 1, tutorSteps.length - 1))}>
+                    <button className="primary-button" disabled={lessonStep === tutorSteps.length - 1 && quizAnswer !== knowledgeCheck.correctIndex} onClick={handleTutorNext}>
                       {lessonStep === tutorSteps.length - 1 ? "Complete lesson" : "Next step"} <ArrowRight size={16} />
                     </button>
                   </div>
