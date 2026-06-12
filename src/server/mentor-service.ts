@@ -6,6 +6,7 @@ import {
   enterpriseUnits,
   plants,
 } from "@/data/enterprise";
+import { documentFlows } from "@/data/document-flows";
 import { enterpriseEvents } from "@/data/history";
 import {
   mentorSuggestions,
@@ -105,6 +106,29 @@ function scenarioDocuments(scenario: ProcessScenario): MentorDocument[] {
 
 const mentorDocuments: MentorDocument[] = [
   ...processScenarios.flatMap(scenarioDocuments),
+  ...documentFlows.flatMap((flow) =>
+    flow.nodes.map((node) => ({
+      id: `document-${flow.processId}-${node.id}`,
+      type: "Process" as const,
+      title: `${node.objectType}: ${node.label}`,
+      reference: node.document,
+      scenarioId: flow.processId,
+      content: [
+        node.purpose,
+        `created by ${node.createdBy}`,
+        `approval ${node.approval}`,
+        `workflow ${node.workflowStatus}`,
+        `upstream ${node.upstreamDocument ?? "business trigger"}`,
+        `downstream ${node.downstreamDocument ?? "process complete"}`,
+        `inventory ${node.inventoryImpact}`,
+        `accounting ${node.accountingImpact}`,
+        ...node.accountingEntries.map(
+          (posting) =>
+            `debit ${posting.debit} credit ${posting.credit} amount ${posting.amount} ${posting.explanation}`,
+        ),
+      ].join(" "),
+    })),
+  ),
   ...enterpriseEvents.map((event) => ({
     id: event.id,
     type: "History" as const,

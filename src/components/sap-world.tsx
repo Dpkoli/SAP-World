@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { learnerInitials, type LearnerProfile } from "@/data/auth";
+import { documentFlowFor } from "@/data/document-flows";
 import {
   businessPartners,
   employees,
@@ -103,6 +104,9 @@ export function SapWorld({
   const [mentorOpen, setMentorOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<
+    Partial<Record<ScenarioId, string>>
+  >({ p2p: "GR" });
   const [preferredIndustryId, setPreferredIndustryId] =
     useState<IndustryId>(defaultIndustryId);
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
@@ -278,6 +282,13 @@ export function SapWorld({
   const activeScenario =
     processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
     processScenarios[0];
+  const activeDocumentFlow = documentFlowFor(activeScenarioId);
+  const selectedDocument =
+    activeDocumentFlow.nodes.find(
+      (node) => node.id === selectedDocumentIds[activeScenarioId],
+    ) ??
+    activeDocumentFlow.nodes.find((node) => node.status === "active") ??
+    activeDocumentFlow.nodes[0];
   const activeProgress = scenarioProgress[activeScenarioId];
   const activeQuizAnswer = quizAnswers[activeScenarioId];
   const troubleshootingCase = troubleshootingCaseFor(activeScenarioId);
@@ -834,17 +845,76 @@ export function SapWorld({
                 <div><span>Value</span><strong>{activeScenario.value}</strong></div>
               </div>
               <div className="process-map panel">
-                {activeScenario.steps.map((step, index) => (
-                  <div className={`map-step ${step.status}`} key={step.id}>
-                    <div className="map-index">{step.status === "complete" ? <Check size={18} /> : index + 1}</div>
-                    <div className="map-copy"><span>{step.module}</span><h3>{step.label}</h3><strong>{step.document}</strong></div>
-                    <div className="map-impact">
-                      <span>{step.status === "waiting" ? "Awaiting preceding document" : activeScenario.id === "p2p" && index === 2 ? "Inventory +£14,800 · GR/IR +£14,800" : activeScenario.id === "o2c" && index === 0 ? "Commercial commitment · No FI posting" : "Process document completed"}</span>
-                    </div>
-                    {index < activeScenario.steps.length - 1 && <ArrowRight className="map-arrow" size={20} />}
-                  </div>
-                ))}
+                <div className="document-flow-summary">
+                  <div><span>Flow ID</span><strong>{activeDocumentFlow.id}</strong></div>
+                  <div><span>Connected documents</span><strong>{activeDocumentFlow.nodes.length}</strong></div>
+                  <div><span>Integrated modules</span><strong>{activeDocumentFlow.modules.join(" / ")}</strong></div>
+                  <div><span>Active exception</span><strong>{activeDocumentFlow.exceptionReference}</strong></div>
+                </div>
+                <div className="document-flow-chain">
+                  {activeDocumentFlow.nodes.map((node, index) => (
+                    <button
+                      className={`document-flow-node ${node.status} ${selectedDocument.id === node.id ? "selected" : ""}`}
+                      onClick={() =>
+                        setSelectedDocumentIds((current) => ({
+                          ...current,
+                          [activeScenarioId]: node.id,
+                        }))
+                      }
+                      key={node.id}
+                    >
+                      <span className="document-sequence">{node.status === "complete" ? <Check size={14} /> : node.sequence}</span>
+                      <span>{node.module}</span>
+                      <strong>{node.label}</strong>
+                      <code>{node.document}</code>
+                      {index < activeDocumentFlow.nodes.length - 1 && <ArrowRight size={14} />}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <article className="document-inspector panel">
+                <header>
+                  <div>
+                    <span className="section-kicker">{selectedDocument.objectType}</span>
+                    <h2>{selectedDocument.label}</h2>
+                    <code>{selectedDocument.document}</code>
+                  </div>
+                  <span className={`status-chip ${selectedDocument.status}`}>{selectedDocument.workflowStatus}</span>
+                </header>
+                <div className="document-purpose">
+                  <FileText size={19} />
+                  <div><strong>Why this document exists</strong><p>{selectedDocument.purpose}</p></div>
+                </div>
+                <div className="document-facts">
+                  <div><span>Created by</span><strong>{selectedDocument.createdBy}</strong></div>
+                  <div><span>Posting time</span><strong>{selectedDocument.postedAt}</strong></div>
+                  <div><span>Approval control</span><strong>{selectedDocument.approval}</strong></div>
+                  <div><span>SAP module</span><strong>{selectedDocument.module}</strong></div>
+                </div>
+                <div className="document-links">
+                  <div><span>Upstream document</span><strong>{selectedDocument.upstreamDocument ?? "Business demand / trigger"}</strong></div>
+                  <ArrowRight size={18} />
+                  <div><span>Current document</span><strong>{selectedDocument.document}</strong></div>
+                  <ArrowRight size={18} />
+                  <div><span>Downstream document</span><strong>{selectedDocument.downstreamDocument ?? "Process complete"}</strong></div>
+                </div>
+                <div className="document-impact-grid">
+                  <div><span className="impact-icon inventory"><Package size={16} /></span><p><strong>Inventory impact</strong>{selectedDocument.inventoryImpact}</p></div>
+                  <div><span className="impact-icon financial"><TrendingUp size={16} /></span><p><strong>Accounting impact</strong>{selectedDocument.accountingImpact}</p></div>
+                </div>
+                <div className="journal-panel">
+                  <div><span className="section-kicker">Accounting evidence</span><strong>{selectedDocument.accountingEntries.length ? `${selectedDocument.accountingEntries.length} journal ${selectedDocument.accountingEntries.length === 1 ? "entry" : "entries"}` : "No FI document at this milestone"}</strong></div>
+                  {selectedDocument.accountingEntries.map((posting, index) => (
+                    <div className="journal-entry" key={`${posting.debit}-${posting.credit}-${index}`}>
+                      <span>Dr</span><strong>{posting.debit}</strong>
+                      <span>Cr</span><strong>{posting.credit}</strong>
+                      <code>{posting.amount}</code>
+                      <p>{posting.explanation}</p>
+                    </div>
+                  ))}
+                  {!selectedDocument.accountingEntries.length && <p className="no-journal">This document changes process or inventory status without creating a general-ledger posting.</p>}
+                </div>
+              </article>
               <div className="impact-grid">
                 {activeScenario.impacts.map((impact) => <article className="panel" key={impact.label}><span className="section-kicker">{impact.label}</span><h3>{impact.title}</h3><p>{impact.description}</p></article>)}
               </div>

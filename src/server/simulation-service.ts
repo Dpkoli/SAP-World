@@ -7,6 +7,7 @@ import {
   employees,
   plants,
 } from "@/data/enterprise";
+import { documentFlows } from "@/data/document-flows";
 import {
   activity,
   kpis,
@@ -29,6 +30,7 @@ export function getEnterpriseSnapshot() {
       activity,
       activeProcess: processSteps,
       processScenarios,
+      documentFlows,
     },
     learning: {
       paths: learningPaths,

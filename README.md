@@ -40,7 +40,10 @@ The first release demonstrates a brewery enterprise with:
 - Three fiscal years of connected growth, procurement, production, quality,
   maintenance, finance, sales, and compliance events
 - Historical SAP document chains with operational, inventory, and financial impact
+- A normalized document-flow explorer with upstream/downstream links, workflow,
+  approvals, inventory movements, and journal-entry evidence
 - A filterable simulation-history API at `/api/simulation/events`
+- A filterable cross-module document API at `/api/simulation/documents`
 - Reusable definitions for all eight processes at `/api/simulation/processes`
 - Responsive desktop and mobile layouts
 
@@ -76,6 +79,14 @@ Process flows and tutor content can be queried by process (`p2p`, `o2c`,
 `ptp`, `r2r`, `qm`, `pm`, `h2r`, or `w2d`):
 
 `/api/simulation/processes?id=o2c`
+
+Connected SAP documents can be queried by process, document number, or module:
+
+`/api/simulation/documents?process=p2p`
+
+`/api/simulation/documents?document=5000042917`
+
+`/api/simulation/documents?module=FI`
 
 Authenticated mentor questions are handled through `POST /api/mentor`. Answers
 include the simulation records used as evidence, and the service does not
