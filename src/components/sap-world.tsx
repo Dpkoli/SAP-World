@@ -16,6 +16,7 @@ import {
   GraduationCap,
   Landmark,
   LayoutDashboard,
+  ListTree,
   Lock,
   MapPin,
   Menu,
@@ -53,6 +54,17 @@ import {
 } from "@/data/mentor";
 import { implementationBlueprintFor } from "@/data/implementation";
 import {
+  batches,
+  billsOfMaterial,
+  masterDataForScenario,
+  materialById,
+  materials,
+  qualitySpecifications,
+  routings,
+  sourceRecords,
+  workCenters,
+} from "@/data/master-data";
+import {
   defaultIndustryId,
   industryById,
   industryEnterprises,
@@ -82,6 +94,7 @@ type View =
   | "tutor"
   | "history"
   | "structure"
+  | "masterdata"
   | "plants"
   | "partners";
 
@@ -122,6 +135,8 @@ export function SapWorld({
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [partnerFilter, setPartnerFilter] = useState<"All" | "Supplier" | "Customer">("All");
+  const [selectedMaterialId, setSelectedMaterialId] = useState("FG-AMBER-KEG-50");
+  const [materialTypeFilter, setMaterialTypeFilter] = useState("All");
   const [selectedYear, setSelectedYear] = useState<FiscalYear>("2025–2026");
   const [eventCategory, setEventCategory] = useState("All");
   const [selectedEventId, setSelectedEventId] = useState("EVT-2604-035");
@@ -300,6 +315,24 @@ export function SapWorld({
   const preferredIndustry = industryById(preferredIndustryId);
   const implementationBlueprint =
     implementationBlueprintFor(activeScenarioId);
+  const scenarioMasterData = masterDataForScenario(activeScenarioId);
+  const selectedMaterial =
+    materialById(selectedMaterialId) ?? materials[0];
+  const selectedBom = billsOfMaterial.find(
+    (bom) => bom.headerMaterialId === selectedMaterial.id,
+  );
+  const selectedRouting = routings.find(
+    (routing) => routing.materialId === selectedMaterial.id,
+  );
+  const selectedBatches = batches.filter(
+    (batch) => batch.materialId === selectedMaterial.id,
+  );
+  const selectedSpecifications = qualitySpecifications.filter(
+    (specification) => specification.materialId === selectedMaterial.id,
+  );
+  const selectedSources = sourceRecords.filter(
+    (source) => source.materialId === selectedMaterial.id,
+  );
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
   const lessonProgress = activeProgress.complete
     ? 100
@@ -386,6 +419,12 @@ export function SapWorld({
           subtitle: `${employee.position} · ${employee.plant} · ${employee.costCenter}`,
           target: "structure" as View,
         })),
+        ...materials.map((material) => ({
+          id: material.id,
+          title: material.description,
+          subtitle: `${material.type} Â· ${material.plant} Â· ${material.standardPrice}`,
+          target: "masterdata" as View,
+        })),
       ]
         .filter((result) =>
           `${result.id} ${result.title} ${result.subtitle}`
@@ -451,6 +490,7 @@ export function SapWorld({
           ))}
           <p className="nav-label nav-spacer">Enterprise</p>
           <button className={view === "structure" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("structure")}><Building2 size={18} />Company structure</button>
+          <button className={view === "masterdata" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("masterdata")}><ListTree size={18} />Master data</button>
           <button className={view === "plants" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("plants")}><Factory size={18} />Plants & operations</button>
           <button className={view === "partners" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("partners")}><Users size={18} />Business partners</button>
         </nav>
@@ -701,6 +741,134 @@ export function SapWorld({
             </section>
           )}
 
+          {view === "masterdata" && (
+            <section className="master-data-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">SAP relational master data</p><h1>Material, production, and quality model</h1><p>Trace how plant, sourcing, valuation, batches, specifications, BOMs, routings, and work centres control transactions.</p></div>
+                <span className="api-badge">API /api/master-data</span>
+              </div>
+              <div className="master-data-summary">
+                <article className="panel"><Package size={18} /><div><span>Materials</span><strong>{materials.length}</strong></div></article>
+                <article className="panel"><ListTree size={18} /><div><span>Released BOMs</span><strong>{billsOfMaterial.length}</strong></div></article>
+                <article className="panel"><Settings size={18} /><div><span>Routings</span><strong>{routings.length}</strong></div></article>
+                <article className="panel"><Factory size={18} /><div><span>Work centres</span><strong>{workCenters.length}</strong></div></article>
+                <article className="panel"><Boxes size={18} /><div><span>Batches</span><strong>{batches.length}</strong></div></article>
+              </div>
+              <div className="master-data-toolbar">
+                <div><span className="section-kicker">Material catalogue</span><h2>Select an SAP material</h2></div>
+                <div className="filter-tabs">
+                  {["All", "ROH", "HALB", "FERT", "VERP", "ERSA"].map((filter) => (
+                    <button className={materialTypeFilter === filter ? "active" : ""} onClick={() => setMaterialTypeFilter(filter)} key={filter}>{filter}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="master-data-layout">
+                <aside className="material-list panel">
+                  {materials
+                    .filter((material) => materialTypeFilter === "All" || material.type === materialTypeFilter)
+                    .map((material) => (
+                      <button className={selectedMaterial.id === material.id ? "selected" : ""} onClick={() => setSelectedMaterialId(material.id)} key={material.id}>
+                        <span className={`material-type ${material.type.toLowerCase()}`}>{material.type}</span>
+                        <div><strong>{material.description}</strong><code>{material.id}</code><small>{material.plant} / {material.storageLocation}</small></div>
+                        <ChevronRight size={16} />
+                      </button>
+                    ))}
+                </aside>
+                <div className="master-data-workspace">
+                  <article className="material-header panel">
+                    <div>
+                      <span className="section-kicker">{selectedMaterial.type} / {selectedMaterial.materialGroup}</span>
+                      <h2>{selectedMaterial.description}</h2>
+                      <code>{selectedMaterial.id}</code>
+                    </div>
+                    <span className={`status-chip ${selectedMaterial.status.toLowerCase()}`}>{selectedMaterial.status}</span>
+                    <div className="material-core-facts">
+                      <div><span>Plant / storage</span><strong>{selectedMaterial.plant} / {selectedMaterial.storageLocation}</strong></div>
+                      <div><span>Base unit</span><strong>{selectedMaterial.baseUnit}</strong></div>
+                      <div><span>Procurement</span><strong>{selectedMaterial.procurementType}</strong></div>
+                      <div><span>MRP / lot size</span><strong>{selectedMaterial.mrpType} / {selectedMaterial.lotSize}</strong></div>
+                      <div><span>Lead time</span><strong>{selectedMaterial.leadTimeDays} days</strong></div>
+                      <div><span>Standard price</span><strong>{selectedMaterial.standardPrice}</strong></div>
+                      <div><span>Valuation class</span><strong>{selectedMaterial.valuationClass}</strong></div>
+                      <div><span>Profit centre</span><strong>{selectedMaterial.profitCenter}</strong></div>
+                    </div>
+                    <div className="material-controls">
+                      <span className={selectedMaterial.batchManaged ? "enabled" : ""}><Check size={13} />Batch management</span>
+                      <span className={selectedMaterial.qualityInspection ? "enabled" : ""}><Check size={13} />Quality inspection</span>
+                    </div>
+                  </article>
+
+                  {selectedBom && (
+                    <article className="master-object panel">
+                      <div className="master-object-heading"><div><span className="section-kicker">Bill of material</span><h2>{selectedBom.id}</h2></div><code>{selectedBom.baseQuantity} / Alternative {selectedBom.alternative}</code></div>
+                      <div className="bom-table">
+                        <div className="bom-head"><span>Operation</span><span>Component</span><span>Quantity</span><span>Scrap</span><span>Purpose</span></div>
+                        {selectedBom.components.map((component) => (
+                          <div className="bom-row" key={`${selectedBom.id}-${component.materialId}`}>
+                            <code>{component.operation}</code>
+                            <div><strong>{materialById(component.materialId)?.description}</strong><small>{component.materialId}</small></div>
+                            <strong>{component.quantity.toLocaleString()} {component.unit}</strong>
+                            <span>{component.scrapPercent}%</span>
+                            <p>{component.purpose}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  )}
+
+                  {selectedRouting && (
+                    <article className="master-object panel">
+                      <div className="master-object-heading"><div><span className="section-kicker">Routing and production version</span><h2>{selectedRouting.id}</h2></div><code>{selectedRouting.productionVersion} / {selectedRouting.plant}</code></div>
+                      <div className="routing-flow">
+                        {selectedRouting.operations.map((operation, index) => (
+                          <div key={`${selectedRouting.id}-${operation.number}`}>
+                            <span>{operation.number}</span>
+                            <div><strong>{operation.title}</strong><code>{operation.workCenterId} / {operation.controlKey}</code><small>{operation.duration} / {operation.activityType}</small><p>{operation.purpose}</p></div>
+                            {index < selectedRouting.operations.length - 1 && <ArrowRight size={16} />}
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  )}
+
+                  <div className="master-object-grid">
+                    <article className="master-object panel">
+                      <div className="master-object-heading"><div><span className="section-kicker">Batch stock</span><h2>Genealogy and availability</h2></div><strong>{selectedBatches.length}</strong></div>
+                      <div className="compact-object-list">
+                        {selectedBatches.map((batch) => <div key={batch.id}><span className={`status-chip ${batch.status.toLowerCase()}`}>{batch.status}</span><div><strong>{batch.id}</strong><small>{batch.quantity} / {batch.stockType} / {batch.plant}/{batch.storageLocation}</small></div></div>)}
+                        {!selectedBatches.length && <p>No batch stock is recorded for this material.</p>}
+                      </div>
+                    </article>
+                    <article className="master-object panel">
+                      <div className="master-object-heading"><div><span className="section-kicker">Quality specifications</span><h2>Inspection controls</h2></div><strong>{selectedSpecifications.length}</strong></div>
+                      <div className="compact-object-list">
+                        {selectedSpecifications.map((specification) => <div key={specification.id}><span className={specification.critical ? "critical-control" : "standard-control"}>{specification.critical ? "Critical" : "Standard"}</span><div><strong>{specification.characteristic}</strong><small>{specification.target ? `Target ${specification.target} ${specification.unit}` : specification.method} / {specification.id}</small></div></div>)}
+                        {!selectedSpecifications.length && <p>No inspection specification is assigned.</p>}
+                      </div>
+                    </article>
+                    <article className="master-object panel">
+                      <div className="master-object-heading"><div><span className="section-kicker">Approved sources</span><h2>Supplier and price control</h2></div><strong>{selectedSources.length}</strong></div>
+                      <div className="compact-object-list">
+                        {selectedSources.map((source) => <div key={source.id}><span className={`status-chip ${source.status.toLowerCase()}`}>{source.status}</span><div><strong>{businessPartners.find((partner) => partner.id === source.supplierId)?.name}</strong><small>{source.price} / {source.plannedDeliveryDays} days / Quality {source.qualityScore}/100</small></div></div>)}
+                        {!selectedSources.length && <p>This material is produced internally or has no purchasing source.</p>}
+                      </div>
+                    </article>
+                    <article className="master-object panel">
+                      <div className="master-object-heading"><div><span className="section-kicker">Work-centre dependency</span><h2>Capacity and cost assignment</h2></div><strong>{selectedRouting?.operations.length ?? 0}</strong></div>
+                      <div className="compact-object-list">
+                        {(selectedRouting?.operations ?? []).map((operation) => {
+                          const workCenter = workCenters.find((item) => item.id === operation.workCenterId);
+                          return workCenter ? <div key={`${operation.number}-${workCenter.id}`}><span className="material-type halb">WC</span><div><strong>{workCenter.name}</strong><small>{workCenter.id} / {workCenter.capacity} / {workCenter.costCenter}</small></div></div> : null;
+                        })}
+                        {!selectedRouting && <p>No routing work-centre assignment is required.</p>}
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
           {view === "plants" && (
             <section className="enterprise-page">
               <div className="page-heading compact">
@@ -913,6 +1081,18 @@ export function SapWorld({
                     </div>
                   ))}
                   {!selectedDocument.accountingEntries.length && <p className="no-journal">This document changes process or inventory status without creating a general-ledger posting.</p>}
+                </div>
+              </article>
+              <article className="process-master-data panel">
+                <div className="panel-header">
+                  <div><span className="section-kicker">Master-data dependencies</span><h2>What controls this process?</h2></div>
+                  <button onClick={() => setView("masterdata")}>Open master data <ArrowRight size={15} /></button>
+                </div>
+                <div className="dependency-grid">
+                  <div><span>Materials</span><strong>{scenarioMasterData.materials.length}</strong><p>{scenarioMasterData.materials.map((item) => item.id).join(" / ") || "No material dependency"}</p></div>
+                  <div><span>BOMs / routings</span><strong>{scenarioMasterData.billsOfMaterial.length + scenarioMasterData.routings.length}</strong><p>{[...scenarioMasterData.billsOfMaterial.map((item) => item.id), ...scenarioMasterData.routings.map((item) => item.id)].join(" / ") || "Not applicable"}</p></div>
+                  <div><span>Batches / specifications</span><strong>{scenarioMasterData.batches.length + scenarioMasterData.qualitySpecifications.length}</strong><p>{[...scenarioMasterData.batches.map((item) => item.id), ...scenarioMasterData.qualitySpecifications.map((item) => item.id)].join(" / ") || "Not applicable"}</p></div>
+                  <div><span>Work centres / sources</span><strong>{scenarioMasterData.workCenters.length + scenarioMasterData.sourceRecords.length}</strong><p>{[...scenarioMasterData.workCenters.map((item) => item.id), ...scenarioMasterData.sourceRecords.map((item) => item.id)].join(" / ") || "Not applicable"}</p></div>
                 </div>
               </article>
               <div className="impact-grid">
@@ -1225,7 +1405,7 @@ export function SapWorld({
       {searchOpen && (
         <div className="search-overlay" onClick={() => setSearchOpen(false)}>
           <div className="search-dialog" onClick={(event) => event.stopPropagation()}>
-            <div className="search-input-row"><Search size={20} /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search code, company, plant, supplier, or customer..." /><button onClick={() => setSearchOpen(false)}><X size={18} /></button></div>
+            <div className="search-input-row"><Search size={20} /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search code, material, plant, supplier, customer, or SAP document..." /><button onClick={() => setSearchOpen(false)}><X size={18} /></button></div>
             <div className="search-results">
               {!normalizedQuery && <p>Try “BR01”, “Highland”, “customer”, or “storage”.</p>}
               {normalizedQuery && searchResults.length === 0 && <p>No SAP objects matched your search.</p>}
@@ -1238,6 +1418,9 @@ export function SapWorld({
                       setEventCategory("All");
                       setSelectedEventId(event.id);
                     }
+                  }
+                  if (result.target === "masterdata") {
+                    setSelectedMaterialId(result.id);
                   }
                   navigateTo(result.target);
                 }} key={`${result.target}-${result.id}`}>

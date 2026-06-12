@@ -9,6 +9,15 @@ import {
 } from "@/data/enterprise";
 import { documentFlows } from "@/data/document-flows";
 import {
+  batches,
+  billsOfMaterial,
+  materials,
+  qualitySpecifications,
+  routings,
+  sourceRecords,
+  workCenters,
+} from "@/data/master-data";
+import {
   activity,
   kpis,
   learningPaths,
@@ -25,6 +34,15 @@ export function getEnterpriseSnapshot() {
     plants,
     businessPartners,
     employees,
+    masterData: {
+      materials,
+      billsOfMaterial,
+      routings,
+      workCenters,
+      batches,
+      qualitySpecifications,
+      sourceRecords,
+    },
     operations: {
       kpis,
       activity,

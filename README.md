@@ -33,10 +33,13 @@ The first release demonstrates a brewery enterprise with:
 - Server-backed lesson progress with an automatic browser fallback
 - An assessed knowledge check with corrective feedback
 - Searchable company structure, plants, storage locations, suppliers, and customers
+- Relational material master data with valuation, MRP, sourcing, batch, quality,
+  BOM, routing, production-version, and work-centre dependencies
 - Searchable employee and organizational-assignment records
 - Operational plant capacity, utilization, staffing, and order context
 - Business-partner exposure, risk, blocking status, and category filters
 - A normalized read-only enterprise API at `/api/enterprise`
+- A filterable master-data API at `/api/master-data`
 - Three fiscal years of connected growth, procurement, production, quality,
   maintenance, finance, sales, and compliance events
 - Historical SAP document chains with operational, inventory, and financial impact
@@ -87,6 +90,12 @@ Connected SAP documents can be queried by process, document number, or module:
 `/api/simulation/documents?document=5000042917`
 
 `/api/simulation/documents?module=FI`
+
+Material master data can be queried by material, plant, or SAP material type:
+
+`/api/master-data?material=FG-AMBER-KEG-50`
+
+`/api/master-data?plant=BR01&type=ROH`
 
 Authenticated mentor questions are handled through `POST /api/mentor`. Answers
 include the simulation records used as evidence, and the service does not

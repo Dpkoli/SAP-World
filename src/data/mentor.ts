@@ -2,7 +2,13 @@ import type { ScenarioId } from "@/data/progress";
 
 export type MentorSource = {
   id: string;
-  type: "Process" | "Tutor" | "Exception" | "History" | "Enterprise";
+  type:
+    | "Process"
+    | "Tutor"
+    | "Exception"
+    | "History"
+    | "Enterprise"
+    | "Master Data";
   title: string;
   reference: string;
 };

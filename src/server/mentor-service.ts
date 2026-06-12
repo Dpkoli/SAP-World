@@ -7,6 +7,15 @@ import {
   plants,
 } from "@/data/enterprise";
 import { documentFlows } from "@/data/document-flows";
+import {
+  batches,
+  billsOfMaterial,
+  materials,
+  qualitySpecifications,
+  routings,
+  sourceRecords,
+  workCenters,
+} from "@/data/master-data";
 import { enterpriseEvents } from "@/data/history";
 import {
   mentorSuggestions,
@@ -32,13 +41,13 @@ const stopWords = new Set([
   "this", "to", "was", "what", "when", "where", "why", "with", "would",
 ]);
 const sapDomainTerms = new Set([
-  "account", "accrual", "batch", "billing", "cost", "credit", "customer",
+  "account", "accrual", "batch", "billing", "bom", "cost", "credit", "customer",
   "delivery", "dispatch", "freight", "goods", "gr", "grir", "handling",
   "inspection", "inventory", "invoice",
-  "maintenance", "material", "mrp", "order", "payroll", "plant", "posting",
+  "maintenance", "material", "mrp", "operation", "order", "payroll", "plant", "posting",
   "production", "purchase", "quality", "receipt", "sales", "settlement",
-  "packing", "picking", "shipment", "stock", "supplier", "usage", "vendor",
-  "warehouse", "wave",
+  "packing", "picking", "routing", "shipment", "specification", "stock",
+  "supplier", "usage", "valuation", "vendor", "warehouse", "wave", "workcenter",
 ]);
 
 function tokens(value: string) {
@@ -129,6 +138,55 @@ const mentorDocuments: MentorDocument[] = [
       ].join(" "),
     })),
   ),
+  ...materials.map((material) => ({
+    id: `material-${material.id}`,
+    type: "Master Data" as const,
+    title: material.description,
+    reference: `Material ${material.id}`,
+    content: `${material.type} base unit ${material.baseUnit} material group ${material.materialGroup} plant ${material.plant} storage location ${material.storageLocation} procurement ${material.procurementType} MRP ${material.mrpType} lot size ${material.lotSize} lead time ${material.leadTimeDays} days batch managed ${material.batchManaged} quality inspection ${material.qualityInspection} valuation class ${material.valuationClass} standard price ${material.standardPrice} profit centre ${material.profitCenter} suppliers ${material.supplierIds.join(" ")}`,
+  })),
+  ...billsOfMaterial.map((bom) => ({
+    id: `bom-${bom.id}`,
+    type: "Master Data" as const,
+    title: `Bill of material ${bom.id}`,
+    reference: `${bom.headerMaterialId} ${bom.baseQuantity}`,
+    content: `${bom.plant} usage ${bom.usage} alternative ${bom.alternative} valid ${bom.validFrom} ${bom.components.map((component) => `${component.materialId} ${component.quantity} ${component.unit} scrap ${component.scrapPercent} operation ${component.operation} ${component.purpose}`).join(" ")}`,
+  })),
+  ...routings.map((routing) => ({
+    id: `routing-${routing.id}`,
+    type: "Master Data" as const,
+    title: `Routing ${routing.id}`,
+    reference: `${routing.materialId} ${routing.productionVersion}`,
+    content: `${routing.plant} valid ${routing.validFrom} ${routing.operations.map((operation) => `${operation.number} ${operation.title} work centre ${operation.workCenterId} control key ${operation.controlKey} duration ${operation.duration} activity ${operation.activityType} ${operation.purpose}`).join(" ")}`,
+  })),
+  ...workCenters.map((workCenter) => ({
+    id: `work-center-${workCenter.id}`,
+    type: "Master Data" as const,
+    title: workCenter.name,
+    reference: `Work centre ${workCenter.id}`,
+    content: `${workCenter.plant} ${workCenter.category} capacity ${workCenter.capacity} cost centre ${workCenter.costCenter} activities ${workCenter.activityTypes.join(" ")} scheduling ${workCenter.schedulingFormula}`,
+  })),
+  ...batches.map((batch) => ({
+    id: `batch-${batch.id}`,
+    type: "Master Data" as const,
+    title: `Batch ${batch.id}`,
+    reference: `Batch ${batch.id} / ${batch.materialId}`,
+    content: `${batch.plant} ${batch.storageLocation} ${batch.stockType} quantity ${batch.quantity} manufacture ${batch.manufactureDate} expiry ${batch.expiryDate} supplier batch ${batch.supplierBatch ?? ""} status ${batch.status}`,
+  })),
+  ...qualitySpecifications.map((specification) => ({
+    id: `specification-${specification.id}`,
+    type: "Master Data" as const,
+    title: `${specification.characteristic} specification`,
+    reference: `${specification.materialId} ${specification.id}`,
+    content: `inspection type ${specification.inspectionType} method ${specification.method} lower ${specification.lowerLimit ?? ""} upper ${specification.upperLimit ?? ""} target ${specification.target ?? ""} unit ${specification.unit} critical ${specification.critical}`,
+  })),
+  ...sourceRecords.map((source) => ({
+    id: `source-${source.id}`,
+    type: "Master Data" as const,
+    title: `Purchasing source ${source.id}`,
+    reference: `${source.materialId} supplier ${source.supplierId}`,
+    content: `${source.purchasingOrg} plant ${source.plant} price ${source.price} delivery ${source.plannedDeliveryDays} days minimum ${source.minimumOrder} quality score ${source.qualityScore} status ${source.status}`,
+  })),
   ...enterpriseEvents.map((event) => ({
     id: event.id,
     type: "History" as const,
@@ -251,6 +309,25 @@ export function answerMentorQuestion(input: {
     ([prompt]) => prompt.toLowerCase() === normalizedQuestion,
   )?.[1];
   const retrieved = retrieve(question, scenarioId);
+  const referencedMaterial = materials.find(
+    (material) =>
+      normalizedQuestion.includes(material.id.toLowerCase()) ||
+      normalizedQuestion.includes(material.description.toLowerCase()),
+  );
+  const referencedBom = billsOfMaterial.find((bom) =>
+    normalizedQuestion.includes(bom.id.toLowerCase()),
+  );
+  const referencedRouting = routings.find((routing) =>
+    normalizedQuestion.includes(routing.id.toLowerCase()),
+  );
+  const referencedBatch = batches.find((batch) =>
+    normalizedQuestion.includes(batch.id.toLowerCase()),
+  );
+  const referencedWorkCenter = workCenters.find(
+    (workCenter) =>
+      normalizedQuestion.includes(workCenter.id.toLowerCase()) ||
+      normalizedQuestion.includes(workCenter.name.toLowerCase()),
+  );
   const step =
     typeof input.step === "number" && Number.isFinite(input.step)
       ? Math.min(
@@ -262,6 +339,26 @@ export function answerMentorQuestion(input: {
   let answer: string;
   if (exactAnswer) {
     answer = exactAnswer;
+  } else if (referencedMaterial) {
+    answer = `${referencedMaterial.id} is ${referencedMaterial.description}, a ${referencedMaterial.type} material at ${referencedMaterial.plant}/${referencedMaterial.storageLocation}. It uses MRP type ${referencedMaterial.mrpType}, ${referencedMaterial.lotSize.toLowerCase()}, a ${referencedMaterial.leadTimeDays}-day lead time, valuation class ${referencedMaterial.valuationClass}, and standard price ${referencedMaterial.standardPrice}. Batch management is ${referencedMaterial.batchManaged ? "active" : "not active"} and quality inspection is ${referencedMaterial.qualityInspection ? "required" : "not required"}.`;
+  } else if (referencedBom) {
+    answer = `${referencedBom.id} is the released production BOM for ${referencedBom.headerMaterialId} at plant ${referencedBom.plant}, based on ${referencedBom.baseQuantity}. It contains ${referencedBom.components.map((component) => `${component.quantity.toLocaleString()} ${component.unit} of ${component.materialId} at operation ${component.operation}`).join("; ")}.`;
+  } else if (referencedRouting) {
+    answer = `${referencedRouting.id} is production version ${referencedRouting.productionVersion} for ${referencedRouting.materialId}. Its sequence is ${referencedRouting.operations.map((operation) => `${operation.number} ${operation.title} at ${operation.workCenterId} (${operation.duration})`).join("; ")}.`;
+  } else if (referencedBatch) {
+    answer = `${referencedBatch.id} is a batch of ${referencedBatch.materialId} holding ${referencedBatch.quantity} in ${referencedBatch.stockType.toLowerCase()} at ${referencedBatch.plant}/${referencedBatch.storageLocation}. Its status is ${referencedBatch.status.toLowerCase()}, with manufacture date ${referencedBatch.manufactureDate} and expiry date ${referencedBatch.expiryDate}.`;
+  } else if (referencedWorkCenter) {
+    answer = `${referencedWorkCenter.id} is ${referencedWorkCenter.name} at plant ${referencedWorkCenter.plant}. Capacity is ${referencedWorkCenter.capacity}, cost posts to ${referencedWorkCenter.costCenter}, and its activity types are ${referencedWorkCenter.activityTypes.join(", ")}. Scheduling uses ${referencedWorkCenter.schedulingFormula.toLowerCase()}.`;
+  } else if (
+    includesAny(normalizedQuestion, [
+      "bom", "bill of material", "routing", "production version", "work centre",
+      "work center", "valuation class", "standard price", "source record",
+      "quality specification", "master data", "lead time", "lot size",
+    ]) &&
+    retrieved[0]?.type === "Master Data"
+  ) {
+    const best = retrieved[0];
+    answer = `${best.title}: ${best.content}`;
   } else if (
     includesAny(normalizedQuestion, [
       "error", "fail", "blocked", "problem", "issue", "shortage", "fix",
@@ -316,7 +413,17 @@ export function answerMentorQuestion(input: {
       document.scenarioId === scenarioId &&
       (document.type === "Process" || document.type === "Exception"),
   );
-  const sources = [...retrieved, ...fallbackSources]
+  const directReferenceIds = [
+    referencedMaterial ? `material-${referencedMaterial.id}` : null,
+    referencedBom ? `bom-${referencedBom.id}` : null,
+    referencedRouting ? `routing-${referencedRouting.id}` : null,
+    referencedBatch ? `batch-${referencedBatch.id}` : null,
+    referencedWorkCenter ? `work-center-${referencedWorkCenter.id}` : null,
+  ].filter((id): id is string => Boolean(id));
+  const directReferences = mentorDocuments.filter((document) =>
+    directReferenceIds.includes(document.id),
+  );
+  const sources = [...directReferences, ...retrieved, ...fallbackSources]
     .filter(
       (document, index, all) =>
         all.findIndex((candidate) => candidate.id === document.id) === index,
