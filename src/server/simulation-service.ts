@@ -4,6 +4,7 @@ import {
   businessPartners,
   enterpriseSummary,
   enterpriseUnits,
+  employees,
   plants,
 } from "@/data/enterprise";
 import {
@@ -22,6 +23,7 @@ export function getEnterpriseSnapshot() {
     organization: enterpriseUnits,
     plants,
     businessPartners,
+    employees,
     operations: {
       kpis,
       activity,

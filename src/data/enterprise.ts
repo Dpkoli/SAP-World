@@ -34,6 +34,19 @@ export type BusinessPartner = {
   status: "Active" | "Blocked";
 };
 
+export type Employee = {
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  plant: string;
+  costCenter: string;
+  manager: string;
+  hireDate: string;
+  employmentStatus: "Active" | "Onboarding" | "Leave";
+  payrollArea: string;
+};
+
 export const enterpriseUnits: EnterpriseUnit[] = [
   { code: "BCB1", name: "Burton Craft Beverages Ltd.", type: "Company Code", location: "Burton upon Trent, UK", currency: "GBP", status: "Active" },
   { code: "P100", name: "UK Central Purchasing", type: "Purchasing Org", parent: "BCB1", location: "Burton upon Trent, UK", status: "Active" },
@@ -93,6 +106,13 @@ export const businessPartners: BusinessPartner[] = [
   { id: "2000017", name: "Northern Taverns Ltd", category: "Customer", role: "On-trade customer", country: "United Kingdom", city: "Manchester", annualValue: "£4.26M", openItems: "£312K", risk: "Medium", status: "Active" },
   { id: "2000029", name: "BritMart Retail Group", category: "Customer", role: "National retail account", country: "United Kingdom", city: "London", annualValue: "£6.18M", openItems: "£428K", risk: "Low", status: "Active" },
   { id: "2000044", name: "Continental Beverage Imports", category: "Customer", role: "Export distributor", country: "Netherlands", city: "Rotterdam", annualValue: "£1.36M", openItems: "£96K", risk: "High", status: "Blocked" },
+];
+
+export const employees: Employee[] = [
+  { id: "700184", name: "Aisha Rahman", position: "Quality Technician", department: "Quality Assurance", plant: "BR01", costCenter: "BR01-QA", manager: "Martin Hughes", hireDate: "2026-06-15", employmentStatus: "Onboarding", payrollArea: "GB-M1" },
+  { id: "700092", name: "Martin Hughes", position: "Quality Manager", department: "Quality Assurance", plant: "BR01", costCenter: "BR01-QA", manager: "Sarah Bennett", hireDate: "2019-03-04", employmentStatus: "Active", payrollArea: "GB-M1" },
+  { id: "700137", name: "Daniel Cooper", position: "Maintenance Planner", department: "Engineering", plant: "BR01", costCenter: "BR01-MAINT", manager: "Priya Shah", hireDate: "2023-08-14", employmentStatus: "Active", payrollArea: "GB-M1" },
+  { id: "700158", name: "Sophie Williams", position: "Warehouse Team Lead", department: "Distribution", plant: "DC01", costCenter: "DC01-WH", manager: "Lewis Grant", hireDate: "2024-05-20", employmentStatus: "Active", payrollArea: "GB-M1" },
 ];
 
 export const enterpriseSummary = {

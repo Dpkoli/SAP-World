@@ -37,7 +37,7 @@ export type KnowledgeCheck = {
 };
 
 export type ProcessScenario = {
-  id: "p2p" | "o2c" | "ptp" | "r2r" | "qm" | "pm";
+  id: "p2p" | "o2c" | "ptp" | "r2r" | "qm" | "pm" | "h2r";
   code: string;
   title: string;
   scenario: string;
@@ -576,6 +576,120 @@ export const plantMaintenanceTutorSteps: TutorStep[] = [
   },
 ];
 
+export const hireToRetireSteps: ProcessStep[] = [
+  { id: "POS", label: "Position Approval", document: "POS-BR01-QA-07", module: "HCM / CO", status: "complete" },
+  { id: "REC", label: "Recruitment & Offer", document: "REQ-260184", module: "SuccessFactors", status: "complete" },
+  { id: "HIR", label: "Employee Hire", document: "700184", module: "HCM / SuccessFactors", status: "active" },
+  { id: "ORG", label: "Org & Cost Assignment", document: "BR01-QA", module: "HCM / CO", status: "waiting" },
+  { id: "TIM", label: "Time & Benefits", document: "GB-M1", module: "HCM", status: "waiting" },
+  { id: "PAY", label: "Payroll & FI Posting", document: "Pending", module: "HCM / FI / CO", status: "waiting" },
+  { id: "DEV", label: "Learning & Performance", document: "Pending", module: "SuccessFactors", status: "waiting" },
+  { id: "SEP", label: "Separation & Final Pay", document: "Future lifecycle", module: "HCM / FI", status: "waiting" },
+];
+
+export const hireToRetireTutorSteps: TutorStep[] = [
+  {
+    number: 1,
+    title: "Review the approved position and requisition",
+    instruction:
+      "In SuccessFactors, open position POS-BR01-QA-07 and requisition REQ-260184. Confirm job classification, location, reporting line, headcount, and budget.",
+    why:
+      "A hire must fill an approved organizational need. Position control links workforce demand to structure, cost planning, security, and recruitment.",
+    result:
+      "The Quality Technician position is approved at BR01, reports to Quality Manager Martin Hughes, and is budgeted to cost centre BR01-QA.",
+    fields: [
+      { label: "Position", value: "POS-BR01-QA-07" },
+      { label: "Requisition", value: "REQ-260184" },
+      { label: "Cost centre", value: "BR01-QA" },
+    ],
+  },
+  {
+    number: 2,
+    title: "Validate offer and pre-employment data",
+    instruction:
+      "Review Aisha Rahman's accepted offer, start date, right-to-work status, bank and tax prerequisites, and onboarding checklist.",
+    why:
+      "Validated pre-employment data prevents payroll, access, compliance, and identity errors from entering the employee master.",
+    result:
+      "The candidate is ready to hire on 15 June 2026 with all mandatory checks completed.",
+    fields: [
+      { label: "Candidate", value: "Aisha Rahman" },
+      { label: "Start date", value: "15.06.2026" },
+      { label: "Annual salary", value: "£36,800" },
+    ],
+  },
+  {
+    number: 3,
+    title: "Create the employee and employment record",
+    instruction:
+      "Use Add New Employee in SuccessFactors, or personnel action Hire in SAP HCM. Enter personal, address, employment, organizational, and contract data.",
+    why:
+      "The hire action creates one effective-dated employee identity that downstream payroll, time, learning, security, and reporting processes can trust.",
+    result:
+      "Personnel number 700184 is created with onboarding status and employment start date 15 June 2026.",
+    fields: [
+      { label: "Personnel number", value: "700184" },
+      { label: "Employee group", value: "1 Active" },
+      { label: "Employee subgroup", value: "GB-SALARIED" },
+    ],
+  },
+  {
+    number: 4,
+    title: "Assign organization and account coding",
+    instruction:
+      "Assign company code BCB1, personnel area BR01, department Quality Assurance, position POS-BR01-QA-07, manager 700092, and cost centre BR01-QA.",
+    why:
+      "Organizational assignment drives approvals, reporting, authorization, time rules, payroll processing, and where labour cost posts in CO.",
+    result:
+      "Aisha appears in the BR01 quality organization and payroll expenses will post to BR01-QA.",
+    fields: [
+      { label: "Company / plant", value: "BCB1 / BR01" },
+      { label: "Manager", value: "700092 Martin Hughes" },
+      { label: "Cost centre", value: "BR01-QA" },
+    ],
+  },
+  {
+    number: 5,
+    title: "Configure time, payroll, and benefits",
+    instruction:
+      "Assign work schedule GB-37.5, payroll area GB-M1, tax and bank details, holiday scheme UK-25, pension plan, and monthly basic pay.",
+    why:
+      "Time and payroll configuration converts the employment contract into controlled attendance, statutory deductions, net pay, liabilities, and labour cost.",
+    result:
+      "The employee is ready for June payroll with prorated basic pay and benefit eligibility.",
+    fields: [
+      { label: "Payroll area", value: "GB-M1" },
+      { label: "Work schedule", value: "GB-37.5" },
+      { label: "Monthly salary", value: "£3,066.67" },
+    ],
+  },
+  {
+    number: 6,
+    title: "Complete onboarding and mandatory learning",
+    instruction:
+      "Assign food safety, laboratory practice, chemical handling, and SAP QM learning. Confirm badge, equipment, system access, and probation objectives.",
+    why:
+      "A technically hired employee cannot safely perform the role until compliance learning, equipment, access, and role expectations are complete.",
+    result:
+      "The onboarding plan contains four mandatory courses and a 90-day performance objective agreed with the manager.",
+  },
+  {
+    number: 7,
+    title: "Understand payroll posting and lifecycle controls",
+    instruction:
+      "Review the simulated June payroll result and posting document. Then inspect how future promotion, leave, transfer, and separation actions remain effective-dated.",
+    why:
+      "Hire-to-Retire is a continuing lifecycle. Payroll must reconcile to FI/CO, while every employee change preserves history and controls final pay and access.",
+    result:
+      "June payroll posts salary and employer cost to BR01-QA, employee payable to payroll clearing, and statutory liabilities to balance-sheet accounts.",
+    fields: [
+      { label: "Gross pay", value: "£1,840.00 prorated" },
+      { label: "Employer cost", value: "£2,112.40" },
+      { label: "Posting document", value: "1900005268" },
+    ],
+  },
+];
+
 export const activity = [
   { time: "09:42", title: "Goods receipt posted", detail: "20,000 KG Pale Ale Malt · PO 4500011842", module: "MM" },
   { time: "09:18", title: "Inspection lot created", detail: "Incoming raw material · Lot 0400001844", module: "QM" },
@@ -614,6 +728,12 @@ export const mentorAnswers: Record<string, string> = {
     "Reserved parts create commitments but not actual cost. Actual material cost posts at goods issue, labour and activity cost at confirmation, supplier cost at invoice, and settlement transfers the final balance to the responsible cost object.",
   "Why technically complete the order?":
     "Technical completion confirms operational work is finished, closes or flags remaining commitments, releases unused reservations, and prepares the order for final cost review and settlement.",
+  "Why is organizational assignment important?":
+    "Company code, personnel area, position, manager, and cost centre determine approvals, reporting, time and payroll rules, security, and where employee costs post in FI and CO.",
+  "How does payroll affect finance?":
+    "Payroll calculates gross-to-net pay and employer costs. Posting debits salary and employer-cost accounts by cost centre, credits employee-payable or clearing accounts, and records tax, pension, and social-insurance liabilities.",
+  "What happens during employee separation?":
+    "A separation action records the effective end date and reason, calculates final pay and leave, ends benefits, triggers asset and access return, preserves statutory records, and closes organizational assignments.",
 };
 
 export const learningPaths: LearningPath[] = [
@@ -701,6 +821,20 @@ export const learningPaths: LearningPath[] = [
     description:
       "Plan and execute emergency work, reserve spares, capture failure history, settle cost, and improve prevention.",
   },
+  {
+    id: "hcm-hire",
+    title: "Hire and onboard a quality technician",
+    process: "Hire to Retire",
+    module: "HCM + SuccessFactors + FI + CO",
+    role: "HR Operations Specialist",
+    level: "Intermediate",
+    duration: "65 min",
+    lessons: 7,
+    progress: 0,
+    status: "available",
+    description:
+      "Create effective-dated employment, organization, payroll, onboarding, learning, and financial assignments.",
+  },
 ];
 
 export const processCatalog = [
@@ -710,6 +844,7 @@ export const processCatalog = [
   { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 61 },
   { name: "Quality Management", code: "QM", modules: "QM · MM · FI", scenarios: 6, readiness: 66 },
   { name: "Plant Maintenance", code: "PM", modules: "PM · MM · CO · EHS", scenarios: 6, readiness: 63 },
+  { name: "Hire to Retire", code: "H2R", modules: "HCM · SF · FI · CO", scenarios: 5, readiness: 62 },
 ];
 
 export const knowledgeCheck: KnowledgeCheck = {
@@ -788,6 +923,19 @@ export const plantMaintenanceKnowledgeCheck: KnowledgeCheck = {
   correctIndex: 0,
   explanation:
     "The reservation protects availability and records a commitment. Goods issue consumes the part, credits inventory, and debits the maintenance order with actual material cost.",
+};
+
+export const hireToRetireKnowledgeCheck: KnowledgeCheck = {
+  question:
+    "Why must the employee's cost centre be correct before payroll posting?",
+  options: [
+    "It determines where salary and employer costs are charged in controlling",
+    "It sets the employee's home address",
+    "It replaces the employee's bank account",
+  ],
+  correctIndex: 0,
+  explanation:
+    "The organizational assignment supplies the account-assignment objects used by payroll posting. An incorrect cost centre misstates departmental cost and profitability reporting.",
 };
 
 export const processScenarios: ProcessScenario[] = [
@@ -921,6 +1069,28 @@ export const processScenarios: ProcessScenario[] = [
       { label: "Inventory impact", title: "Critical spares reserved and issued", description: "Bearing and seal-kit stock is protected by reservation, then consumed through goods issue to the maintenance order." },
       { label: "Accounting impact", title: "£12,450 settled to utilities", description: "Material, labour, and service costs accumulate on the order before settlement to cost centre BR01-UTIL." },
       { label: "Operational impact", title: "14-hour outage controlled", description: "Safety isolation, rescheduling, execution, testing, and preventive-plan feedback restore service and reduce recurrence risk." },
+    ],
+  },
+  {
+    id: "h2r",
+    code: "H2R-2026-00184",
+    title: "Hire to Retire",
+    scenario: "Quality Technician onboarding",
+    partyLabel: "Employee / position",
+    party: "700184 Aisha Rahman / POS-BR01-QA-07",
+    value: "£36,800 annual salary / BR01-QA",
+    module: "SAP HCM / SuccessFactors",
+    tutorTitle: "Hire and onboard a new employee",
+    tutorDescription: "Create a compliant employee lifecycle connected to organization, payroll, learning, and finance.",
+    appName: "Add New Employee",
+    transactionCode: "PA40 / SuccessFactors",
+    steps: hireToRetireSteps,
+    tutorSteps: hireToRetireTutorSteps,
+    knowledgeCheck: hireToRetireKnowledgeCheck,
+    impacts: [
+      { label: "Master-data impact", title: "One effective-dated employee record", description: "Personal, employment, organization, time, payroll, benefit, and learning data share personnel number 700184." },
+      { label: "Accounting impact", title: "Payroll posts to BR01-QA", description: "Gross pay and employer cost debit quality cost accounts while net pay and statutory deductions credit clearing and liability accounts." },
+      { label: "Operational impact", title: "Quality capacity increases", description: "A trained Quality Technician fills approved position POS-BR01-QA-07 and supports incoming and production inspection workload." },
     ],
   },
 ];

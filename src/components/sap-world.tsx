@@ -34,6 +34,7 @@ import {
 import { useEffect, useState } from "react";
 import {
   businessPartners,
+  employees,
   enterpriseSummary,
   enterpriseUnits,
   plants,
@@ -80,6 +81,7 @@ const initialScenarioProgress: ScenarioProgress = {
   r2r: { step: 0, complete: false },
   qm: { step: 0, complete: false },
   pm: { step: 0, complete: false },
+  h2r: { step: 0, complete: false },
 };
 
 function restoreScenarioProgress(
@@ -109,7 +111,7 @@ export function SapWorld() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(initialScenarioProgress);
-  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null });
+  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,6 +238,12 @@ export function SapWorld() {
           title: event.title,
           subtitle: `${event.category} · ${event.date}`,
           target: "history" as View,
+        })),
+        ...employees.map((employee) => ({
+          id: employee.id,
+          title: employee.name,
+          subtitle: `${employee.position} · ${employee.plant} · ${employee.costCenter}`,
+          target: "structure" as View,
         })),
       ]
         .filter((result) =>
@@ -416,8 +424,8 @@ export function SapWorld() {
 
               <div className="academy-summary">
                 <article className="panel"><span>Current role</span><strong>Warehouse Operative</strong><small>Burton Brewery · Plant BR01</small></article>
-                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 6</strong><small>Available learning pathways</small></article>
-                <article className="panel"><span>Process coverage</span><strong>7 modules</strong><small>MM · QM · FI · SD · EWM · PP · CO</small></article>
+                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 7</strong><small>Available learning pathways</small></article>
+                <article className="panel"><span>Process coverage</span><strong>10 modules</strong><small>MM · QM · FI · SD · EWM · PP · CO · PM · HCM · SF</small></article>
               </div>
 
               <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>{learningPaths.length} pathways</span></div>
@@ -430,7 +438,8 @@ export function SapWorld() {
                     path.id === "pp-brew-plan" ? "ptp" :
                     path.id === "fi-month-close" ? "r2r" :
                     path.id === "qm-inspection" ? "qm" :
-                    path.id === "pm-breakdown" ? "pm" : null;
+                    path.id === "pm-breakdown" ? "pm" :
+                    path.id === "hcm-hire" ? "h2r" : null;
                   const pathState = scenarioId ? scenarioProgress[scenarioId] : null;
                   const scenario = scenarioId ? processScenarios.find((item) => item.id === scenarioId) : null;
                   const progress = pathState && scenario

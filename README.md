@@ -16,12 +16,14 @@ The first release demonstrates a brewery enterprise with:
 - A guided month-end close lesson spanning FI-GL, AP, AR, CO, PP, and reporting
 - A guided incoming-inspection lesson spanning QM, MM, supplier quality, and stock disposition
 - A guided emergency-maintenance lesson spanning PM, MM, CO, safety, and reliability feedback
+- A guided employee-onboarding lesson spanning HCM, SuccessFactors, payroll, FI, and CO
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
 - Locally persisted lesson progress and completion status
 - An assessed knowledge check with corrective feedback
 - Searchable company structure, plants, storage locations, suppliers, and customers
+- Searchable employee and organizational-assignment records
 - Operational plant capacity, utilization, staffing, and order context
 - Business-partner exposure, risk, blocking status, and category filters
 - A normalized read-only enterprise API at `/api/enterprise`
@@ -53,7 +55,7 @@ Historical events can be queried by fiscal year, severity, and category:
 `/api/simulation/events?year=2025–2026&severity=Critical&category=Quality`
 
 Process flows and tutor content can be queried by process (`p2p`, `o2c`,
-`ptp`, `r2r`, `qm`, or `pm`):
+`ptp`, `r2r`, `qm`, `pm`, or `h2r`):
 
 `/api/simulation/processes?id=o2c`
 
