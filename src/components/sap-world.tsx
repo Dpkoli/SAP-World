@@ -47,6 +47,12 @@ import {
   type FiscalYear,
 } from "@/data/history";
 import {
+  defaultIndustryId,
+  industryById,
+  industryEnterprises,
+  type IndustryId,
+} from "@/data/industries";
+import {
   defaultDiagnosticProgress,
   defaultScenarioProgress,
   normalizeLearnerProgress,
@@ -93,6 +99,8 @@ export function SapWorld({
   const [mentorOpen, setMentorOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
+  const [preferredIndustryId, setPreferredIndustryId] =
+    useState<IndustryId>(defaultIndustryId);
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
@@ -101,6 +109,7 @@ export function SapWorld({
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "saved" | "offline">("loading");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [partnerFilter, setPartnerFilter] = useState<"All" | "Supplier" | "Customer">("All");
   const [selectedYear, setSelectedYear] = useState<FiscalYear>("2025–2026");
@@ -142,6 +151,7 @@ export function SapWorld({
           setScenarioProgress(normalized.scenarios);
           setDiagnosticProgress(normalized.diagnostics);
           setActiveScenarioId(normalized.activeScenarioId);
+          setPreferredIndustryId(normalized.preferredIndustryId);
           setSyncStatus(result.found ? "saved" : "saving");
         }
       } catch {
@@ -150,6 +160,7 @@ export function SapWorld({
           setScenarioProgress(normalized.scenarios);
           setDiagnosticProgress(normalized.diagnostics);
           setActiveScenarioId(normalized.activeScenarioId);
+          setPreferredIndustryId(normalized.preferredIndustryId);
           setSyncStatus("offline");
         }
       } finally {
@@ -167,6 +178,7 @@ export function SapWorld({
     if (!progressLoaded) return;
     const payload = {
       activeScenarioId,
+      preferredIndustryId,
       scenarios: scenarioProgress,
       diagnostics: diagnosticProgress,
     };
@@ -197,6 +209,7 @@ export function SapWorld({
   }, [
     activeScenarioId,
     diagnosticProgress,
+    preferredIndustryId,
     progressLoaded,
     scenarioProgress,
     user.id,
@@ -236,6 +249,8 @@ export function SapWorld({
   const diagnosisCorrect =
     diagnosticProgress[activeScenarioId].complete ||
     diagnosisAnswer === troubleshootingCase.correctDiagnosis;
+  const activeEnterprise = industryById(defaultIndustryId);
+  const preferredIndustry = industryById(preferredIndustryId);
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
   const lessonProgress = activeProgress.complete
     ? 100
@@ -406,14 +421,14 @@ export function SapWorld({
           <button className="menu-button" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu size={21} />
           </button>
-          <div className="enterprise-switcher">
+          <button className="enterprise-switcher" onClick={() => setEnterpriseOpen(true)}>
             <span className="company-icon"><Factory size={17} /></span>
             <div>
               <span>Active enterprise</span>
-              <strong>Burton Craft Beverages Ltd.</strong>
+              <strong>{activeEnterprise.enterprise}</strong>
             </div>
             <ChevronRight size={17} />
-          </div>
+          </button>
           <div className="topbar-actions">
             <span className={`sync-status ${syncStatus}`}>
               <i />
@@ -515,6 +530,12 @@ export function SapWorld({
                 <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 7</strong><small>Available learning pathways</small></article>
                 <article className="panel"><span>Exceptions diagnosed</span><strong>{Object.values(diagnosticProgress).filter((progress) => progress.complete).length} of 7</strong><small>{Object.values(diagnosticProgress).reduce((sum, progress) => sum + progress.attempts, 0)} diagnostic attempts</small></article>
               </div>
+
+              <button className="industry-preference panel" onClick={() => setEnterpriseOpen(true)}>
+                <span className="company-icon"><Building2 size={18} /></span>
+                <div><span className="section-kicker">Industry roadmap preference</span><strong>{preferredIndustry.industry}</strong><small>{preferredIndustry.status === "live" ? "Your selected enterprise is available now." : `${preferredIndustry.enterprise} · ${preferredIndustry.release}`}</small></div>
+                <span>Explore all industries <ChevronRight size={15} /></span>
+              </button>
 
               <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>{learningPaths.length} pathways</span></div>
               <div className="path-grid">
@@ -953,6 +974,64 @@ export function SapWorld({
           )}
         </div>
       </main>
+
+      {enterpriseOpen && (
+        <div className="enterprise-overlay" onClick={() => setEnterpriseOpen(false)}>
+          <section className="enterprise-dialog" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span className="section-kicker">SAP Enterprise Simulation Cloud</span>
+                <h2>Choose an industry environment</h2>
+                <p>
+                  The brewery simulation is live with connected transactions.
+                  Select a planned industry to save it as your roadmap preference.
+                </p>
+              </div>
+              <button onClick={() => setEnterpriseOpen(false)} aria-label="Close enterprise selector"><X size={19} /></button>
+            </header>
+            <div className="enterprise-live-banner">
+              <Factory size={21} />
+              <div><span>Active workspace</span><strong>{activeEnterprise.enterprise}</strong><small>{activeEnterprise.operatingModel} · {activeEnterprise.companyCode}</small></div>
+              <span className="status-chip operating">Live</span>
+            </div>
+            <div className="industry-grid">
+              {industryEnterprises.map((enterprise) => {
+                const selected = preferredIndustryId === enterprise.id;
+                return (
+                  <article className={`industry-card ${enterprise.status} ${selected ? "selected" : ""}`} key={enterprise.id}>
+                    <div className="industry-card-top">
+                      <span className={enterprise.status === "live" ? "status-chip operating" : "status-chip planned"}>{enterprise.status === "live" ? "Live" : enterprise.release}</span>
+                      {selected && <span className="preference-check"><Check size={13} /> Selected</span>}
+                    </div>
+                    <span className="industry-name">{enterprise.industry}</span>
+                    <h3>{enterprise.enterprise}</h3>
+                    <p>{enterprise.description}</p>
+                    <small>{enterprise.operatingModel}</small>
+                    <div className="industry-modules">
+                      {enterprise.modules.map((module) => <span key={module}>{module}</span>)}
+                    </div>
+                    <button
+                      className={selected ? "selected" : ""}
+                      onClick={() => {
+                        setPreferredIndustryId(enterprise.id);
+                        setEnterpriseOpen(false);
+                      }}
+                    >
+                      {enterprise.status === "live"
+                        ? selected
+                          ? "Current enterprise"
+                          : "Open enterprise"
+                        : selected
+                          ? "Roadmap preference saved"
+                          : "Set as roadmap preference"}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      )}
 
       {searchOpen && (
         <div className="search-overlay" onClick={() => setSearchOpen(false)}>

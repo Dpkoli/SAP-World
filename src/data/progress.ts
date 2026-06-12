@@ -1,4 +1,9 @@
 import { processScenarios } from "@/data/simulation";
+import {
+  defaultIndustryId,
+  isIndustryId,
+  type IndustryId,
+} from "@/data/industries";
 
 export type ScenarioId = (typeof processScenarios)[number]["id"];
 
@@ -15,6 +20,7 @@ export type DiagnosticProgress = Record<
 export type LearnerProgress = {
   learnerId: string;
   activeScenarioId: ScenarioId;
+  preferredIndustryId: IndustryId;
   scenarios: ScenarioProgress;
   diagnostics: DiagnosticProgress;
   updatedAt: string;
@@ -89,6 +95,7 @@ export function normalizeLearnerProgress(
     typeof value === "object" && value !== null
       ? (value as {
           activeScenarioId?: unknown;
+          preferredIndustryId?: unknown;
           scenarios?: unknown;
           diagnostics?: unknown;
           lessonStep?: number;
@@ -102,6 +109,9 @@ export function normalizeLearnerProgress(
     activeScenarioId: isScenarioId(input.activeScenarioId)
       ? input.activeScenarioId
       : "p2p",
+    preferredIndustryId: isIndustryId(input.preferredIndustryId)
+      ? input.preferredIndustryId
+      : defaultIndustryId,
     scenarios: normalizeScenarioProgress(input.scenarios, {
       lessonStep: input.lessonStep,
       lessonComplete: input.lessonComplete,

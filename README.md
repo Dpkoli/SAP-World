@@ -8,6 +8,7 @@ S/4HANA through realistic, connected business operations.
 The first release demonstrates a brewery enterprise with:
 
 - An operational dashboard and enterprise KPIs
+- A ten-industry enterprise catalogue with saved learner roadmap preference
 - A connected Procure-to-Pay document flow
 - Inventory, accounting, and operational impact explanations
 - A guided SAP goods-receipt lesson using realistic business data
@@ -54,6 +55,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 The current enterprise snapshot is available at
 [http://localhost:3000/api/enterprise](http://localhost:3000/api/enterprise).
+
+The multi-industry catalogue and rollout status are available at:
+
+`/api/industries`
 
 Historical events can be queried by fiscal year, severity, and category:
 
