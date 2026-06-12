@@ -78,6 +78,7 @@ const initialScenarioProgress: ScenarioProgress = {
   o2c: { step: 0, complete: false },
   ptp: { step: 0, complete: false },
   r2r: { step: 0, complete: false },
+  qm: { step: 0, complete: false },
 };
 
 function restoreScenarioProgress(
@@ -107,7 +108,7 @@ export function SapWorld() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(initialScenarioProgress);
-  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null });
+  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -414,11 +415,11 @@ export function SapWorld() {
 
               <div className="academy-summary">
                 <article className="panel"><span>Current role</span><strong>Warehouse Operative</strong><small>Burton Brewery · Plant BR01</small></article>
-                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 4</strong><small>Available learning pathways</small></article>
+                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 5</strong><small>Available learning pathways</small></article>
                 <article className="panel"><span>Process coverage</span><strong>7 modules</strong><small>MM · QM · FI · SD · EWM · PP · CO</small></article>
               </div>
 
-              <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>4 pathways</span></div>
+              <div className="catalog-heading"><div><span className="section-kicker">Recommended pathways</span><h2>Learn through real business scenarios</h2></div><span>{learningPaths.length} pathways</span></div>
               <div className="path-grid">
                 {learningPaths.map((path) => {
                   const available = path.status === "available";
@@ -426,7 +427,8 @@ export function SapWorld() {
                     path.id === "mm-goods-receipt" ? "p2p" :
                     path.id === "sd-order-to-cash" ? "o2c" :
                     path.id === "pp-brew-plan" ? "ptp" :
-                    path.id === "fi-month-close" ? "r2r" : null;
+                    path.id === "fi-month-close" ? "r2r" :
+                    path.id === "qm-inspection" ? "qm" : null;
                   const pathState = scenarioId ? scenarioProgress[scenarioId] : null;
                   const scenario = scenarioId ? processScenarios.find((item) => item.id === scenarioId) : null;
                   const progress = pathState && scenario

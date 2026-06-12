@@ -37,7 +37,7 @@ export type KnowledgeCheck = {
 };
 
 export type ProcessScenario = {
-  id: "p2p" | "o2c" | "ptp" | "r2r";
+  id: "p2p" | "o2c" | "ptp" | "r2r" | "qm";
   code: string;
   title: string;
   scenario: string;
@@ -374,6 +374,99 @@ export const recordToReportTutorSteps: TutorStep[] = [
   },
 ];
 
+export const qualityManagementSteps: ProcessStep[] = [
+  { id: "LOT", label: "Inspection Lot", document: "0400001844", module: "QM / MM", status: "complete" },
+  { id: "SMP", label: "Sample Calculation", document: "Sample 0001", module: "QM", status: "complete" },
+  { id: "RES", label: "Results Recording", document: "In progress", module: "QM", status: "active" },
+  { id: "DEF", label: "Defect Recording", document: "Conditional", module: "QM", status: "waiting" },
+  { id: "UD", label: "Usage Decision", document: "Pending", module: "QM / MM", status: "waiting" },
+  { id: "STK", label: "Stock Posting", document: "Pending", module: "MM / FI", status: "waiting" },
+  { id: "VEN", label: "Supplier Evaluation", document: "Pending", module: "QM / MM", status: "waiting" },
+];
+
+export const qualityManagementTutorSteps: TutorStep[] = [
+  {
+    number: 1,
+    title: "Open Manage Inspection Lots",
+    instruction:
+      "In SAP Fiori, open Manage Inspection Lots and search for inspection lot 0400001844. In SAP GUI, use QA32.",
+    why:
+      "The inspection lot is the controlled quality record linking the supplier delivery, material, batch, inspection plan, sample, results, and stock decision.",
+    result:
+      "SAP displays the 20,000 KG Pale Ale Malt receipt from Highland Maltings in quality inspection stock.",
+    fields: [
+      { label: "Inspection lot", value: "0400001844" },
+      { label: "Material", value: "RM-MALT-PALE-01" },
+      { label: "Batch", value: "MALT-260611-A" },
+    ],
+  },
+  {
+    number: 2,
+    title: "Review the inspection plan and sample",
+    instruction:
+      "Open the inspection specifications. Confirm plan MALT-IN-01, sample size 2 KG, and characteristics for moisture, protein, extract, colour, and contamination.",
+    why:
+      "The inspection plan ensures each delivery is tested consistently against approved technical specifications and sampling rules.",
+    result:
+      "The laboratory receives a controlled sample with five required characteristics and defined acceptance limits.",
+    fields: [
+      { label: "Inspection plan", value: "MALT-IN-01" },
+      { label: "Sample size", value: "2 KG" },
+      { label: "Inspection type", value: "01 Goods receipt" },
+    ],
+  },
+  {
+    number: 3,
+    title: "Record laboratory results",
+    instruction:
+      "Choose Record Results. Enter moisture 4.3%, protein 10.8%, extract 81.2%, colour 5.2 EBC, and contamination result Not Detected.",
+    why:
+      "Result recording creates objective evidence that the received batch meets recipe, yield, food-safety, and process-performance requirements.",
+    result:
+      "All quantitative values fall within specification and the qualitative contamination check is accepted.",
+    fields: [
+      { label: "Moisture", value: "4.3% · Limit ≤ 4.5%" },
+      { label: "Protein", value: "10.8% · 9.5–11.5%" },
+      { label: "Extract", value: "81.2% · Limit ≥ 80.5%" },
+    ],
+  },
+  {
+    number: 4,
+    title: "Evaluate defects and complete results",
+    instruction:
+      "Review characteristic valuations and choose Complete. If a result is rejected, record a defect and create a quality notification before continuing.",
+    why:
+      "Completing results prevents silent changes and ensures rejected characteristics trigger traceable corrective action rather than an unsupported stock release.",
+    result:
+      "The lot receives accepted characteristic valuations with no defect notification required for this batch.",
+  },
+  {
+    number: 5,
+    title: "Make the usage decision",
+    instruction:
+      "Open Make Usage Decision, select code A1 Accept, enter the decision note, and post all 20,000 KG to unrestricted-use stock.",
+    why:
+      "The usage decision is the formal quality authorization that determines whether stock can be used, blocked, returned, reworked, or scrapped.",
+    result:
+      "The inspection lot closes and material document 5000042988 transfers the batch from quality inspection to unrestricted stock.",
+    fields: [
+      { label: "Decision code", value: "A1 Accept" },
+      { label: "Stock posting", value: "20,000 KG unrestricted" },
+      { label: "Material document", value: "5000042988" },
+    ],
+  },
+  {
+    number: 6,
+    title: "Review supplier quality impact",
+    instruction:
+      "Open the supplier evaluation for Highland Maltings and confirm the accepted inspection updates the quality score and delivery history.",
+    why:
+      "Supplier evaluation converts individual inspection outcomes into sourcing evidence for future awards, development actions, and risk decisions.",
+    result:
+      "Highland Maltings retains a quality score of 94/100 and the batch becomes available to production planning.",
+  },
+];
+
 export const activity = [
   { time: "09:42", title: "Goods receipt posted", detail: "20,000 KG Pale Ale Malt · PO 4500011842", module: "MM" },
   { time: "09:18", title: "Inspection lot created", detail: "Incoming raw material · Lot 0400001844", module: "QM" },
@@ -400,6 +493,12 @@ export const mentorAnswers: Record<string, string> = {
     "Goods issues, confirmations, overhead, and goods receipts leave costs and credits on production orders. Variance calculation explains the difference, and settlement transfers the remaining balance to the correct inventory, price-difference, or profitability object.",
   "Why lock the accounting period?":
     "After close checks and reporting are approved, posting-period control prevents late transactions from changing published results. Authorized finance roles can open controlled adjustment periods when necessary.",
+  "Why is a usage decision required?":
+    "Results prove what was measured, but the usage decision is the formal business authorization for stock disposition. It closes the inspection lot and posts the quantity to unrestricted, blocked, return, rework, or scrap stock.",
+  "What happens when a result fails?":
+    "SAP values the characteristic as rejected. The inspector can record a defect and create a quality notification, while the stock remains unavailable until an authorized usage decision determines its disposition.",
+  "Does the quality stock transfer create value?":
+    "A transfer from quality inspection to unrestricted stock usually changes stock type, not total quantity or inventory value. Accounting postings occur only when the chosen disposition changes valuation, such as scrapping or returning stock.",
 };
 
 export const learningPaths: LearningPath[] = [
@@ -459,6 +558,20 @@ export const learningPaths: LearningPath[] = [
     description:
       "Reconcile subledgers, post accruals, allocate costs, review variances, and close the period.",
   },
+  {
+    id: "qm-inspection",
+    title: "Inspect and release incoming materials",
+    process: "Quality Management",
+    module: "QM + MM + FI",
+    role: "Quality Technician",
+    level: "Intermediate",
+    duration: "50 min",
+    lessons: 6,
+    progress: 0,
+    status: "available",
+    description:
+      "Record laboratory results, manage defects, make a usage decision, and update supplier quality performance.",
+  },
 ];
 
 export const processCatalog = [
@@ -466,6 +579,7 @@ export const processCatalog = [
   { name: "Order to Cash", code: "O2C", modules: "SD · EWM · FI", scenarios: 6, readiness: 68 },
   { name: "Plan to Produce", code: "PTP", modules: "PP · MM · CO", scenarios: 7, readiness: 64 },
   { name: "Record to Report", code: "R2R", modules: "FI · CO", scenarios: 5, readiness: 61 },
+  { name: "Quality Management", code: "QM", modules: "QM · MM · FI", scenarios: 6, readiness: 66 },
 ];
 
 export const knowledgeCheck: KnowledgeCheck = {
@@ -518,6 +632,19 @@ export const recordToReportKnowledgeCheck: KnowledgeCheck = {
   correctIndex: 0,
   explanation:
     "The accrual follows the matching principle: current-period operations consumed the utilities, so the expense and liability are recognized now and reversed when the supplier invoice is expected.",
+};
+
+export const qualityManagementKnowledgeCheck: KnowledgeCheck = {
+  question:
+    "Why can production not consume the malt immediately after all inspection results are accepted?",
+  options: [
+    "The supplier invoice must be paid first",
+    "An authorized usage decision must release the stock from quality inspection",
+    "MRP must recreate the purchase order",
+  ],
+  correctIndex: 1,
+  explanation:
+    "Accepted results are evidence, but the usage decision is the formal stock-disposition authorization. Posting the decision moves the batch from quality inspection to unrestricted-use stock.",
 };
 
 export const processScenarios: ProcessScenario[] = [
@@ -607,6 +734,28 @@ export const processScenarios: ProcessScenario[] = [
       { label: "Inventory impact", title: "Valuation and variances finalized", description: "Inventory balances reconcile to the material ledger while production variances are calculated and settled." },
       { label: "Accounting impact", title: "Period 03 results completed", description: "Accruals, allocations, settlements, and subledger balances produce a balanced and period-complete general ledger." },
       { label: "Operational impact", title: "Performance becomes explainable", description: "Profit-centre, product, customer, and cost-centre reporting show how operations created the period result." },
+    ],
+  },
+  {
+    id: "qm",
+    code: "QM-2026-0184",
+    title: "Quality Management",
+    scenario: "Incoming malt inspection",
+    partyLabel: "Inspection lot / supplier",
+    party: "0400001844 / Highland Maltings PLC",
+    value: "20,000 KG / £14,800 inventory",
+    module: "SAP QM",
+    tutorTitle: "Inspect and release incoming malt",
+    tutorDescription: "Record controlled results, evaluate defects, authorize stock, and update supplier quality.",
+    appName: "Manage Inspection Lots",
+    transactionCode: "QA32 / QE51N",
+    steps: qualityManagementSteps,
+    tutorSteps: qualityManagementTutorSteps,
+    knowledgeCheck: qualityManagementKnowledgeCheck,
+    impacts: [
+      { label: "Inventory impact", title: "20,000 KG quality stock controlled", description: "The batch remains unavailable until usage decision A1 posts it from quality inspection to unrestricted-use stock." },
+      { label: "Accounting impact", title: "No value change on acceptance", description: "The stock-type transfer preserves inventory quantity and value; reject dispositions can create return, scrap, or claim postings." },
+      { label: "Operational impact", title: "Recipe compliance protected", description: "Moisture, protein, extract, colour, and contamination results protect yield, product consistency, and food safety." },
     ],
   },
 ];
