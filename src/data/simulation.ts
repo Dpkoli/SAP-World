@@ -37,7 +37,7 @@ export type KnowledgeCheck = {
 };
 
 export type ProcessScenario = {
-  id: "p2p" | "o2c" | "ptp" | "r2r" | "qm" | "pm" | "h2r";
+  id: "p2p" | "o2c" | "ptp" | "r2r" | "qm" | "pm" | "h2r" | "w2d";
   code: string;
   title: string;
   scenario: string;
@@ -190,6 +190,104 @@ export const orderToCashTutorSteps: TutorStep[] = [
       "Pricing determines expected revenue while the credit check controls financial exposure before warehouse fulfilment begins.",
     result:
       "Sales order 182934 is created for £46,720 net value and becomes due for outbound-delivery creation.",
+  },
+];
+
+export const warehouseToDispatchSteps: ProcessStep[] = [
+  { id: "OBD", label: "Outbound Delivery", document: "800018447", module: "SD / EWM", status: "complete" },
+  { id: "WAVE", label: "Warehouse Wave", document: "WAVE-260618-03", module: "EWM", status: "complete" },
+  { id: "PICK", label: "Picking Tasks", document: "WT-70018442", module: "EWM", status: "active" },
+  { id: "PACK", label: "Handling Units", document: "HU-260618-441/442", module: "EWM", status: "waiting" },
+  { id: "LOAD", label: "Carrier Loading", document: "FO-660001184", module: "EWM / TM", status: "waiting" },
+  { id: "PGI", label: "Post Goods Issue", document: "Pending", module: "EWM / MM / FI", status: "waiting" },
+  { id: "POD", label: "Proof of Delivery", document: "Pending", module: "TM / SD", status: "waiting" },
+];
+
+export const warehouseToDispatchTutorSteps: TutorStep[] = [
+  {
+    number: 1,
+    title: "Review the outbound warehouse request",
+    instruction:
+      "Open Run Outbound Process - Deliveries and select outbound delivery 800018447. Confirm the route, requested date, quantities, stock-removal rule, and warehouse status.",
+    why:
+      "The warehouse request translates the customer delivery into executable warehouse work while preserving the sales and delivery document chain.",
+    result:
+      "The delivery is ready for wave planning with 400 kegs confirmed from warehouse DC01.",
+    fields: [
+      { label: "Outbound delivery", value: "800018447" },
+      { label: "Warehouse", value: "DC01" },
+      { label: "Route", value: "UK-MID-04" },
+    ],
+  },
+  {
+    number: 2,
+    title: "Create and release the warehouse wave",
+    instruction:
+      "Assign the delivery items to wave WAVE-260618-03, review labour and door capacity, then release the wave to create warehouse tasks.",
+    why:
+      "Wave management groups due work into a practical execution window and creates controlled picking tasks for warehouse resources.",
+    result:
+      "Warehouse task WT-70018442 is created for the two delivery items.",
+  },
+  {
+    number: 3,
+    title: "Confirm picking from the proposed bins",
+    instruction:
+      "Confirm 240 Amber Ale kegs and 160 Session IPA kegs from the proposed bins. Validate batch, quantity, source bin, destination staging area, and any exception code.",
+    why:
+      "Task confirmation proves the physical movement and preserves batch traceability. Short picks must be resolved before dispatch.",
+    result:
+      "All 400 kegs are moved to outbound staging for packing.",
+    fields: [
+      { label: "Amber Ale", value: "240 EA" },
+      { label: "Session IPA", value: "160 EA" },
+      { label: "Staging area", value: "GI-ZONE-04" },
+    ],
+  },
+  {
+    number: 4,
+    title: "Pack and label the handling units",
+    instruction:
+      "Create handling units HU-260618-441 and HU-260618-442, assign the picked stock, validate weight, and print the customer and carrier labels.",
+    why:
+      "Handling units give the load a scannable identity and connect products, batches, packaging, weight, and shipment labels.",
+    result:
+      "The delivery is fully packed and ready for door staging.",
+  },
+  {
+    number: 5,
+    title: "Stage and load the carrier",
+    instruction:
+      "Assign the handling units to freight order FO-660001184 and door D04. Check in the vehicle, confirm loading, seal number, and departure readiness.",
+    why:
+      "EWM and Transportation Management must agree on the physical load before the carrier can depart.",
+    result:
+      "The freight order shows both handling units loaded on the planned vehicle.",
+    fields: [
+      { label: "Freight order", value: "FO-660001184" },
+      { label: "Door", value: "D04" },
+      { label: "Carrier", value: "Midlands Drinks Logistics" },
+    ],
+  },
+  {
+    number: 6,
+    title: "Post goods issue",
+    instruction:
+      "Run the delivery completeness check, resolve any red status, and post goods issue for outbound delivery 800018447.",
+    why:
+      "Goods issue is the legal and accounting handover point: it reduces finished-goods stock and records cost of goods sold.",
+    result:
+      "Inventory decreases by 400 kegs and SAP posts Dr Cost of Goods Sold / Cr Finished Goods Inventory.",
+  },
+  {
+    number: 7,
+    title: "Monitor departure and proof of delivery",
+    instruction:
+      "Confirm vehicle departure, monitor transport milestones, and record proof of delivery or any quantity and damage exception returned by the carrier.",
+    why:
+      "The final milestone closes operational custody and gives customer service evidence for claims, billing disputes, and service reporting.",
+    result:
+      "The delivery has a traceable carrier handover and proof-of-delivery status.",
   },
 ];
 
@@ -835,6 +933,20 @@ export const learningPaths: LearningPath[] = [
     description:
       "Create effective-dated employment, organization, payroll, onboarding, learning, and financial assignments.",
   },
+  {
+    id: "ewm-warehouse-dispatch",
+    title: "Pick, pack, and dispatch a customer delivery",
+    process: "Warehouse to Dispatch",
+    module: "EWM + TM + SD + FI",
+    role: "Warehouse Supervisor",
+    level: "Intermediate",
+    duration: "55 min",
+    lessons: 7,
+    progress: 0,
+    status: "available",
+    description:
+      "Release a wave, confirm picking, pack handling units, load the carrier, post goods issue, and monitor proof of delivery.",
+  },
 ];
 
 export const processCatalog = [
@@ -846,6 +958,14 @@ export const processCatalog = [
   { name: "Plant Maintenance", code: "PM", modules: "PM · MM · CO · EHS", scenarios: 6, readiness: 63 },
   { name: "Hire to Retire", code: "H2R", modules: "HCM · SF · FI · CO", scenarios: 5, readiness: 62 },
 ];
+
+processCatalog.push({
+  name: "Warehouse to Dispatch",
+  code: "W2D",
+  modules: "EWM / TM / SD / FI",
+  scenarios: 7,
+  readiness: 60,
+});
 
 export const knowledgeCheck: KnowledgeCheck = {
   question:
@@ -936,6 +1056,19 @@ export const hireToRetireKnowledgeCheck: KnowledgeCheck = {
   correctIndex: 0,
   explanation:
     "The organizational assignment supplies the account-assignment objects used by payroll posting. An incorrect cost centre misstates departmental cost and profitability reporting.",
+};
+
+export const warehouseToDispatchKnowledgeCheck: KnowledgeCheck = {
+  question:
+    "Which warehouse milestone reduces finished-goods inventory and records cost of goods sold?",
+  options: [
+    "Releasing the picking wave",
+    "Packing the handling units",
+    "Posting goods issue for the outbound delivery",
+  ],
+  correctIndex: 2,
+  explanation:
+    "Picking, packing, and loading change warehouse execution status. Post goods issue is the valuated movement that credits finished-goods inventory and debits cost of goods sold.",
 };
 
 export const processScenarios: ProcessScenario[] = [
@@ -1091,6 +1224,29 @@ export const processScenarios: ProcessScenario[] = [
       { label: "Master-data impact", title: "One effective-dated employee record", description: "Personal, employment, organization, time, payroll, benefit, and learning data share personnel number 700184." },
       { label: "Accounting impact", title: "Payroll posts to BR01-QA", description: "Gross pay and employer cost debit quality cost accounts while net pay and statutory deductions credit clearing and liability accounts." },
       { label: "Operational impact", title: "Quality capacity increases", description: "A trained Quality Technician fills approved position POS-BR01-QA-07 and supports incoming and production inspection workload." },
+    ],
+  },
+  {
+    id: "w2d",
+    code: "W2D-2026-0117",
+    title: "Warehouse to Dispatch",
+    scenario: "Customer delivery wave and carrier handover",
+    partyLabel: "Delivery / customer",
+    party: "800018447 / Northern Taverns Ltd",
+    value: "400 kegs / GBP 46,720 outbound value",
+    module: "SAP EWM / TM",
+    tutorTitle: "Pick, pack, and dispatch a customer delivery",
+    tutorDescription:
+      "Execute the warehouse and carrier handover while understanding every inventory and accounting milestone.",
+    appName: "Run Outbound Process - Deliveries",
+    transactionCode: "/SCWM/MON / VL02N",
+    steps: warehouseToDispatchSteps,
+    tutorSteps: warehouseToDispatchTutorSteps,
+    knowledgeCheck: warehouseToDispatchKnowledgeCheck,
+    impacts: [
+      { label: "Inventory impact", title: "400 kegs leave finished-goods stock", description: "Picking moves stock operationally, but the valuated inventory reduction occurs only when goods issue is posted." },
+      { label: "Accounting impact", title: "Dr COGS / Cr Finished Goods", description: "Post goods issue recognizes the product cost associated with the customer delivery." },
+      { label: "Operational impact", title: "Carrier custody is traceable", description: "Wave, task, handling-unit, door, freight-order, departure, and proof-of-delivery statuses preserve end-to-end accountability." },
     ],
   },
 ];

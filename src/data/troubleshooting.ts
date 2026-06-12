@@ -230,6 +230,40 @@ export const troubleshootingCases: TroubleshootingCase[] = [
     prevention: "Classify critical spares, set reorder points, and monitor shelf-life inspection dates.",
   },
   {
+    id: "W2D-EX-001",
+    scenarioId: "w2d",
+    severity: "Critical",
+    title: "Goods issue blocked by incomplete picking",
+    symptom: "Outbound delivery 800018447 cannot post goods issue because one delivery item is not fully picked.",
+    businessContext:
+      "The carrier is waiting at door D04, but 24 kegs were short-picked after the proposed batch was moved to blocked stock.",
+    evidence: [
+      { source: "Outbound delivery", finding: "Delivery quantity: 400 EA; picked quantity: 376 EA." },
+      { source: "Warehouse task", finding: "WT-70018442 contains exception DIFW for 24 EA." },
+      { source: "Stock overview", finding: "Replacement stock exists only in blocked stock and cannot be allocated." },
+    ],
+    diagnoses: [
+      "The carrier freight order has no invoice",
+      "The delivery is not fully picked and the shortage remains unresolved",
+      "The customer payment terms are missing",
+    ],
+    correctDiagnosis: 1,
+    explanation:
+      "SAP protects document and quantity consistency. Goods issue cannot be posted until the delivery is fully picked or an authorized delivery-quantity change resolves the short pick.",
+    recoverySteps: [
+      { action: "Review the warehouse exception", sap: "Open WT-70018442 in the warehouse monitor and inspect exception DIFW", why: "Confirm the exact item, batch, bin, and short quantity." },
+      { action: "Find authorized replacement stock", sap: "Run stock and batch selection for an unrestricted approved batch", why: "Blocked stock must not be dispatched without a valid release." },
+      { action: "Resolve the delivery quantity", sap: "Reallocate and confirm the remaining task, or reduce the delivery with SD approval", why: "The physical load and delivery document must agree." },
+      { action: "Recheck and post goods issue", sap: "Validate picking, packing, loading, and completeness before PGI", why: "Only a complete and controlled handover should reduce inventory and post COGS." },
+    ],
+    impact: {
+      operational: "The vehicle misses its departure slot unless the shortage is resolved or the delivery is authorized for reduction.",
+      inventory: "Blocked stock remains unavailable, and no valuated stock reduction occurs before goods issue.",
+      financial: "Cost of goods sold is not posted while goods issue remains blocked.",
+    },
+    prevention: "Monitor wave shortages before carrier check-in and maintain replenishment rules for fast-moving dispatch stock.",
+  },
+  {
     id: "H2R-EX-001",
     scenarioId: "h2r",
     severity: "Warning",

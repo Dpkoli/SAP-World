@@ -18,8 +18,9 @@ The first release demonstrates a brewery enterprise with:
 - A guided incoming-inspection lesson spanning QM, MM, supplier quality, and stock disposition
 - A guided emergency-maintenance lesson spanning PM, MM, CO, safety, and reliability feedback
 - A guided employee-onboarding lesson spanning HCM, SuccessFactors, payroll, FI, and CO
+- A guided warehouse-dispatch lesson spanning EWM, TM, SD, MM, and FI
 - Interactive troubleshooting labs for P2P, O2C, production, close, quality,
-  maintenance, and payroll failures
+  maintenance, payroll, and warehouse-dispatch failures
 - Implementation blueprints covering organizational structure, master data,
   configuration, integration, testing, and go-live controls
 - Account-backed diagnostic attempts, exception completion, XP, and dynamic
@@ -27,7 +28,7 @@ The first release demonstrates a brewery enterprise with:
 - Step-by-step explanations of why each action is performed
 - An authenticated SAP mentor grounded in process, exception, enterprise, and
   historical simulation evidence
-- A role-based learning centre across MM, SD, PP, FI, QM, and EWM
+- A role-based learning centre across MM, SD, PP, FI, QM, PM, HCM, EWM, and TM
 - Learner registration and sign-in with hashed passwords and secure sessions
 - Server-backed lesson progress with an automatic browser fallback
 - An assessed knowledge check with corrective feedback
@@ -40,7 +41,7 @@ The first release demonstrates a brewery enterprise with:
   maintenance, finance, sales, and compliance events
 - Historical SAP document chains with operational, inventory, and financial impact
 - A filterable simulation-history API at `/api/simulation/events`
-- Reusable P2P and O2C process definitions at `/api/simulation/processes`
+- Reusable definitions for all eight processes at `/api/simulation/processes`
 - Responsive desktop and mobile layouts
 
 The simulation follows a real business chain:
@@ -72,7 +73,7 @@ Historical events can be queried by fiscal year, severity, and category:
 `/api/simulation/events?year=2025–2026&severity=Critical&category=Quality`
 
 Process flows and tutor content can be queried by process (`p2p`, `o2c`,
-`ptp`, `r2r`, `qm`, `pm`, or `h2r`):
+`ptp`, `r2r`, `qm`, `pm`, `h2r`, or `w2d`):
 
 `/api/simulation/processes?id=o2c`
 

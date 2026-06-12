@@ -32,10 +32,12 @@ const stopWords = new Set([
 ]);
 const sapDomainTerms = new Set([
   "account", "accrual", "batch", "billing", "cost", "credit", "customer",
-  "delivery", "goods", "gr", "grir", "inspection", "inventory", "invoice",
+  "delivery", "dispatch", "freight", "goods", "gr", "grir", "handling",
+  "inspection", "inventory", "invoice",
   "maintenance", "material", "mrp", "order", "payroll", "plant", "posting",
   "production", "purchase", "quality", "receipt", "sales", "settlement",
-  "stock", "supplier", "usage", "vendor", "warehouse",
+  "packing", "picking", "shipment", "stock", "supplier", "usage", "vendor",
+  "warehouse", "wave",
 ]);
 
 function tokens(value: string) {

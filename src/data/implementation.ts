@@ -246,6 +246,40 @@ export const implementationBlueprints: ImplementationBlueprint[] = [
     goLiveControls: ["Technical-object migration", "Critical spare verification", "Preventive-plan start dates", "Open order reconciliation"],
   },
   {
+    scenarioId: "w2d",
+    title: "Implement Warehouse to Dispatch",
+    objective:
+      "Create a controlled outbound flow from customer delivery through wave, picking, packing, staging, loading, goods issue, carrier handover, and proof of delivery.",
+    consultantRole: "SAP EWM / TM Integration Consultant",
+    organizationalUnits: [
+      { name: "Warehouse number and activity areas", purpose: "Control storage, picking responsibility, queues, and workload.", example: "DC01 / PICK-A / STAGE-OUT" },
+      { name: "Shipping point and staging areas", purpose: "Connect SD delivery dates to physical goods-issue processing.", example: "DC01 / GI-ZONE-04" },
+      { name: "Doors and transport organization", purpose: "Coordinate loading capacity and carrier execution.", example: "D04 / UK-DOMESTIC" },
+    ],
+    masterData: [
+      { name: "Product warehouse data", purpose: "Controls stock removal, replenishment, handling, and warehouse execution.", example: "FG-AMBER-KEG-50" },
+      { name: "Bins, activity areas, and packaging specifications", purpose: "Define where stock is picked and how it is packed.", example: "A-01-02 / KEG-PALLET-STD" },
+      { name: "Carrier, route, and freight agreement", purpose: "Support transport planning, tendering, and milestone tracking.", example: "Midlands Drinks Logistics / UK-MID-04" },
+    ],
+    configuration: [
+      { area: "Delivery integration", decision: "Map ERP delivery types, item types, status, and queue processing into EWM.", businessEffect: "Creates complete and consistent warehouse requests from customer deliveries.", owner: "SD / EWM" },
+      { area: "Warehouse process and wave control", decision: "Configure warehouse process types, stock-removal rules, wave templates, queues, and exception codes.", businessEffect: "Turns due demand into prioritized, executable picking work.", owner: "EWM" },
+      { area: "Packing, staging, and loading", decision: "Define handling-unit types, packing rules, staging determination, door assignment, and loading statuses.", businessEffect: "Protects load identity and carrier handover accuracy.", owner: "EWM / TM" },
+      { area: "Goods issue and account determination", decision: "Configure PGI status flow, movement type, valuation, and automatic account determination.", businessEffect: "Reduces inventory and records COGS at the controlled handover point.", owner: "EWM / MM / FI" },
+    ],
+    integrations: [
+      { from: "SD Outbound Delivery", to: "EWM Warehouse Request", trigger: "Delivery distribution", result: "Warehouse execution demand is created with product, quantity, batch, and date." },
+      { from: "EWM Loading", to: "TM Freight Order", trigger: "Handling-unit and departure status", result: "Transport execution reflects the physical load and carrier milestones." },
+      { from: "EWM Goods Issue", to: "MM / FI / SD", trigger: "Completed outbound handover", result: "Stock, COGS, delivery status, and downstream billing relevance update." },
+    ],
+    validationTests: [
+      { id: "W2D-T01", test: "Distribute and wave an outbound delivery.", expected: "The warehouse request creates correctly grouped picking tasks.", evidence: "Delivery, wave, and warehouse-task document flow" },
+      { id: "W2D-T02", test: "Pick, pack, stage, and load handling units.", expected: "Quantities, batches, labels, door, and freight order remain synchronized.", evidence: "Task confirmations, handling units, and loading status" },
+      { id: "W2D-T03", test: "Post goods issue and reconcile the delivery.", expected: "Inventory decreases, COGS posts, and delivery and transport statuses complete.", evidence: "Material, accounting, delivery, and freight documents" },
+    ],
+    goLiveControls: ["Outbound stock reconciliation", "Open-delivery migration", "Printer and scanner readiness", "Carrier and door cutover plan"],
+  },
+  {
     scenarioId: "h2r",
     title: "Implement Hire to Retire",
     objective:

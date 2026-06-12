@@ -107,11 +107,11 @@ export function SapWorld({
     useState<IndustryId>(defaultIndustryId);
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
-  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
+  const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
   const [tutorMode, setTutorMode] = useState<
     "guided" | "troubleshoot" | "implementation"
   >("guided");
-  const [diagnosisAnswers, setDiagnosisAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
+  const [diagnosisAnswers, setDiagnosisAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "saved" | "offline">("loading");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -565,8 +565,8 @@ export function SapWorld({
 
               <div className="academy-summary">
                 <article className="panel"><span>Current role</span><strong>Warehouse Operative</strong><small>Burton Brewery · Plant BR01</small></article>
-                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of 7</strong><small>Available learning pathways</small></article>
-                <article className="panel"><span>Exceptions diagnosed</span><strong>{Object.values(diagnosticProgress).filter((progress) => progress.complete).length} of 7</strong><small>{Object.values(diagnosticProgress).reduce((sum, progress) => sum + progress.attempts, 0)} diagnostic attempts</small></article>
+                <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of {processScenarios.length}</strong><small>Available learning pathways</small></article>
+                <article className="panel"><span>Exceptions diagnosed</span><strong>{Object.values(diagnosticProgress).filter((progress) => progress.complete).length} of {processScenarios.length}</strong><small>{Object.values(diagnosticProgress).reduce((sum, progress) => sum + progress.attempts, 0)} diagnostic attempts</small></article>
               </div>
 
               <button className="industry-preference panel" onClick={() => setEnterpriseOpen(true)}>
@@ -586,7 +586,8 @@ export function SapWorld({
                     path.id === "fi-month-close" ? "r2r" :
                     path.id === "qm-inspection" ? "qm" :
                     path.id === "pm-breakdown" ? "pm" :
-                    path.id === "hcm-hire" ? "h2r" : null;
+                    path.id === "hcm-hire" ? "h2r" :
+                    path.id === "ewm-warehouse-dispatch" ? "w2d" : null;
                   const pathState = scenarioId ? scenarioProgress[scenarioId] : null;
                   const scenario = scenarioId ? processScenarios.find((item) => item.id === scenarioId) : null;
                   const progress = pathState && scenario

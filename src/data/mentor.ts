@@ -50,4 +50,9 @@ export const mentorSuggestions: Record<ScenarioId, string[]> = {
     "How does payroll affect finance?",
     "Why can payroll posting fail?",
   ],
+  w2d: [
+    "When does warehouse stock leave inventory?",
+    "Why can goods issue be blocked?",
+    "How do handling units support dispatch?",
+  ],
 };
