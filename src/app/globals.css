@@ -56,6 +56,11 @@ button { cursor: pointer; }
 .enterprise-switcher div span { color: #71808e; font-size: 10px; }
 .enterprise-switcher strong { margin-top: 2px; font-size: 13px; }
 .topbar-actions { display: flex; align-items: center; gap: 9px; }
+.sync-status { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 8px; white-space: nowrap; }
+.sync-status i { width: 6px; height: 6px; border-radius: 50%; background: #91a0ab; }
+.sync-status.saved i { background: var(--green); }
+.sync-status.saving i, .sync-status.loading i { background: var(--blue); box-shadow: 0 0 0 3px #dceefc; }
+.sync-status.offline i { background: var(--amber); }
 .search-button { width: 270px; height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: #f8f9fa; color: #71808e; font-size: 12px; }
 .search-button kbd { margin-left: auto; padding: 2px 5px; border: 1px solid #d9dee2; border-radius: 4px; background: white; font-size: 9px; }
 .help-button, .menu-button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 7px; background: white; color: #607080; }

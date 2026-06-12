@@ -20,7 +20,7 @@ The first release demonstrates a brewery enterprise with:
 - Step-by-step explanations of why each action is performed
 - A context-aware SAP mentor prototype
 - A role-based learning centre across MM, SD, PP, FI, QM, and EWM
-- Locally persisted lesson progress and completion status
+- Server-backed lesson progress with an automatic browser fallback
 - An assessed knowledge check with corrective feedback
 - Searchable company structure, plants, storage locations, suppliers, and customers
 - Searchable employee and organizational-assignment records
@@ -59,6 +59,16 @@ Process flows and tutor content can be queried by process (`p2p`, `o2c`,
 
 `/api/simulation/processes?id=o2c`
 
+Learner progress can be loaded or updated through:
+
+`/api/learning/progress?learner=deepa-koli`
+
+During local development, server progress is stored in the ignored
+`.data/learning-progress.json` file. The browser keeps a backup so lessons
+remain usable if the progress service is unavailable. Production deployment
+will replace this repository with authenticated PostgreSQL storage because
+serverless filesystems are not durable.
+
 ## Quality checks
 
 ```bash
@@ -70,8 +80,8 @@ npm run build
 
 Planned phases include:
 
-1. Persistent PostgreSQL enterprise and document models
-2. User accounts and server-backed learning records
+1. Persistent PostgreSQL enterprise, document, and learning models
+2. Authenticated user accounts and role-based learning records
 3. Additional Procure-to-Pay lessons and exception scenarios
 4. Order-to-Cash, Plan-to-Produce, and Record-to-Report
 5. Configurable industry templates and multi-year simulation data

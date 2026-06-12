@@ -45,6 +45,12 @@ import {
   type FiscalYear,
 } from "@/data/history";
 import {
+  defaultScenarioProgress,
+  normalizeLearnerProgress,
+  type ScenarioId,
+  type ScenarioProgress,
+} from "@/data/progress";
+import {
   activity,
   kpis,
   learningPaths,
@@ -71,48 +77,17 @@ const navigation = [
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
 
-type ScenarioId = (typeof processScenarios)[number]["id"];
-type ScenarioProgress = Record<ScenarioId, { step: number; complete: boolean }>;
-
-const initialScenarioProgress: ScenarioProgress = {
-  p2p: { step: 0, complete: false },
-  o2c: { step: 0, complete: false },
-  ptp: { step: 0, complete: false },
-  r2r: { step: 0, complete: false },
-  qm: { step: 0, complete: false },
-  pm: { step: 0, complete: false },
-  h2r: { step: 0, complete: false },
-};
-
-function restoreScenarioProgress(
-  saved: Partial<ScenarioProgress> | undefined,
-  legacy?: { lessonStep?: number; lessonComplete?: boolean },
-) {
-  return processScenarios.reduce((result, scenario) => {
-    const previous =
-      saved?.[scenario.id] ??
-      (scenario.id === "p2p"
-        ? {
-            step: legacy?.lessonStep ?? 0,
-            complete: Boolean(legacy?.lessonComplete),
-          }
-        : initialScenarioProgress[scenario.id]);
-    result[scenario.id] = {
-      step: Math.min(Math.max(previous.step, 0), scenario.tutorSteps.length - 1),
-      complete: Boolean(previous.complete),
-    };
-    return result;
-  }, {} as ScenarioProgress);
-}
+const learnerId = "deepa-koli";
 
 export function SapWorld() {
   const [view, setView] = useState<View>("overview");
   const [mentorOpen, setMentorOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("p2p");
-  const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(initialScenarioProgress);
+  const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "saved" | "offline">("loading");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [partnerFilter, setPartnerFilter] = useState<"All" | "Supplier" | "Customer">("All");
@@ -125,40 +100,78 @@ export function SapWorld() {
   );
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    let cancelled = false;
+
+    async function loadProgress() {
+      let localProgress: unknown = null;
       const saved = window.localStorage.getItem("sap-world-progress");
       if (saved) {
         try {
-          const progress = JSON.parse(saved) as {
-            lessonStep?: number;
-            lessonComplete?: boolean;
-            activeScenarioId?: ScenarioId;
-            scenarios?: Partial<ScenarioProgress>;
-          };
-          setScenarioProgress(
-            restoreScenarioProgress(progress.scenarios, {
-              lessonStep: progress.lessonStep,
-              lessonComplete: progress.lessonComplete,
-            }),
-          );
-          if (processScenarios.some((scenario) => scenario.id === progress.activeScenarioId)) {
-            setActiveScenarioId(progress.activeScenarioId as ScenarioId);
-          }
+          localProgress = JSON.parse(saved);
         } catch {
           window.localStorage.removeItem("sap-world-progress");
         }
       }
-      setProgressLoaded(true);
-    });
-    return () => window.cancelAnimationFrame(frame);
+
+      try {
+        const response = await fetch(
+          `/api/learning/progress?learner=${learnerId}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) throw new Error("Progress service unavailable");
+        const result = (await response.json()) as {
+          found: boolean;
+          progress: unknown;
+        };
+        const source = result.found ? result.progress : localProgress;
+        const normalized = normalizeLearnerProgress(learnerId, source);
+        if (!cancelled) {
+          setScenarioProgress(normalized.scenarios);
+          setActiveScenarioId(normalized.activeScenarioId);
+          setSyncStatus(result.found ? "saved" : "saving");
+        }
+      } catch {
+        const normalized = normalizeLearnerProgress(learnerId, localProgress);
+        if (!cancelled) {
+          setScenarioProgress(normalized.scenarios);
+          setActiveScenarioId(normalized.activeScenarioId);
+          setSyncStatus("offline");
+        }
+      } finally {
+        if (!cancelled) setProgressLoaded(true);
+      }
+    }
+
+    void loadProgress();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!progressLoaded) return;
-    window.localStorage.setItem(
-      "sap-world-progress",
-      JSON.stringify({ activeScenarioId, scenarios: scenarioProgress }),
-    );
+    const payload = { activeScenarioId, scenarios: scenarioProgress };
+    window.localStorage.setItem("sap-world-progress", JSON.stringify(payload));
+
+    const timer = window.setTimeout(async () => {
+      setSyncStatus("saving");
+      try {
+        const response = await fetch(
+          `/api/learning/progress?learner=${learnerId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (!response.ok) throw new Error("Progress save failed");
+        setSyncStatus("saved");
+      } catch {
+        setSyncStatus("offline");
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timer);
   }, [activeScenarioId, progressLoaded, scenarioProgress]);
 
   useEffect(() => {
@@ -337,6 +350,16 @@ export function SapWorld() {
             <ChevronRight size={17} />
           </div>
           <div className="topbar-actions">
+            <span className={`sync-status ${syncStatus}`}>
+              <i />
+              {syncStatus === "loading"
+                ? "Loading progress"
+                : syncStatus === "saving"
+                  ? "Saving"
+                  : syncStatus === "saved"
+                    ? "Progress saved"
+                    : "Browser backup"}
+            </span>
             <button className="search-button" onClick={() => setSearchOpen(true)}><Search size={18} /><span>Search SAP objects</span><kbd>Ctrl K</kbd></button>
             <button className="help-button"><CircleHelp size={20} /></button>
           </div>
