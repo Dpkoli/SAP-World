@@ -6,6 +6,11 @@ import {
   enterpriseUnits,
   plants,
 } from "@/data/enterprise";
+import {
+  analyticsPeriods,
+  performanceDrivers,
+  profitabilitySegments,
+} from "@/data/analytics";
 import { documentFlows } from "@/data/document-flows";
 import {
   batches,
@@ -50,6 +55,8 @@ const sapDomainTerms = new Set([
   "packing", "picking", "routing", "shipment", "specification", "stock",
   "supplier", "usage", "valuation", "vendor", "warehouse", "wave", "workcenter",
   "approval", "approver", "authority", "audit", "release", "workflow",
+  "analytics", "downtime", "margin", "performance", "profitability", "revenue",
+  "service", "waste", "workingcapital",
 ]);
 
 function tokens(value: string) {
@@ -117,6 +124,27 @@ function scenarioDocuments(scenario: ProcessScenario): MentorDocument[] {
 
 const mentorDocuments: MentorDocument[] = [
   ...processScenarios.flatMap(scenarioDocuments),
+  ...analyticsPeriods.map((period) => ({
+    id: `analytics-period-${period.id}`,
+    type: "Analytics" as const,
+    title: `${period.fiscalYear} ${period.quarter} performance`,
+    reference: period.id,
+    content: `revenue GBP ${period.revenueM} million volume ${period.volumeKhl} thousand hectolitres operating margin ${period.operatingMargin} percent service level ${period.serviceLevel} percent inventory ${period.inventoryDays} days downtime ${period.downtimeHours} hours waste ${period.wastePercent} percent working capital GBP ${period.workingCapitalM} million`,
+  })),
+  ...performanceDrivers.map((driver) => ({
+    id: `analytics-driver-${driver.id}`,
+    type: "Analytics" as const,
+    title: driver.title,
+    reference: `${driver.fiscalYear} / ${driver.id}`,
+    content: `${driver.category} ${driver.direction} ${driver.financialImpact} ${driver.metricImpact} ${driver.explanation} ${driver.sapEvidence} ${driver.modules.join(" ")} ${driver.managementAction}`,
+  })),
+  ...profitabilitySegments.map((segment) => ({
+    id: `analytics-profitability-${segment.id}`,
+    type: "Analytics" as const,
+    title: `${segment.name} profitability`,
+    reference: `${segment.fiscalYear} / ${segment.dimension}`,
+    content: `revenue GBP ${segment.revenueM} million contribution GBP ${segment.contributionM} million margin ${segment.marginPercent} percent volume share ${segment.volumeShare} percent ${segment.primaryDriver}`,
+  })),
   ...workflowDefinitions.map((workflow) => ({
     id: `workflow-${workflow.id}`,
     type: "Workflow" as const,
@@ -360,6 +388,15 @@ export function answerMentorQuestion(input: {
       normalizedQuestion.includes(workflow.id.toLowerCase()) ||
       normalizedQuestion.includes(workflow.documentNumber.toLowerCase()),
   );
+  const referencedDriver = performanceDrivers.find(
+    (driver) =>
+      normalizedQuestion.includes(driver.id.toLowerCase()) ||
+      tokens(driver.title).filter((token) => normalizedQuestion.includes(token))
+        .length >= 3,
+  );
+  const referencedProfitability = profitabilitySegments.find(
+    (segment) => normalizedQuestion.includes(segment.name.toLowerCase()),
+  );
   const step =
     typeof input.step === "number" && Number.isFinite(input.step)
       ? Math.min(
@@ -371,6 +408,10 @@ export function answerMentorQuestion(input: {
   let answer: string;
   if (exactAnswer) {
     answer = exactAnswer;
+  } else if (referencedDriver) {
+    answer = `${referencedDriver.title}. ${referencedDriver.explanation} The measured effect was ${referencedDriver.metricImpact.toLowerCase()}, with ${referencedDriver.financialImpact.toLowerCase()}. In SAP, review ${referencedDriver.sapEvidence}.`;
+  } else if (referencedProfitability) {
+    answer = `${referencedProfitability.name} generated GBP ${referencedProfitability.revenueM.toFixed(1)}M revenue and GBP ${referencedProfitability.contributionM.toFixed(1)}M contribution in ${referencedProfitability.fiscalYear}, a ${referencedProfitability.marginPercent.toFixed(1)}% margin. The primary driver was ${referencedProfitability.primaryDriver.toLowerCase()}.`;
   } else if (referencedWorkflow) {
     const currentApprover = referencedWorkflow.steps.find(
       (workflowStep) => workflowStep.status === "Current",
@@ -386,6 +427,17 @@ export function answerMentorQuestion(input: {
     answer = `${referencedBatch.id} is a batch of ${referencedBatch.materialId} holding ${referencedBatch.quantity} in ${referencedBatch.stockType.toLowerCase()} at ${referencedBatch.plant}/${referencedBatch.storageLocation}. Its status is ${referencedBatch.status.toLowerCase()}, with manufacture date ${referencedBatch.manufactureDate} and expiry date ${referencedBatch.expiryDate}.`;
   } else if (referencedWorkCenter) {
     answer = `${referencedWorkCenter.id} is ${referencedWorkCenter.name} at plant ${referencedWorkCenter.plant}. Capacity is ${referencedWorkCenter.capacity}, cost posts to ${referencedWorkCenter.costCenter}, and its activity types are ${referencedWorkCenter.activityTypes.join(", ")}. Scheduling uses ${referencedWorkCenter.schedulingFormula.toLowerCase()}.`;
+  } else if (
+    includesAny(normalizedQuestion, [
+      "profitability", "margin decreased", "margin decrease", "performance",
+      "service level", "inventory days", "downtime", "working capital",
+    ])
+  ) {
+    const negativeDriver = performanceDrivers.find(
+      (driver) =>
+        driver.fiscalYear === "2025–2026" && driver.direction === "Negative",
+    )!;
+    answer = `${negativeDriver.title}. ${negativeDriver.explanation} ${negativeDriver.metricImpact}. The connected SAP evidence is ${negativeDriver.sapEvidence}.`;
   } else if (
     includesAny(normalizedQuestion, [
       "bom", "bill of material", "routing", "production version", "work centre",
@@ -457,6 +509,10 @@ export function answerMentorQuestion(input: {
     referencedBatch ? `batch-${referencedBatch.id}` : null,
     referencedWorkCenter ? `work-center-${referencedWorkCenter.id}` : null,
     referencedWorkflow ? `workflow-${referencedWorkflow.id}` : null,
+    referencedDriver ? `analytics-driver-${referencedDriver.id}` : null,
+    referencedProfitability
+      ? `analytics-profitability-${referencedProfitability.id}`
+      : null,
   ].filter((id): id is string => Boolean(id));
   const directReferences = mentorDocuments.filter((document) =>
     directReferenceIds.includes(document.id),

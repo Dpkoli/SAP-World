@@ -43,6 +43,10 @@ The first release demonstrates a brewery enterprise with:
 - Three fiscal years of connected growth, procurement, production, quality,
   maintenance, finance, sales, and compliance events
 - Historical SAP document chains with operational, inventory, and financial impact
+- A three-year enterprise performance cockpit with quarterly revenue, margin,
+  service, inventory, downtime, waste, working-capital, and profitability drivers
+- Explainable KPI movements connected to SAP documents, modules, historical
+  events, and recommended management actions
 - A normalized document-flow explorer with upstream/downstream links, workflow,
   approvals, inventory movements, and journal-entry evidence
 - An account-backed approval inbox with multi-step routing, evidence review,
@@ -98,6 +102,12 @@ Material master data can be queried by material, plant, or SAP material type:
 `/api/master-data?material=FG-AMBER-KEG-50`
 
 `/api/master-data?plant=BR01&type=ROH`
+
+Enterprise performance can be queried across all periods or by fiscal year:
+
+`/api/analytics`
+
+`/api/analytics?year=2025%E2%80%932026`
 
 Authenticated approval cases can be read and filtered through `/api/workflows`.
 Learner decisions are submitted to the same endpoint and advance multi-step

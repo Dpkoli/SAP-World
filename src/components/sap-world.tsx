@@ -3,6 +3,7 @@
 import {
   Award,
   ArrowRight,
+  BarChart3,
   BookOpenCheck,
   Boxes,
   Building2,
@@ -36,6 +37,16 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { learnerInitials, type LearnerProfile } from "@/data/auth";
+import {
+  analyticsMetrics,
+  driversForYear,
+  metricLabel,
+  metricValue,
+  performanceDrivers,
+  periodsForYear,
+  profitabilitySegments,
+  type AnalyticsMetric,
+} from "@/data/analytics";
 import { documentFlowFor } from "@/data/document-flows";
 import {
   businessPartners,
@@ -98,6 +109,7 @@ type View =
   | "processes"
   | "tutor"
   | "history"
+  | "analytics"
   | "workflows"
   | "structure"
   | "masterdata"
@@ -108,6 +120,7 @@ const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
   { id: "processes" as const, label: "Process explorer", icon: Boxes },
+  { id: "analytics" as const, label: "Performance analytics", icon: BarChart3 },
   { id: "history" as const, label: "Simulation history", icon: CalendarDays },
   { id: "workflows" as const, label: "Approval inbox", icon: ClipboardCheck },
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
@@ -152,6 +165,13 @@ export function SapWorld({
   const [workflowError, setWorkflowError] = useState("");
   const [workflowOverdue, setWorkflowOverdue] = useState(0);
   const [selectedYear, setSelectedYear] = useState<FiscalYear>("2025–2026");
+  const [analyticsYear, setAnalyticsYear] = useState<FiscalYear>("2025–2026");
+  const [analyticsMetric, setAnalyticsMetric] =
+    useState<AnalyticsMetric>("Operating margin");
+  const [selectedDriverId, setSelectedDriverId] =
+    useState("DRV-FY26-RETURN");
+  const [profitabilityDimension, setProfitabilityDimension] =
+    useState<"Product" | "Customer" | "Channel">("Product");
   const [eventCategory, setEventCategory] = useState("All");
   const [selectedEventId, setSelectedEventId] = useState("EVT-2604-035");
   const [question, setQuestion] = useState("");
@@ -445,6 +465,20 @@ export function SapWorld({
       workflow.scenarioId === activeScenarioId &&
       workflow.status === "Pending",
   ) ?? workflows.find((workflow) => workflow.scenarioId === activeScenarioId);
+  const analyticsYearPeriods = periodsForYear(analyticsYear);
+  const analyticsYearDrivers = driversForYear(analyticsYear);
+  const selectedPerformanceDriver =
+    analyticsYearDrivers.find((driver) => driver.id === selectedDriverId) ??
+    analyticsYearDrivers[0];
+  const metricMaximum = Math.max(
+    ...analyticsYearPeriods.map((period) => metricValue(period, analyticsMetric)),
+    1,
+  );
+  const visibleProfitability = profitabilitySegments.filter(
+    (segment) =>
+      segment.fiscalYear === analyticsYear &&
+      segment.dimension === profitabilityDimension,
+  );
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
   const lessonProgress = activeProgress.complete
     ? 100
@@ -543,6 +577,14 @@ export function SapWorld({
           subtitle: `${workflow.status} / ${workflow.module}`,
           target: "workflows" as View,
           workflowId: workflow.id,
+        })),
+        ...performanceDrivers.map((driver) => ({
+          id: driver.id,
+          title: driver.title,
+          subtitle: `${driver.fiscalYear} / ${driver.category}`,
+          target: "analytics" as View,
+          driverId: driver.id,
+          fiscalYear: driver.fiscalYear,
         })),
       ]
         .filter((result) =>
@@ -1038,6 +1080,125 @@ export function SapWorld({
                     <span className={`status-chip ${partner.status.toLowerCase()}`}>{partner.status}</span>
                   </div>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {view === "analytics" && (
+            <section className="analytics-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">SAP enterprise performance management</p><h1>Performance and profitability cockpit</h1><p>Connect financial results to service, inventory, production, quality, maintenance, and working-capital behavior.</p></div>
+                <span className="api-badge">API /api/analytics</span>
+              </div>
+
+              <div className="analytics-year-tabs">
+                {fiscalYearSummaries.map((summary) => (
+                  <button className={analyticsYear === summary.year ? "active" : ""} onClick={() => {
+                    setAnalyticsYear(summary.year);
+                    setSelectedDriverId(driversForYear(summary.year)[0]?.id ?? "");
+                  }} key={summary.year}>
+                    <span>{summary.phase}</span><strong>{summary.year}</strong><small>{summary.revenue} revenue / {summary.operatingMargin} margin</small>
+                  </button>
+                ))}
+              </div>
+
+              <div className="analytics-kpis">
+                {analyticsYearPeriods.length > 0 && (() => {
+                  const latest = analyticsYearPeriods[analyticsYearPeriods.length - 1];
+                  const first = analyticsYearPeriods[0];
+                  return (
+                    <>
+                      <article className="panel"><span>Quarterly revenue</span><strong>GBP {latest.revenueM.toFixed(1)}M</strong><small className={latest.revenueM >= first.revenueM ? "positive" : "negative"}>{latest.revenueM >= first.revenueM ? "+" : ""}{(latest.revenueM - first.revenueM).toFixed(1)}M vs Q1</small></article>
+                      <article className="panel"><span>Operating margin</span><strong>{latest.operatingMargin.toFixed(1)}%</strong><small className={latest.operatingMargin >= first.operatingMargin ? "positive" : "negative"}>{latest.operatingMargin >= first.operatingMargin ? "+" : ""}{(latest.operatingMargin - first.operatingMargin).toFixed(1)} pts vs Q1</small></article>
+                      <article className="panel"><span>Customer service</span><strong>{latest.serviceLevel.toFixed(1)}%</strong><small>{latest.inventoryDays} inventory days</small></article>
+                      <article className="panel"><span>Operational stability</span><strong>{latest.downtimeHours} hrs</strong><small>{latest.wastePercent.toFixed(1)}% waste / GBP {latest.workingCapitalM.toFixed(1)}M working capital</small></article>
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="analytics-main-grid">
+                <article className="analytics-trend panel">
+                  <div className="panel-header">
+                    <div><span className="section-kicker">Quarterly trend</span><h2>{analyticsMetric}</h2></div>
+                    <div className="analytics-metric-tabs">
+                      {analyticsMetrics.map((metric) => <button className={analyticsMetric === metric ? "active" : ""} onClick={() => setAnalyticsMetric(metric)} key={metric}>{metric}</button>)}
+                    </div>
+                  </div>
+                  <div className="analytics-chart">
+                    {analyticsYearPeriods.map((period) => {
+                      const value = metricValue(period, analyticsMetric);
+                      return (
+                        <div className="analytics-bar-column" key={period.id}>
+                          <strong>{metricLabel(value, analyticsMetric)}</strong>
+                          <div><span style={{ height: `${Math.max(8, (value / metricMaximum) * 100)}%` }} /></div>
+                          <small>{period.quarter}</small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="analytics-supporting">
+                    {analyticsYearPeriods.map((period) => (
+                      <div key={`${period.id}-support`}><strong>{period.quarter}</strong><span>{period.volumeKhl}K HL</span><span>{period.wastePercent}% waste</span><span>GBP {period.workingCapitalM}M WC</span></div>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="analytics-driver-list panel">
+                  <div className="panel-header"><div><span className="section-kicker">Explainable performance</span><h2>Business drivers</h2></div><strong>{analyticsYearDrivers.length}</strong></div>
+                  <div>
+                    {analyticsYearDrivers.map((driver) => (
+                      <button className={selectedPerformanceDriver?.id === driver.id ? "selected" : ""} onClick={() => setSelectedDriverId(driver.id)} key={driver.id}>
+                        <span className={`driver-direction ${driver.direction.toLowerCase()}`}>{driver.direction}</span>
+                        <div><strong>{driver.title}</strong><small>{driver.category} / {driver.financialImpact}</small></div>
+                        <ChevronRight size={16} />
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              </div>
+
+              {selectedPerformanceDriver && (
+                <article className="analytics-driver-detail panel">
+                  <div className="analytics-driver-heading">
+                    <div><span className="section-kicker">{selectedPerformanceDriver.id}</span><h2>{selectedPerformanceDriver.title}</h2><p>{selectedPerformanceDriver.explanation}</p></div>
+                    <span className={`driver-direction ${selectedPerformanceDriver.direction.toLowerCase()}`}>{selectedPerformanceDriver.direction}</span>
+                  </div>
+                  <div className="analytics-driver-evidence">
+                    <div><span>Financial impact</span><strong>{selectedPerformanceDriver.financialImpact}</strong></div>
+                    <div><span>KPI movement</span><strong>{selectedPerformanceDriver.metricImpact}</strong></div>
+                    <div><span>SAP evidence</span><strong>{selectedPerformanceDriver.sapEvidence}</strong></div>
+                    <div><span>Affected modules</span><strong>{selectedPerformanceDriver.modules.join(" / ")}</strong></div>
+                  </div>
+                  <div className="analytics-action">
+                    <Sparkles size={18} /><div><strong>Management action</strong><p>{selectedPerformanceDriver.managementAction}</p></div>
+                    <button onClick={() => {
+                      const event = enterpriseEvents.find((item) => selectedPerformanceDriver.eventIds.includes(item.id));
+                      if (event) {
+                        setSelectedYear(event.fiscalYear);
+                        setEventCategory("All");
+                        setSelectedEventId(event.id);
+                        setView("history");
+                      }
+                    }}>Open source event <ArrowRight size={15} /></button>
+                  </div>
+                </article>
+              )}
+
+              <div className="profitability-heading">
+                <div><span className="section-kicker">Margin analysis</span><h2>Profitability by business dimension</h2></div>
+                <div className="filter-tabs">
+                  {(["Product", "Customer", "Channel"] as const).map((dimension) => <button className={profitabilityDimension === dimension ? "active" : ""} onClick={() => setProfitabilityDimension(dimension)} key={dimension}>{dimension}</button>)}
+                </div>
+              </div>
+              <div className="profitability-table panel">
+                <div className="profitability-head"><span>{profitabilityDimension}</span><span>Revenue</span><span>Contribution</span><span>Margin</span><span>Volume share</span><span>Primary driver</span></div>
+                {visibleProfitability.map((segment) => (
+                  <div className="profitability-row" key={segment.id}>
+                    <strong>{segment.name}</strong><span>GBP {segment.revenueM.toFixed(1)}M</span><span>GBP {segment.contributionM.toFixed(1)}M</span><strong className={segment.marginPercent >= 25 ? "healthy" : "attention-margin"}>{segment.marginPercent.toFixed(1)}%</strong><span>{segment.volumeShare}%</span><p>{segment.primaryDriver}</p>
+                  </div>
+                ))}
+                {!visibleProfitability.length && <p className="profitability-empty">Detailed {profitabilityDimension.toLowerCase()} profitability is available for the current optimization year.</p>}
               </div>
             </section>
           )}
@@ -1659,6 +1820,16 @@ export function SapWorld({
                     typeof result.workflowId === "string"
                   ) {
                     setSelectedWorkflowId(result.workflowId);
+                  }
+                  if (
+                    result.target === "analytics" &&
+                    "driverId" in result &&
+                    typeof result.driverId === "string" &&
+                    "fiscalYear" in result &&
+                    typeof result.fiscalYear === "string"
+                  ) {
+                    setSelectedDriverId(result.driverId);
+                    setAnalyticsYear(result.fiscalYear as FiscalYear);
                   }
                   navigateTo(result.target);
                 }} key={`${result.target}-${result.id}`}>

@@ -25,6 +25,11 @@ import {
   processScenarios,
   processSteps,
 } from "@/data/simulation";
+import {
+  analyticsPeriods,
+  performanceDrivers,
+  profitabilitySegments,
+} from "@/data/analytics";
 import { workflowAuditTrail, workflowDefinitions } from "@/data/workflows";
 
 export function getEnterpriseSnapshot() {
@@ -52,6 +57,11 @@ export function getEnterpriseSnapshot() {
       documentFlows,
       workflows: workflowDefinitions,
       workflowAuditTrail,
+      analytics: {
+        periods: analyticsPeriods,
+        drivers: performanceDrivers,
+        profitability: profitabilitySegments,
+      },
     },
     learning: {
       paths: learningPaths,
