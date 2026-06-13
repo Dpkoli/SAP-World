@@ -13,6 +13,8 @@ import {
 } from "@/data/analytics";
 import { documentFlows } from "@/data/document-flows";
 import { advancedTransactionDefinitions } from "@/data/advanced-transactions";
+import { industryBlueprints } from "@/data/industry-blueprints";
+import { industryEnterprises } from "@/data/industries";
 import {
   governanceAuditTrail,
   governanceDefinitions,
@@ -65,6 +67,7 @@ const sapDomainTerms = new Set([
   "change", "governance", "steward", "validation", "effective", "dependency",
   "asset", "capitalization", "depreciation", "return", "transfer", "tax", "vat",
   "yearend", "close", "transport", "scrap",
+  "industry", "seasonality", "compliance", "supplychain", "operatingmodel",
 ]);
 
 function tokens(value: string) {
@@ -132,6 +135,51 @@ function scenarioDocuments(scenario: ProcessScenario): MentorDocument[] {
 
 const mentorDocuments: MentorDocument[] = [
   ...processScenarios.flatMap(scenarioDocuments),
+  ...industryBlueprints.map((blueprint) => {
+    const industry = industryEnterprises.find(
+      (item) => item.id === blueprint.id,
+    )!;
+    return {
+      id: `industry-${blueprint.id}`,
+      type: "Industry Blueprint" as const,
+      title: `${industry.industry} operating blueprint`,
+      reference: `${blueprint.id} / ${industry.enterprise}`,
+      content: [
+        industry.description,
+        industry.operatingModel,
+        industry.modules.join(" "),
+        blueprint.customerPromise,
+        blueprint.supplyChain,
+        ...blueprint.procurementLifecycle,
+        ...blueprint.productionLifecycle,
+        ...blueprint.inventoryLifecycle,
+        ...blueprint.financialStructure,
+        ...blueprint.organizationalTemplate,
+        ...blueprint.masterData,
+        ...blueprint.valueChain.map(
+          (stage) =>
+            `${stage.stage} ${stage.activities} ${stage.sap.join(" ")}`,
+        ),
+        ...blueprint.kpis.map(
+          (kpi) => `${kpi.name} target ${kpi.target} ${kpi.purpose}`,
+        ),
+        ...blueprint.compliance,
+        ...blueprint.reporting,
+        ...blueprint.dependencies.map(
+          (dependency) =>
+            `${dependency.from} to ${dependency.to} ${dependency.logic}`,
+        ),
+        ...blueprint.commonProblems.map(
+          (problem) =>
+            `${problem.issue} ${problem.signal} ${problem.sapResponse}`,
+        ),
+        ...blueprint.seasonality.map(
+          (season) =>
+            `${season.period} ${season.behavior} ${season.planningResponse}`,
+        ),
+      ].join(" "),
+    };
+  }),
   ...advancedTransactionDefinitions.flatMap((transaction) => [
     {
       id: `advanced-${transaction.id}`,
@@ -469,6 +517,15 @@ export function answerMentorQuestion(input: {
         normalizedQuestion.includes(token),
       ).length >= 3,
   );
+  const referencedIndustry = industryEnterprises.find(
+    (industry) =>
+      normalizedQuestion.includes(industry.id.toLowerCase()) ||
+      normalizedQuestion.includes(industry.industry.toLowerCase()) ||
+      normalizedQuestion.includes(industry.enterprise.toLowerCase()) ||
+      tokens(industry.industry).filter((token) =>
+        normalizedQuestion.includes(token),
+      ).length >= Math.min(2, tokens(industry.industry).length),
+  );
   const referencedDriver = performanceDrivers.find(
     (driver) =>
       normalizedQuestion.includes(driver.id.toLowerCase()) ||
@@ -496,6 +553,15 @@ export function answerMentorQuestion(input: {
   let answer: string;
   if (exactAnswer) {
     answer = exactAnswer;
+  } else if (referencedIndustry) {
+    const blueprint = industryBlueprints.find(
+      (item) => item.id === referencedIndustry.id,
+    )!;
+    const topKpis = blueprint.kpis
+      .slice(0, 3)
+      .map((kpi) => `${kpi.name} (${kpi.target})`)
+      .join(", ");
+    answer = `${referencedIndustry.enterprise} uses a ${referencedIndustry.operatingModel.toLowerCase()} model. ${blueprint.supplyChain} Its customer promise is to ${blueprint.customerPromise.charAt(0).toLowerCase()}${blueprint.customerPromise.slice(1)} Core SAP coverage is ${referencedIndustry.modules.join(", ")}, and leading KPIs include ${topKpis}.`;
   } else if (referencedAdvancedTransaction) {
     const requestedStep =
       referencedAdvancedTransaction.steps.find(
@@ -630,6 +696,7 @@ export function answerMentorQuestion(input: {
     referencedAdvancedTransaction
       ? `advanced-${referencedAdvancedTransaction.id}`
       : null,
+    referencedIndustry ? `industry-${referencedIndustry.id}` : null,
   ].filter((id): id is string => Boolean(id));
   const directReferences = mentorDocuments.filter((document) =>
     directReferenceIds.includes(document.id),

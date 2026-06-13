@@ -36,11 +36,19 @@ import {
 } from "@/data/governance";
 import { workflowAuditTrail, workflowDefinitions } from "@/data/workflows";
 import { advancedTransactionDefinitions } from "@/data/advanced-transactions";
+import { industryBlueprints } from "@/data/industry-blueprints";
+import { industryEnterprises } from "@/data/industries";
 
 export function getEnterpriseSnapshot() {
   return {
     generatedAt: new Date().toISOString(),
     enterprise: enterpriseSummary,
+    industryPortfolio: industryEnterprises.map((industry) => ({
+      ...industry,
+      blueprint: industryBlueprints.find(
+        (blueprint) => blueprint.id === industry.id,
+      ),
+    })),
     organization: enterpriseUnits,
     plants,
     businessPartners,

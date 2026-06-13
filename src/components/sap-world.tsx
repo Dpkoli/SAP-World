@@ -93,6 +93,9 @@ import {
   type IndustryId,
 } from "@/data/industries";
 import {
+  industryBlueprintById,
+} from "@/data/industry-blueprints";
+import {
   defaultDiagnosticProgress,
   defaultScenarioProgress,
   normalizeLearnerProgress,
@@ -116,6 +119,7 @@ import type {
 type View =
   | "overview"
   | "academy"
+  | "industries"
   | "processes"
   | "advanced"
   | "tutor"
@@ -131,6 +135,7 @@ type View =
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
+  { id: "industries" as const, label: "Industry blueprints", icon: Landmark },
   { id: "processes" as const, label: "Process explorer", icon: Boxes },
   { id: "advanced" as const, label: "Advanced transactions", icon: Repeat2 },
   { id: "analytics" as const, label: "Performance analytics", icon: BarChart3 },
@@ -154,6 +159,8 @@ export function SapWorld({
     Partial<Record<ScenarioId, string>>
   >({ p2p: "GR" });
   const [preferredIndustryId, setPreferredIndustryId] =
+    useState<IndustryId>(defaultIndustryId);
+  const [selectedIndustryBlueprintId, setSelectedIndustryBlueprintId] =
     useState<IndustryId>(defaultIndustryId);
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
@@ -630,6 +637,12 @@ export function SapWorld({
     diagnosisAnswer === troubleshootingCase.correctDiagnosis;
   const activeEnterprise = industryById(defaultIndustryId);
   const preferredIndustry = industryById(preferredIndustryId);
+  const selectedIndustryEnterprise = industryById(
+    selectedIndustryBlueprintId,
+  );
+  const selectedIndustryBlueprint = industryBlueprintById(
+    selectedIndustryBlueprintId,
+  );
   const implementationBlueprint =
     implementationBlueprintFor(activeScenarioId);
   const scenarioMasterData = masterDataForScenario(activeScenarioId);
@@ -811,6 +824,13 @@ export function SapWorld({
           subtitle: `${transaction.type} / ${transaction.status}`,
           target: "advanced" as View,
           advancedId: transaction.id,
+        })),
+        ...industryEnterprises.map((industry) => ({
+          id: industry.id,
+          title: industry.industry,
+          subtitle: `${industry.enterprise} / ${industry.operatingModel}`,
+          target: "industries" as View,
+          industryId: industry.id,
         })),
         ...performanceDrivers.map((driver) => ({
           id: driver.id,
@@ -1087,6 +1107,136 @@ export function SapWorld({
                   </div>
                   );
                 })}
+              </div>
+            </section>
+          )}
+
+          {view === "industries" && (
+            <section className="industry-blueprint-page">
+              <div className="page-heading compact">
+                <div>
+                  <p className="eyebrow">Reusable enterprise templates</p>
+                  <h1>Industry implementation blueprints</h1>
+                  <p>
+                    Compare how value chains, SAP design, controls, KPIs, and
+                    operational behavior change across ten industries.
+                  </p>
+                </div>
+                <span className="api-badge">API /api/industries?id={selectedIndustryBlueprintId}</span>
+              </div>
+
+              <div className="industry-blueprint-tabs">
+                {industryEnterprises.map((industry) => (
+                  <button
+                    className={selectedIndustryBlueprintId === industry.id ? "active" : ""}
+                    onClick={() => setSelectedIndustryBlueprintId(industry.id)}
+                    key={industry.id}
+                  >
+                    <span>{industry.status === "live" ? "Live simulation" : industry.release}</span>
+                    <strong>{industry.industry}</strong>
+                    <small>{industry.modules.length} SAP capabilities</small>
+                  </button>
+                ))}
+              </div>
+
+              <article className="industry-blueprint-hero panel">
+                <div>
+                  <span className="section-kicker">{selectedIndustryEnterprise.operatingModel}</span>
+                  <h2>{selectedIndustryEnterprise.enterprise}</h2>
+                  <p>{selectedIndustryEnterprise.description}</p>
+                </div>
+                <div className="industry-promise">
+                  <Sparkles size={19} />
+                  <p><strong>Customer promise</strong>{selectedIndustryBlueprint.customerPromise}</p>
+                </div>
+                <div className="industry-module-strip">
+                  {selectedIndustryEnterprise.modules.map((module) => <span key={module}>{module}</span>)}
+                </div>
+              </article>
+
+              <div className="industry-blueprint-grid">
+                <article className="industry-value-chain panel">
+                  <div className="panel-header"><div><span className="section-kicker">Connected operating model</span><h2>Industry value chain</h2></div></div>
+                  <p className="industry-supply-chain">{selectedIndustryBlueprint.supplyChain}</p>
+                  <div>
+                    {selectedIndustryBlueprint.valueChain.map((stage, index) => (
+                      <div className="industry-stage" key={stage.stage}>
+                        <span>{index + 1}</span>
+                        <div><strong>{stage.stage}</strong><p>{stage.activities}</p><small>{stage.sap.join(" / ")}</small></div>
+                        {index < selectedIndustryBlueprint.valueChain.length - 1 && <ArrowRight size={16} />}
+                      </div>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="industry-kpi-panel panel">
+                  <div className="panel-header"><div><span className="section-kicker">Operational control</span><h2>Leading KPIs</h2></div></div>
+                  <div>
+                    {selectedIndustryBlueprint.kpis.map((kpi) => (
+                      <div key={kpi.name}><span>{kpi.name}</span><strong>{kpi.target}</strong><p>{kpi.purpose}</p></div>
+                    ))}
+                  </div>
+                </article>
+              </div>
+
+              <div className="industry-lifecycle-grid">
+                {[
+                  ["Procurement lifecycle", selectedIndustryBlueprint.procurementLifecycle, "MM / Ariba / FI"],
+                  ["Operations lifecycle", selectedIndustryBlueprint.productionLifecycle, "Planning / Execution / CO"],
+                  ["Inventory lifecycle", selectedIndustryBlueprint.inventoryLifecycle, "MM / EWM / QM"],
+                  ["Financial structure", selectedIndustryBlueprint.financialStructure, "FI / CO / Analytics"],
+                ].map(([title, items, modules]) => (
+                  <article className="industry-lifecycle panel" key={title as string}>
+                    <span className="section-kicker">{modules as string}</span>
+                    <h3>{title as string}</h3>
+                    {(items as string[]).map((item, index) => <p key={item}><span>{index + 1}</span>{item}</p>)}
+                  </article>
+                ))}
+              </div>
+
+              <div className="industry-foundation-grid">
+                <article className="panel">
+                  <div className="panel-header"><div><span className="section-kicker">Implementation foundation</span><h2>Organization and master data</h2></div></div>
+                  <div className="industry-foundation-columns">
+                    <div><strong>Organizational template</strong>{selectedIndustryBlueprint.organizationalTemplate.map((item) => <p key={item}><Building2 size={14} />{item}</p>)}</div>
+                    <div><strong>Critical master data</strong>{selectedIndustryBlueprint.masterData.map((item) => <p key={item}><ListTree size={14} />{item}</p>)}</div>
+                  </div>
+                </article>
+                <article className="panel">
+                  <div className="panel-header"><div><span className="section-kicker">Governance and evidence</span><h2>Compliance and reporting</h2></div></div>
+                  <div className="industry-foundation-columns">
+                    <div><strong>Compliance requirements</strong>{selectedIndustryBlueprint.compliance.map((item) => <p key={item}><ShieldCheck size={14} />{item}</p>)}</div>
+                    <div><strong>Management reporting</strong>{selectedIndustryBlueprint.reporting.map((item) => <p key={item}><BarChart3 size={14} />{item}</p>)}</div>
+                  </div>
+                </article>
+              </div>
+
+              <article className="industry-dependencies panel">
+                <div className="panel-header"><div><span className="section-kicker">Cross-functional integration</span><h2>What depends on what?</h2></div></div>
+                <div>
+                  {selectedIndustryBlueprint.dependencies.map((dependency) => (
+                    <div key={`${dependency.from}-${dependency.to}`}><strong>{dependency.from}</strong><ArrowRight size={16} /><strong>{dependency.to}</strong><p>{dependency.logic}</p></div>
+                  ))}
+                </div>
+              </article>
+
+              <div className="industry-behavior-grid">
+                <article className="panel">
+                  <div className="panel-header"><div><span className="section-kicker">Exception patterns</span><h2>Common business problems</h2></div></div>
+                  <div className="industry-problems">
+                    {selectedIndustryBlueprint.commonProblems.map((problem) => (
+                      <div key={problem.issue}><TriangleAlert size={17} /><div><strong>{problem.issue}</strong><p><span>Signal:</span> {problem.signal}</p><p><span>SAP response:</span> {problem.sapResponse}</p></div></div>
+                    ))}
+                  </div>
+                </article>
+                <article className="panel">
+                  <div className="panel-header"><div><span className="section-kicker">Demand behavior</span><h2>Seasonality and planning</h2></div></div>
+                  <div className="industry-seasonality">
+                    {selectedIndustryBlueprint.seasonality.map((season) => (
+                      <div key={season.period}><CalendarDays size={17} /><div><strong>{season.period}</strong><p>{season.behavior}</p><small>{season.planningResponse}</small></div></div>
+                    ))}
+                  </div>
+                </article>
               </div>
             </section>
           )}
@@ -2358,6 +2508,13 @@ export function SapWorld({
                     typeof result.advancedId === "string"
                   ) {
                     setSelectedAdvancedId(result.advancedId);
+                  }
+                  if (
+                    result.target === "industries" &&
+                    "industryId" in result &&
+                    typeof result.industryId === "string"
+                  ) {
+                    setSelectedIndustryBlueprintId(result.industryId as IndustryId);
                   }
                   navigateTo(result.target);
                 }} key={`${result.target}-${result.id}`}>

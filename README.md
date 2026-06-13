@@ -9,6 +9,9 @@ The first release demonstrates a brewery enterprise with:
 
 - An operational dashboard and enterprise KPIs
 - A ten-industry enterprise catalogue with saved learner roadmap preference
+- Detailed implementation blueprints for all ten industries covering value
+  chains, lifecycles, organization, master data, KPIs, compliance, reporting,
+  dependencies, operational failures, and seasonality
 - A connected Procure-to-Pay document flow
 - Inventory, accounting, and operational impact explanations
 - A guided SAP goods-receipt lesson using realistic business data
@@ -83,6 +86,12 @@ The current enterprise snapshot is available at
 The multi-industry catalogue and rollout status are available at:
 
 `/api/industries`
+
+Industry blueprints can be filtered by industry or SAP capability:
+
+`/api/industries?id=pharmaceutical`
+
+`/api/industries?module=TM`
 
 Implementation-consultant blueprints can be queried by process:
 
