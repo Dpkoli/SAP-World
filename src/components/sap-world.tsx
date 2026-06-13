@@ -28,6 +28,7 @@ import {
   Search,
   Send,
   Settings,
+  ShieldCheck,
   LogOut,
   Sparkles,
   TrendingUp,
@@ -48,6 +49,10 @@ import {
   type AnalyticsMetric,
 } from "@/data/analytics";
 import { documentFlowFor } from "@/data/document-flows";
+import type {
+  GovernanceAction,
+  GovernanceCase,
+} from "@/data/governance";
 import {
   businessPartners,
   employees,
@@ -110,6 +115,7 @@ type View =
   | "tutor"
   | "history"
   | "analytics"
+  | "governance"
   | "workflows"
   | "structure"
   | "masterdata"
@@ -157,6 +163,13 @@ export function SapWorld({
   const [partnerFilter, setPartnerFilter] = useState<"All" | "Supplier" | "Customer">("All");
   const [selectedMaterialId, setSelectedMaterialId] = useState("FG-AMBER-KEG-50");
   const [materialTypeFilter, setMaterialTypeFilter] = useState("All");
+  const [governanceCases, setGovernanceCases] = useState<GovernanceCase[]>([]);
+  const [selectedGovernanceId, setSelectedGovernanceId] =
+    useState("MDG-BP-260031");
+  const [governanceDomain, setGovernanceDomain] = useState("All");
+  const [governanceComment, setGovernanceComment] = useState("");
+  const [governanceLoading, setGovernanceLoading] = useState(true);
+  const [governanceError, setGovernanceError] = useState("");
   const [workflows, setWorkflows] = useState<WorkflowCase[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("WF-O2C-CREDIT-001");
   const [workflowFilter, setWorkflowFilter] = useState("All");
@@ -231,6 +244,43 @@ export function SapWorld({
     }
 
     void loadProgress();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGovernance() {
+      setGovernanceLoading(true);
+      try {
+        const response = await fetch("/api/governance", { cache: "no-store" });
+        const result = (await response.json()) as {
+          requests?: GovernanceCase[];
+          error?: string;
+        };
+        if (!response.ok || !result.requests) {
+          throw new Error(result.error ?? "Governance service unavailable.");
+        }
+        if (!cancelled) {
+          setGovernanceCases(result.requests);
+          setGovernanceError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setGovernanceError(
+            error instanceof Error
+              ? error.message
+              : "Governance service unavailable.",
+          );
+        }
+      } finally {
+        if (!cancelled) setGovernanceLoading(false);
+      }
+    }
+
+    void loadGovernance();
     return () => {
       cancelled = true;
     };
@@ -413,6 +463,46 @@ export function SapWorld({
     }
   }
 
+  async function submitGovernanceDecision(action: GovernanceAction) {
+    if (!selectedGovernance || governanceComment.trim().length < 5) return;
+    setGovernanceLoading(true);
+    setGovernanceError("");
+    try {
+      const response = await fetch("/api/governance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: selectedGovernance.id,
+          action,
+          comment: governanceComment,
+        }),
+      });
+      const result = (await response.json()) as {
+        request?: GovernanceCase;
+        error?: string;
+      };
+      if (!response.ok || !result.request) {
+        throw new Error(
+          result.error ?? "Governance decision could not be saved.",
+        );
+      }
+      setGovernanceCases((current) =>
+        current.map((request) =>
+          request.id === result.request!.id ? result.request! : request,
+        ),
+      );
+      setGovernanceComment("");
+    } catch (error) {
+      setGovernanceError(
+        error instanceof Error
+          ? error.message
+          : "Governance decision could not be saved.",
+      );
+    } finally {
+      setGovernanceLoading(false);
+    }
+  }
+
   const activeScenario =
     processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
     processScenarios[0];
@@ -452,6 +542,14 @@ export function SapWorld({
   const selectedSources = sourceRecords.filter(
     (source) => source.materialId === selectedMaterial.id,
   );
+  const visibleGovernanceCases = governanceCases.filter(
+    (request) =>
+      governanceDomain === "All" || request.domain === governanceDomain,
+  );
+  const selectedGovernance =
+    governanceCases.find((request) => request.id === selectedGovernanceId) ??
+    visibleGovernanceCases[0] ??
+    governanceCases[0];
   const visibleWorkflows = workflows.filter(
     (workflow) =>
       workflowFilter === "All" || workflow.status === workflowFilter,
@@ -571,6 +669,13 @@ export function SapWorld({
           subtitle: `${material.type} Â· ${material.plant} Â· ${material.standardPrice}`,
           target: "masterdata" as View,
         })),
+        ...governanceCases.map((request) => ({
+          id: request.objectId,
+          title: request.title,
+          subtitle: `${request.domain} governance / ${request.status}`,
+          target: "governance" as View,
+          governanceId: request.id,
+        })),
         ...workflows.map((workflow) => ({
           id: workflow.documentNumber,
           title: workflow.title,
@@ -652,6 +757,7 @@ export function SapWorld({
           <p className="nav-label nav-spacer">Enterprise</p>
           <button className={view === "structure" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("structure")}><Building2 size={18} />Company structure</button>
           <button className={view === "masterdata" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("masterdata")}><ListTree size={18} />Master data</button>
+          <button className={view === "governance" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("governance")}><ShieldCheck size={18} />Data governance</button>
           <button className={view === "plants" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("plants")}><Factory size={18} />Plants & operations</button>
           <button className={view === "partners" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("partners")}><Users size={18} />Business partners</button>
         </nav>
@@ -898,6 +1004,120 @@ export function SapWorld({
                   ))}
                   <div className="structure-note"><Sparkles size={18} /><p>These organizational assignments determine where materials are valued, purchased, stored, produced, and sold in SAP.</p></div>
                 </article>
+              </div>
+            </section>
+          )}
+
+          {view === "governance" && (
+            <section className="governance-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">SAP master-data governance</p><h1>Change requests and data controls</h1><p>Practise how enterprise data is proposed, validated, approved, and propagated without breaking connected SAP processes.</p></div>
+                <span className="api-badge">API /api/governance</span>
+              </div>
+              <div className="governance-summary">
+                <article className="panel"><ShieldCheck size={18} /><div><span>Change requests</span><strong>{governanceCases.length}</strong></div></article>
+                <article className="panel"><Clock3 size={18} /><div><span>Open governance</span><strong>{governanceCases.filter((request) => request.status === "Draft" || request.status === "Pending").length}</strong></div></article>
+                <article className="panel"><TriangleAlert size={18} /><div><span>Failed validations</span><strong>{governanceCases.filter((request) => request.validations.some((validation) => validation.status === "Fail")).length}</strong></div></article>
+                <article className="panel"><Check size={18} /><div><span>Approved changes</span><strong>{governanceCases.filter((request) => request.status === "Approved").length}</strong></div></article>
+              </div>
+              <div className="governance-toolbar">
+                <div><span className="section-kicker">Stewardship workbench</span><h2>Connected master-data changes</h2></div>
+                <div className="filter-tabs">
+                  {["All", "Material", "Supplier", "Customer", "BOM", "Pricing", "Employee"].map((domain) => (
+                    <button className={governanceDomain === domain ? "active" : ""} onClick={() => setGovernanceDomain(domain)} key={domain}>{domain}</button>
+                  ))}
+                </div>
+              </div>
+              {governanceError && <p className="governance-error">{governanceError}</p>}
+              <div className="governance-layout">
+                <aside className="governance-list panel">
+                  {visibleGovernanceCases.map((request) => (
+                    <button className={selectedGovernance?.id === request.id ? "selected" : ""} onClick={() => {
+                      setSelectedGovernanceId(request.id);
+                      setGovernanceComment("");
+                      setGovernanceError("");
+                    }} key={request.id}>
+                      <span className={`governance-priority ${request.priority.toLowerCase()}`}>{request.priority}</span>
+                      <div><strong>{request.title}</strong><code>{request.objectId}</code><small>{request.domain} / Effective {request.effectiveDate}</small></div>
+                      <span className={`governance-status ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
+                    </button>
+                  ))}
+                  {!visibleGovernanceCases.length && <p className="governance-empty">No change requests match this domain.</p>}
+                </aside>
+                {selectedGovernance && (
+                  <div className="governance-workspace">
+                    <article className="governance-brief panel">
+                      <div className="governance-brief-heading">
+                        <div><span className="section-kicker">{selectedGovernance.id} / {selectedGovernance.domain}</span><h2>{selectedGovernance.title}</h2><code>{selectedGovernance.objectId} / {selectedGovernance.objectName}</code></div>
+                        <span className={`governance-status ${selectedGovernance.status.toLowerCase().replaceAll(" ", "-")}`}>{selectedGovernance.status}</span>
+                      </div>
+                      <div className="governance-facts">
+                        <div><span>Requested by</span><strong>{selectedGovernance.requestedBy}</strong></div>
+                        <div><span>Requested</span><strong>{new Date(selectedGovernance.requestedAt).toLocaleString("en-GB")}</strong></div>
+                        <div><span>Effective date</span><strong>{selectedGovernance.effectiveDate}</strong></div>
+                        <div><span>Current owner</span><strong>{selectedGovernance.steps.find((step) => step.status === "Current")?.role ?? "Governance complete"}</strong></div>
+                      </div>
+                      <div className="governance-purpose"><div><strong>Business reason</strong><p>{selectedGovernance.businessReason}</p></div><div><strong>Governance policy</strong><p>{selectedGovernance.governancePolicy}</p></div><div><strong>Risk if uncontrolled</strong><p>{selectedGovernance.risk}</p></div></div>
+                    </article>
+
+                    <article className="governance-fields panel">
+                      <div className="panel-header"><div><span className="section-kicker">Proposed record version</span><h2>Field-level change comparison</h2></div><strong>{selectedGovernance.fieldChanges.length} fields</strong></div>
+                      <div className="governance-field-head"><span>Field</span><span>Current value</span><span>Proposed value</span><span>Business rationale</span></div>
+                      {selectedGovernance.fieldChanges.map((change) => (
+                        <div className="governance-field-row" key={change.field}>
+                          <div><strong>{change.field}</strong>{change.critical && <small>Critical</small>}</div><code>{change.before}</code><code>{change.after}</code><p>{change.rationale}</p>
+                        </div>
+                      ))}
+                    </article>
+
+                    <div className="governance-control-grid">
+                      <article className="governance-validations panel">
+                        <div className="panel-header"><div><span className="section-kicker">Validation gate</span><h2>Can this change proceed?</h2></div></div>
+                        {selectedGovernance.validations.map((validation) => (
+                          <div key={validation.id}><span className={`validation-state ${validation.status.toLowerCase()}`}>{validation.status}</span><div><strong>{validation.label}</strong><small>{validation.id}</small><p>{validation.evidence}</p></div></div>
+                        ))}
+                      </article>
+                      <article className="governance-route panel">
+                        <div className="panel-header"><div><span className="section-kicker">Governance route</span><h2>Accountability and approval</h2></div></div>
+                        {selectedGovernance.steps.map((step) => (
+                          <div className={`governance-step ${step.status.toLowerCase()}`} key={step.sequence}>
+                            <span>{step.sequence}</span><div><strong>{step.role}</strong><small>{step.assignee}</small>{step.comment && <p>{step.comment}</p>}</div><b>{step.decision ?? step.status}</b>
+                          </div>
+                        ))}
+                      </article>
+                    </div>
+
+                    <article className="governance-dependencies panel">
+                      <div className="panel-header"><div><span className="section-kicker">Relational integrity</span><h2>Downstream impact analysis</h2></div><strong>{selectedGovernance.dependencies.length} dependencies</strong></div>
+                      <div>
+                        {selectedGovernance.dependencies.map((dependency) => (
+                          <div key={`${dependency.object}-${dependency.relationship}`}><span><ListTree size={15} /></span><div><strong>{dependency.object}</strong><small>{dependency.relationship}</small><p>{dependency.impact}</p></div></div>
+                        ))}
+                      </div>
+                    </article>
+
+                    {selectedGovernance.allowedActions.length > 0 && (
+                      <article className="governance-decision panel">
+                        <div><span className="section-kicker">Simulation decision</span><h2>Act as {selectedGovernance.steps.find((step) => step.status === "Current")?.role}</h2><p>Use the validation evidence and dependency impact to record a controlled governance decision.</p></div>
+                        <textarea value={governanceComment} onChange={(event) => setGovernanceComment(event.target.value)} maxLength={500} placeholder="Explain the validation evidence reviewed and why the change should proceed or return for correction..." />
+                        <div>
+                          <small>{governanceComment.trim().length}/500 characters</small>
+                          {selectedGovernance.allowedActions.includes("request-changes") && <button disabled={governanceLoading || governanceComment.trim().length < 5} onClick={() => submitGovernanceDecision("request-changes")}>Request changes</button>}
+                          {selectedGovernance.allowedActions.includes("reject") && <button className="reject" disabled={governanceLoading || governanceComment.trim().length < 5} onClick={() => submitGovernanceDecision("reject")}>Reject</button>}
+                          {selectedGovernance.allowedActions.includes("submit") && <button className="approve" disabled={governanceLoading || governanceComment.trim().length < 5} onClick={() => submitGovernanceDecision("submit")}>{governanceLoading ? "Saving..." : "Submit for review"}</button>}
+                          {selectedGovernance.allowedActions.includes("approve") && <button className="approve" disabled={governanceLoading || governanceComment.trim().length < 5} onClick={() => submitGovernanceDecision("approve")}>{governanceLoading ? "Saving..." : "Approve stage"}</button>}
+                        </div>
+                      </article>
+                    )}
+
+                    <article className="governance-audit panel">
+                      <div className="panel-header"><div><span className="section-kicker">Change evidence</span><h2>Governance audit trail</h2></div><strong>{selectedGovernance.auditTrail.length} events</strong></div>
+                      {selectedGovernance.auditTrail.map((entry) => (
+                        <div key={entry.id}><span>{new Date(entry.at).toLocaleString("en-GB")}</span><div><strong>{entry.action}</strong><small>{entry.actor} / {entry.actorRole}</small><p>{entry.comment}</p></div></div>
+                      ))}
+                    </article>
+                  </div>
+                )}
               </div>
             </section>
           )}
@@ -1830,6 +2050,13 @@ export function SapWorld({
                   ) {
                     setSelectedDriverId(result.driverId);
                     setAnalyticsYear(result.fiscalYear as FiscalYear);
+                  }
+                  if (
+                    result.target === "governance" &&
+                    "governanceId" in result &&
+                    typeof result.governanceId === "string"
+                  ) {
+                    setSelectedGovernanceId(result.governanceId);
                   }
                   navigateTo(result.target);
                 }} key={`${result.target}-${result.id}`}>

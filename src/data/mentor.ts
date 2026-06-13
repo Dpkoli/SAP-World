@@ -10,7 +10,8 @@ export type MentorSource = {
     | "Enterprise"
     | "Master Data"
     | "Workflow"
-    | "Analytics";
+    | "Analytics"
+    | "Governance";
   title: string;
   reference: string;
 };

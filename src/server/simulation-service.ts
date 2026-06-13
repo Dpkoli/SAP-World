@@ -30,6 +30,10 @@ import {
   performanceDrivers,
   profitabilitySegments,
 } from "@/data/analytics";
+import {
+  governanceAuditTrail,
+  governanceDefinitions,
+} from "@/data/governance";
 import { workflowAuditTrail, workflowDefinitions } from "@/data/workflows";
 
 export function getEnterpriseSnapshot() {
@@ -61,6 +65,10 @@ export function getEnterpriseSnapshot() {
         periods: analyticsPeriods,
         drivers: performanceDrivers,
         profitability: profitabilitySegments,
+      },
+      governance: {
+        changeRequests: governanceDefinitions,
+        auditTrail: governanceAuditTrail,
       },
     },
     learning: {

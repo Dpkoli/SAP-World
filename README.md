@@ -35,6 +35,10 @@ The first release demonstrates a brewery enterprise with:
 - Searchable company structure, plants, storage locations, suppliers, and customers
 - Relational material master data with valuation, MRP, sourcing, batch, quality,
   BOM, routing, production-version, and work-centre dependencies
+- An account-backed master-data governance workbench for material, supplier,
+  customer, BOM, pricing, and employee change requests
+- Field-level record versions, validation gates, dependency impact analysis,
+  sequential stewardship approvals, and change audit trails
 - Searchable employee and organizational-assignment records
 - Operational plant capacity, utilization, staffing, and order context
 - Business-partner exposure, risk, blocking status, and category filters
@@ -113,6 +117,10 @@ Authenticated approval cases can be read and filtered through `/api/workflows`.
 Learner decisions are submitted to the same endpoint and advance multi-step
 routes one approver at a time.
 
+Authenticated master-data change requests can be reviewed and filtered through
+`/api/governance`. Learners can submit drafts, approve valid stages, reject
+changes, or return them for correction.
+
 Authenticated mentor questions are handled through `POST /api/mentor`. Answers
 include the simulation records used as evidence, and the service does not
 invent facts when the local data cannot support a precise response.
@@ -127,7 +135,8 @@ Authenticated learner progress can be loaded or updated through:
 During local development, accounts and sessions are stored in the ignored
 `.data/accounts.json` file, while server progress is stored in
 `.data/learning-progress.json` and workflow decisions are stored in
-`.data/workflow-decisions.json`. Passwords use salted `scrypt` hashes and
+`.data/workflow-decisions.json`. Governance decisions are stored in
+`.data/governance-decisions.json`. Passwords use salted `scrypt` hashes and
 browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
 service is unavailable.
@@ -157,10 +166,9 @@ Planned phases include:
 
 1. Persistent PostgreSQL enterprise, document, and learning models
 2. Managed identity integration and role-based authorization
-3. Additional Procure-to-Pay lessons and exception scenarios
-4. Order-to-Cash, Plan-to-Produce, and Record-to-Report
-5. Configurable industry templates and multi-year simulation data
-6. AI mentor integration with grounded enterprise context
-7. Deployment, observability, and controlled content administration
+3. Configurable industry templates with generated enterprise data
+4. Asset, tax, stock-transfer, returns, and year-end-close simulations
+5. External AI model integration using the grounded mentor contract
+6. Deployment, observability, and controlled content administration
 
 The source product vision is retained in `Prompt_v2.txt`.

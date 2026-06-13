@@ -13,6 +13,10 @@ import {
 } from "@/data/analytics";
 import { documentFlows } from "@/data/document-flows";
 import {
+  governanceAuditTrail,
+  governanceDefinitions,
+} from "@/data/governance";
+import {
   batches,
   billsOfMaterial,
   materials,
@@ -57,6 +61,7 @@ const sapDomainTerms = new Set([
   "approval", "approver", "authority", "audit", "release", "workflow",
   "analytics", "downtime", "margin", "performance", "profitability", "revenue",
   "service", "waste", "workingcapital",
+  "change", "governance", "steward", "validation", "effective", "dependency",
 ]);
 
 function tokens(value: string) {
@@ -144,6 +149,41 @@ const mentorDocuments: MentorDocument[] = [
     title: `${segment.name} profitability`,
     reference: `${segment.fiscalYear} / ${segment.dimension}`,
     content: `revenue GBP ${segment.revenueM} million contribution GBP ${segment.contributionM} million margin ${segment.marginPercent} percent volume share ${segment.volumeShare} percent ${segment.primaryDriver}`,
+  })),
+  ...governanceDefinitions.map((request) => ({
+    id: `governance-${request.id}`,
+    type: "Governance" as const,
+    title: request.title,
+    reference: `${request.id} / ${request.domain} ${request.objectId}`,
+    content: [
+      `status ${request.status}`,
+      `effective ${request.effectiveDate}`,
+      request.businessReason,
+      request.governancePolicy,
+      request.risk,
+      ...request.fieldChanges.map(
+        (change) =>
+          `${change.field} changes from ${change.before} to ${change.after} ${change.rationale}`,
+      ),
+      ...request.validations.map(
+        (validation) =>
+          `${validation.status} ${validation.label} ${validation.evidence}`,
+      ),
+      ...request.dependencies.map(
+        (dependency) =>
+          `${dependency.object} ${dependency.relationship} ${dependency.impact}`,
+      ),
+      ...request.steps.map(
+        (step) => `${step.role} ${step.assignee} ${step.status}`,
+      ),
+    ].join(" "),
+  })),
+  ...governanceAuditTrail.map((entry) => ({
+    id: `governance-audit-${entry.id}`,
+    type: "Governance" as const,
+    title: `${entry.action}: ${entry.requestId}`,
+    reference: `${entry.requestId} / ${entry.at}`,
+    content: `${entry.actor} ${entry.actorRole} ${entry.action} ${entry.comment}`,
   })),
   ...workflowDefinitions.map((workflow) => ({
     id: `workflow-${workflow.id}`,
@@ -397,6 +437,13 @@ export function answerMentorQuestion(input: {
   const referencedProfitability = profitabilitySegments.find(
     (segment) => normalizedQuestion.includes(segment.name.toLowerCase()),
   );
+  const referencedGovernance = governanceDefinitions.find(
+    (request) =>
+      normalizedQuestion.includes(request.id.toLowerCase()) ||
+      normalizedQuestion.includes(request.objectId.toLowerCase()) ||
+      tokens(request.title).filter((token) => normalizedQuestion.includes(token))
+        .length >= 3,
+  );
   const step =
     typeof input.step === "number" && Number.isFinite(input.step)
       ? Math.min(
@@ -408,6 +455,14 @@ export function answerMentorQuestion(input: {
   let answer: string;
   if (exactAnswer) {
     answer = exactAnswer;
+  } else if (referencedGovernance) {
+    const failed = referencedGovernance.validations.filter(
+      (validation) => validation.status === "Fail",
+    );
+    const currentOwner = referencedGovernance.steps.find(
+      (governanceStep) => governanceStep.status === "Current",
+    );
+    answer = `${referencedGovernance.id} controls ${referencedGovernance.title.toLowerCase()} for ${referencedGovernance.objectId}. It is ${referencedGovernance.status.toLowerCase()}${currentOwner ? ` with ${currentOwner.role} (${currentOwner.assignee}) responsible for the current stage` : ""}. ${failed.length ? `It must not be approved because ${failed.map((validation) => validation.evidence).join(" ")}` : `The validation gate has no failed checks, but warnings and downstream dependencies still require review.`} ${referencedGovernance.risk}`;
   } else if (referencedDriver) {
     answer = `${referencedDriver.title}. ${referencedDriver.explanation} The measured effect was ${referencedDriver.metricImpact.toLowerCase()}, with ${referencedDriver.financialImpact.toLowerCase()}. In SAP, review ${referencedDriver.sapEvidence}.`;
   } else if (referencedProfitability) {
@@ -512,6 +567,9 @@ export function answerMentorQuestion(input: {
     referencedDriver ? `analytics-driver-${referencedDriver.id}` : null,
     referencedProfitability
       ? `analytics-profitability-${referencedProfitability.id}`
+      : null,
+    referencedGovernance
+      ? `governance-${referencedGovernance.id}`
       : null,
   ].filter((id): id is string => Boolean(id));
   const directReferences = mentorDocuments.filter((document) =>
