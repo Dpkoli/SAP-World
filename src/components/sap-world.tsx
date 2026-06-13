@@ -101,6 +101,12 @@ import {
   type SimulationFiscalYear,
 } from "@/data/generated-simulations";
 import {
+  simulationLedgerProcesses,
+  type SimulationLedgerDocument,
+  type SimulationLedgerProcess,
+  type SimulationLedgerSummary,
+} from "@/data/simulation-ledger";
+import {
   defaultDiagnosticProgress,
   defaultScenarioProgress,
   normalizeLearnerProgress,
@@ -181,6 +187,20 @@ export function SapWorld({
   const [studioLoading, setStudioLoading] = useState(true);
   const [studioError, setStudioError] = useState("");
   const [studioExecutionNote, setStudioExecutionNote] = useState("");
+  const [studioLedgerSummary, setStudioLedgerSummary] =
+    useState<SimulationLedgerSummary | null>(null);
+  const [studioLedgerDocuments, setStudioLedgerDocuments] = useState<
+    SimulationLedgerDocument[]
+  >([]);
+  const [studioLedgerYear, setStudioLedgerYear] = useState<
+    "All" | SimulationFiscalYear
+  >("All");
+  const [studioLedgerProcess, setStudioLedgerProcess] = useState<
+    "All" | SimulationLedgerProcess
+  >("All");
+  const [selectedLedgerDocumentId, setSelectedLedgerDocumentId] = useState("");
+  const [studioLedgerLoading, setStudioLedgerLoading] = useState(false);
+  const [studioLedgerError, setStudioLedgerError] = useState("");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
@@ -282,6 +302,68 @@ export function SapWorld({
       cancelled = true;
     };
   }, [user.id]);
+
+  useEffect(() => {
+    if (!selectedSimulationId) return;
+
+    let cancelled = false;
+
+    async function loadSimulationLedger() {
+      setStudioLedgerLoading(true);
+      setStudioLedgerError("");
+      const search = new URLSearchParams();
+      if (studioLedgerYear !== "All") {
+        search.set("year", studioLedgerYear);
+      }
+      if (studioLedgerProcess !== "All") {
+        search.set("process", studioLedgerProcess);
+      }
+      const query = search.size ? `?${search.toString()}` : "";
+
+      try {
+        const response = await fetch(
+          `/api/simulation-studio/${selectedSimulationId}/ledger${query}`,
+          { cache: "no-store" },
+        );
+        const result = (await response.json()) as {
+          summary?: SimulationLedgerSummary;
+          documents?: SimulationLedgerDocument[];
+          error?: string;
+        };
+        if (!response.ok || !result.summary || !result.documents) {
+          throw new Error(
+            result.error ?? "Enterprise ledger service unavailable.",
+          );
+        }
+        if (!cancelled) {
+          setStudioLedgerSummary(result.summary);
+          setStudioLedgerDocuments(result.documents);
+          setSelectedLedgerDocumentId((current) =>
+            result.documents!.some((document) => document.id === current)
+              ? current
+              : result.documents![0]?.id ?? "",
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStudioLedgerError(
+            error instanceof Error
+              ? error.message
+              : "Enterprise ledger service unavailable.",
+          );
+          setStudioLedgerSummary(null);
+          setStudioLedgerDocuments([]);
+        }
+      } finally {
+        if (!cancelled) setStudioLedgerLoading(false);
+      }
+    }
+
+    void loadSimulationLedger();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSimulationId, studioLedgerProcess, studioLedgerYear]);
 
   useEffect(() => {
     let cancelled = false;
@@ -804,6 +886,10 @@ export function SapWorld({
     generatedSimulations.find(
       (simulation) => simulation.id === selectedSimulationId,
     ) ?? generatedSimulations[0];
+  const selectedLedgerDocument =
+    studioLedgerDocuments.find(
+      (document) => document.id === selectedLedgerDocumentId,
+    ) ?? studioLedgerDocuments[0];
   const implementationBlueprint =
     implementationBlueprintFor(activeScenarioId);
   const scenarioMasterData = masterDataForScenario(activeScenarioId);
@@ -1500,6 +1586,87 @@ export function SapWorld({
                     <article className="studio-history panel">
                       <div className="panel-header"><div><span className="section-kicker">Enterprise evolution</span><h2>Three-year chronology</h2></div></div>
                       <div>{selectedGeneratedSimulation.history.map((period) => <div className={period.fiscalYear === selectedGeneratedSimulation.fiscalYear ? "active" : ""} key={period.fiscalYear}><strong>{period.fiscalYear}</strong><p>{period.state}</p></div>)}</div>
+                    </article>
+
+                    <article className="studio-ledger panel">
+                      <div className="panel-header">
+                        <div><span className="section-kicker">Connected transaction history</span><h2>Three-year enterprise ledger</h2></div>
+                        <div className="studio-ledger-filters">
+                          <label>
+                            <span>Fiscal year</span>
+                            <select value={studioLedgerYear} onChange={(event) => setStudioLedgerYear(event.target.value as "All" | SimulationFiscalYear)}>
+                              <option value="All">All years</option>
+                              {simulationFiscalYears.map((year) => <option value={year} key={year}>{year}</option>)}
+                            </select>
+                          </label>
+                          <label>
+                            <span>Process</span>
+                            <select value={studioLedgerProcess} onChange={(event) => setStudioLedgerProcess(event.target.value as "All" | SimulationLedgerProcess)}>
+                              <option value="All">All processes</option>
+                              {simulationLedgerProcesses.map((process) => <option value={process} key={process}>{process}</option>)}
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+                      {studioLedgerSummary && !studioLedgerLoading && (
+                        <div className="studio-ledger-summary">
+                          <div><span>Documents</span><strong>{studioLedgerSummary.documentCount}</strong><small>{studioLedgerDocuments.length} shown</small></div>
+                          <div><span>Process chains</span><strong>{studioLedgerSummary.processChainCount}</strong><small>{studioLedgerSummary.processCoverage.length} end-to-end processes</small></div>
+                          <div><span>Transaction value</span><strong>GBP {studioLedgerSummary.transactionValue.toLocaleString("en-GB")}</strong><small>Unique chain value</small></div>
+                          <div><span>Controlled exceptions</span><strong>{studioLedgerSummary.exceptionCount}</strong><small>Resolved with SAP evidence</small></div>
+                          <div className={studioLedgerSummary.integrity.status === "Passed" ? "passed" : "failed"}><span>Relational integrity</span><strong>{studioLedgerSummary.integrity.status}</strong><small>{studioLedgerSummary.integrity.brokenLinks} broken links / {studioLedgerSummary.integrity.orphanDocuments} orphans</small></div>
+                        </div>
+                      )}
+                      {studioLedgerError && <div className="workflow-error" role="alert">{studioLedgerError}</div>}
+                      {studioLedgerLoading ? (
+                        <div className="workflow-empty">Replaying deterministic enterprise history...</div>
+                      ) : studioLedgerDocuments.length ? (
+                        <div className="studio-ledger-layout">
+                          <div className="studio-ledger-table">
+                            <div className="studio-ledger-row heading"><span>Date</span><span>Process / document</span><span>Module</span><span>Value</span><span>Status</span></div>
+                            {studioLedgerDocuments.map((document) => (
+                              <button className={`studio-ledger-row ${selectedLedgerDocument?.id === document.id ? "selected" : ""}`} onClick={() => setSelectedLedgerDocumentId(document.id)} key={document.id}>
+                                <span>{new Date(document.postingDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                <span><strong>{document.type}</strong><small>{document.process} / {document.number}</small></span>
+                                <span>{document.module}</span>
+                                <span>GBP {document.amount.toLocaleString("en-GB")}</span>
+                                <span className={document.exception ? "exception" : ""}>{document.status}</span>
+                              </button>
+                            ))}
+                          </div>
+                          {selectedLedgerDocument && (
+                            <aside className="studio-ledger-detail">
+                              <div><span className="section-kicker">{selectedLedgerDocument.process} / Step {selectedLedgerDocument.sequence}</span><h3>{selectedLedgerDocument.type}</h3><code>{selectedLedgerDocument.number}</code></div>
+                              <p>{selectedLedgerDocument.businessPurpose}</p>
+                              <dl>
+                                <div><dt>Fiscal year</dt><dd>{selectedLedgerDocument.fiscalYear}</dd></div>
+                                <div><dt>Quantity</dt><dd>{selectedLedgerDocument.quantity === null ? "Not applicable" : `${selectedLedgerDocument.quantity.toLocaleString("en-GB")} ${selectedLedgerDocument.unit}`}</dd></div>
+                                <div><dt>Upstream</dt><dd>{selectedLedgerDocument.upstreamDocument ?? "Chain origin"}</dd></div>
+                                <div><dt>Downstream</dt><dd>{selectedLedgerDocument.downstreamDocument ?? "Chain complete"}</dd></div>
+                              </dl>
+                              <div className="studio-ledger-impact"><span>Inventory impact</span><p>{selectedLedgerDocument.inventoryImpact}</p></div>
+                              <div className="studio-ledger-impact"><span>Accounting impact</span><p>{selectedLedgerDocument.accountingImpact}</p></div>
+                              {selectedLedgerDocument.exception && (
+                                <div className="studio-ledger-exception">
+                                  <span><TriangleAlert size={14} /> Controlled exception</span>
+                                  <strong>{selectedLedgerDocument.exception.issue}</strong>
+                                  <p>{selectedLedgerDocument.exception.signal}</p>
+                                  <small>{selectedLedgerDocument.exception.resolution}</small>
+                                </div>
+                              )}
+                              {selectedLedgerDocument.journalEntries.map((entry) => (
+                                <div className="studio-ledger-entry" key={`${entry.debit}-${entry.credit}`}>
+                                  <div><span>Dr</span><strong>{entry.debit}</strong></div>
+                                  <div><span>Cr</span><strong>{entry.credit}</strong></div>
+                                  <code>GBP {entry.amount.toLocaleString("en-GB")}</code>
+                                </div>
+                              ))}
+                            </aside>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="workflow-empty">No ledger documents match these filters.</div>
+                      )}
                     </article>
 
                     <article className="studio-documents panel">

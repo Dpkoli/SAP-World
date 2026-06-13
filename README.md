@@ -17,6 +17,12 @@ The first release demonstrates a brewery enterprise with:
 - Stable scenario signatures, three-year chronology, organizational and
   master-data dependencies, six-document flows, tutor steps, controls, and
   operational, inventory, and financial impacts
+- A deterministic three-year enterprise ledger for every generated simulation,
+  with 144 chronological SAP documents across 24 connected process chains
+- Complete P2P, O2C, Plan-to-Produce, Record-to-Report,
+  Warehouse-to-Dispatch, Quality, Maintenance, and Hire-to-Retire coverage
+- Upstream/downstream document references, quantities, statuses, inventory
+  effects, journal evidence, resolved exceptions, and relational integrity checks
 - Event-sourced scenario execution with ordered commands, optimistic version
   checks, immutable learner evidence, derived process state, and replayable audit logs
 - A connected Procure-to-Pay document flow
@@ -121,6 +127,20 @@ Execution commands must match the current step and aggregate version. Accepted
 commands append immutable events; operational, inventory, financial, document,
 and completion status are rebuilt by replaying that event stream.
 
+Every generated scenario also exposes its deterministic enterprise history:
+
+`GET /api/simulation-studio/{simulationId}/ledger`
+
+The ledger can be filtered by fiscal year and end-to-end process:
+
+`GET /api/simulation-studio/{simulationId}/ledger?year=2024-2025&process=Plan-to-Produce`
+
+Each ledger contains three fiscal years, eight process chains per year, and six
+documents per chain. The response reports broken links and orphan records so
+relational integrity is visible rather than assumed. Ledger history is derived
+from the immutable scenario signature, so replay does not require another AI
+generation call and always returns the same document numbers and values.
+
 Implementation-consultant blueprints can be queried by process:
 
 `/api/implementation?id=p2p`
@@ -221,7 +241,8 @@ Planned phases include:
 
 1. Persistent PostgreSQL enterprise, document, and learning models
 2. Managed identity integration and role-based authorization
-3. Full-volume generated industry enterprises with multi-year transaction ledgers
+3. Expand generated industry ledgers from representative connected histories
+   to configurable full-volume enterprise scale
 4. External AI model integration using the grounded mentor contract
 5. Deployment, observability, and controlled content administration
 

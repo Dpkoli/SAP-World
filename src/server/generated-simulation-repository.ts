@@ -54,6 +54,14 @@ export async function getGeneratedSimulations(learnerId: string) {
   return database.learners[learnerId] ?? [];
 }
 
+export async function getGeneratedSimulation(
+  learnerId: string,
+  simulationId: string,
+) {
+  const simulations = await getGeneratedSimulations(learnerId);
+  return simulations.find((simulation) => simulation.id === simulationId);
+}
+
 export async function saveGeneratedSimulation(
   learnerId: string,
   input: {
