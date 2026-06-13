@@ -38,6 +38,7 @@ import { workflowAuditTrail, workflowDefinitions } from "@/data/workflows";
 import { advancedTransactionDefinitions } from "@/data/advanced-transactions";
 import { industryBlueprints } from "@/data/industry-blueprints";
 import { industryEnterprises } from "@/data/industries";
+import { simulationFiscalYears } from "@/data/generated-simulations";
 
 export function getEnterpriseSnapshot() {
   return {
@@ -49,6 +50,12 @@ export function getEnterpriseSnapshot() {
         (blueprint) => blueprint.id === industry.id,
       ),
     })),
+    simulationStudio: {
+      deterministic: true,
+      fiscalYears: simulationFiscalYears,
+      templateVersion: "sap-world-v1",
+      maxSavedPerLearner: 25,
+    },
     organization: enterpriseUnits,
     plants,
     businessPartners,

@@ -15,6 +15,8 @@ import { documentFlows } from "@/data/document-flows";
 import { advancedTransactionDefinitions } from "@/data/advanced-transactions";
 import { industryBlueprints } from "@/data/industry-blueprints";
 import { industryEnterprises } from "@/data/industries";
+import { simulationFiscalYears } from "@/data/generated-simulations";
+import { generateIndustrySimulation } from "@/server/industry-simulation-generator";
 import {
   governanceAuditTrail,
   governanceDefinitions,
@@ -135,6 +137,45 @@ function scenarioDocuments(scenario: ProcessScenario): MentorDocument[] {
 
 const mentorDocuments: MentorDocument[] = [
   ...processScenarios.flatMap(scenarioDocuments),
+  ...industryEnterprises.flatMap((industry) => {
+    const blueprint = industryBlueprints.find(
+      (item) => item.id === industry.id,
+    )!;
+    return simulationFiscalYears.flatMap((fiscalYear) =>
+      blueprint.commonProblems.map((_, eventIndex) => {
+        const simulation = generateIndustrySimulation({
+          industryId: industry.id,
+          fiscalYear,
+          eventIndex,
+          generatedAt: "2026-06-13T00:00:00.000Z",
+        });
+        return {
+          id: `generated-${simulation.id}`,
+          type: "Generated Simulation" as const,
+          title: `${simulation.id}: ${simulation.title}`,
+          reference: `${simulation.id} / ${simulation.signature.slice(0, 12)}`,
+          content: [
+            simulation.businessContext,
+            simulation.trigger,
+            simulation.rootCause,
+            simulation.operationalImpact,
+            simulation.inventoryImpact,
+            simulation.financialImpact,
+            simulation.exposure,
+            ...simulation.documents.map(
+              (document) =>
+                `${document.type} ${document.number} ${document.module} ${document.purpose}`,
+            ),
+            ...simulation.steps.map(
+              (step) =>
+                `${step.sequence} ${step.title} ${step.role} ${step.app} ${step.instruction} ${step.why} ${step.result}`,
+            ),
+            ...simulation.controls,
+          ].join(" "),
+        };
+      }),
+    );
+  }),
   ...industryBlueprints.map((blueprint) => {
     const industry = industryEnterprises.find(
       (item) => item.id === blueprint.id,
@@ -526,6 +567,26 @@ export function answerMentorQuestion(input: {
         normalizedQuestion.includes(token),
       ).length >= Math.min(2, tokens(industry.industry).length),
   );
+  const referencedGeneratedSimulation = industryEnterprises
+    .flatMap((industry) =>
+      simulationFiscalYears.flatMap((fiscalYear) =>
+        industryBlueprints
+          .find((blueprint) => blueprint.id === industry.id)!
+          .commonProblems.map((_, eventIndex) =>
+            generateIndustrySimulation({
+              industryId: industry.id,
+              fiscalYear,
+              eventIndex,
+              generatedAt: "2026-06-13T00:00:00.000Z",
+            }),
+          ),
+        ),
+    )
+    .find(
+      (simulation) =>
+        normalizedQuestion.includes(simulation.id.toLowerCase()) ||
+        normalizedQuestion.includes(simulation.signature.slice(0, 12)),
+    );
   const referencedDriver = performanceDrivers.find(
     (driver) =>
       normalizedQuestion.includes(driver.id.toLowerCase()) ||
@@ -553,6 +614,8 @@ export function answerMentorQuestion(input: {
   let answer: string;
   if (exactAnswer) {
     answer = exactAnswer;
+  } else if (referencedGeneratedSimulation) {
+    answer = `${referencedGeneratedSimulation.id} simulates ${referencedGeneratedSimulation.title.toLowerCase()} at ${referencedGeneratedSimulation.enterprise}. ${referencedGeneratedSimulation.trigger} ${referencedGeneratedSimulation.rootCause} The deterministic exposure is ${referencedGeneratedSimulation.exposure}. Start by ${referencedGeneratedSimulation.steps[0].instruction.charAt(0).toLowerCase()}${referencedGeneratedSimulation.steps[0].instruction.slice(1)} The next controlled action is ${referencedGeneratedSimulation.steps[1].title.toLowerCase()}.`;
   } else if (referencedIndustry) {
     const blueprint = industryBlueprints.find(
       (item) => item.id === referencedIndustry.id,
@@ -697,6 +760,9 @@ export function answerMentorQuestion(input: {
       ? `advanced-${referencedAdvancedTransaction.id}`
       : null,
     referencedIndustry ? `industry-${referencedIndustry.id}` : null,
+    referencedGeneratedSimulation
+      ? `generated-${referencedGeneratedSimulation.id}`
+      : null,
   ].filter((id): id is string => Boolean(id));
   const directReferences = mentorDocuments.filter((document) =>
     directReferenceIds.includes(document.id),

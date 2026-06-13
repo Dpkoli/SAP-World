@@ -96,6 +96,11 @@ import {
   industryBlueprintById,
 } from "@/data/industry-blueprints";
 import {
+  simulationFiscalYears,
+  type GeneratedSimulation,
+  type SimulationFiscalYear,
+} from "@/data/generated-simulations";
+import {
   defaultDiagnosticProgress,
   defaultScenarioProgress,
   normalizeLearnerProgress,
@@ -120,6 +125,7 @@ type View =
   | "overview"
   | "academy"
   | "industries"
+  | "studio"
   | "processes"
   | "advanced"
   | "tutor"
@@ -136,6 +142,7 @@ const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
   { id: "industries" as const, label: "Industry blueprints", icon: Landmark },
+  { id: "studio" as const, label: "Simulation studio", icon: Sparkles },
   { id: "processes" as const, label: "Process explorer", icon: Boxes },
   { id: "advanced" as const, label: "Advanced transactions", icon: Repeat2 },
   { id: "analytics" as const, label: "Performance analytics", icon: BarChart3 },
@@ -162,6 +169,17 @@ export function SapWorld({
     useState<IndustryId>(defaultIndustryId);
   const [selectedIndustryBlueprintId, setSelectedIndustryBlueprintId] =
     useState<IndustryId>(defaultIndustryId);
+  const [studioIndustryId, setStudioIndustryId] =
+    useState<IndustryId>(defaultIndustryId);
+  const [studioFiscalYear, setStudioFiscalYear] =
+    useState<SimulationFiscalYear>("2025-2026");
+  const [studioEventIndex, setStudioEventIndex] = useState(0);
+  const [generatedSimulations, setGeneratedSimulations] = useState<
+    GeneratedSimulation[]
+  >([]);
+  const [selectedSimulationId, setSelectedSimulationId] = useState("");
+  const [studioLoading, setStudioLoading] = useState(true);
+  const [studioError, setStudioError] = useState("");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
@@ -219,6 +237,50 @@ export function SapWorld({
   const [mentorSources, setMentorSources] = useState<MentorSource[]>([]);
   const [mentorLoading, setMentorLoading] = useState(false);
   const [mentorError, setMentorError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGeneratedSimulations() {
+      setStudioLoading(true);
+      try {
+        const response = await fetch("/api/simulation-studio", {
+          cache: "no-store",
+        });
+        const result = (await response.json()) as {
+          simulations?: GeneratedSimulation[];
+          error?: string;
+        };
+        if (!response.ok || !result.simulations) {
+          throw new Error(
+            result.error ?? "Simulation Studio service unavailable.",
+          );
+        }
+        if (!cancelled) {
+          setGeneratedSimulations(result.simulations);
+          setSelectedSimulationId((current) =>
+            current || result.simulations?.[0]?.id || "",
+          );
+          setStudioError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStudioError(
+            error instanceof Error
+              ? error.message
+              : "Simulation Studio service unavailable.",
+          );
+        }
+      } finally {
+        if (!cancelled) setStudioLoading(false);
+      }
+    }
+
+    void loadGeneratedSimulations();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -618,6 +680,45 @@ export function SapWorld({
     }
   }
 
+  async function generateStudioSimulation() {
+    if (studioLoading) return;
+    setStudioLoading(true);
+    setStudioError("");
+    try {
+      const response = await fetch("/api/simulation-studio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industryId: studioIndustryId,
+          fiscalYear: studioFiscalYear,
+          eventIndex: studioEventIndex,
+        }),
+      });
+      const result = (await response.json()) as {
+        simulation?: GeneratedSimulation;
+        error?: string;
+      };
+      if (!response.ok || !result.simulation) {
+        throw new Error(result.error ?? "Simulation could not be generated.");
+      }
+      setGeneratedSimulations((current) => [
+        result.simulation!,
+        ...current.filter(
+          (simulation) => simulation.signature !== result.simulation!.signature,
+        ),
+      ]);
+      setSelectedSimulationId(result.simulation.id);
+    } catch (error) {
+      setStudioError(
+        error instanceof Error
+          ? error.message
+          : "Simulation could not be generated.",
+      );
+    } finally {
+      setStudioLoading(false);
+    }
+  }
+
   const activeScenario =
     processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
     processScenarios[0];
@@ -643,6 +744,12 @@ export function SapWorld({
   const selectedIndustryBlueprint = industryBlueprintById(
     selectedIndustryBlueprintId,
   );
+  const studioIndustry = industryById(studioIndustryId);
+  const studioBlueprint = industryBlueprintById(studioIndustryId);
+  const selectedGeneratedSimulation =
+    generatedSimulations.find(
+      (simulation) => simulation.id === selectedSimulationId,
+    ) ?? generatedSimulations[0];
   const implementationBlueprint =
     implementationBlueprintFor(activeScenarioId);
   const scenarioMasterData = masterDataForScenario(activeScenarioId);
@@ -831,6 +938,13 @@ export function SapWorld({
           subtitle: `${industry.enterprise} / ${industry.operatingModel}`,
           target: "industries" as View,
           industryId: industry.id,
+        })),
+        ...generatedSimulations.map((simulation) => ({
+          id: simulation.id,
+          title: simulation.title,
+          subtitle: `${simulation.industry} / ${simulation.fiscalYear} / ${simulation.exposure}`,
+          target: "studio" as View,
+          simulationId: simulation.id,
         })),
         ...performanceDrivers.map((driver) => ({
           id: driver.id,
@@ -1237,6 +1351,141 @@ export function SapWorld({
                     ))}
                   </div>
                 </article>
+              </div>
+            </section>
+          )}
+
+          {view === "studio" && (
+            <section className="simulation-studio-page">
+              <div className="page-heading compact">
+                <div>
+                  <p className="eyebrow">Deterministic enterprise generation</p>
+                  <h1>Simulation Studio</h1>
+                  <p>
+                    Instantiate a curated industry event as a connected SAP
+                    scenario with stable documents, impacts, controls, and history.
+                  </p>
+                </div>
+                <span className="api-badge">API /api/simulation-studio</span>
+              </div>
+
+              <article className="studio-generator panel">
+                <div className="studio-generator-heading">
+                  <div><Sparkles size={21} /><div><span className="section-kicker">Template version sap-world-v1</span><h2>Generate a scenario package</h2></div></div>
+                  <span><ShieldCheck size={14} /> No random business data</span>
+                </div>
+                <div className="studio-controls">
+                  <label>
+                    <span>Industry template</span>
+                    <select value={studioIndustryId} onChange={(event) => {
+                      setStudioIndustryId(event.target.value as IndustryId);
+                      setStudioEventIndex(0);
+                    }}>
+                      {industryEnterprises.map((industry) => <option value={industry.id} key={industry.id}>{industry.industry}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Fiscal year</span>
+                    <select value={studioFiscalYear} onChange={(event) => setStudioFiscalYear(event.target.value as SimulationFiscalYear)}>
+                      {simulationFiscalYears.map((year) => <option value={year} key={year}>{year}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Curated business event</span>
+                    <select value={studioEventIndex} onChange={(event) => setStudioEventIndex(Number(event.target.value))}>
+                      {studioBlueprint.commonProblems.map((problem, index) => <option value={index} key={problem.issue}>{problem.issue}</option>)}
+                    </select>
+                  </label>
+                  <button className="primary-button" disabled={studioLoading} onClick={() => void generateStudioSimulation()}>
+                    <Sparkles size={16} /> {studioLoading ? "Generating..." : "Generate package"}
+                  </button>
+                </div>
+                <div className="studio-template-preview">
+                  <div><span>Enterprise</span><strong>{studioIndustry.enterprise}</strong></div>
+                  <div><span>Trigger signal</span><strong>{studioBlueprint.commonProblems[studioEventIndex].signal}</strong></div>
+                  <div><span>Controlled SAP response</span><strong>{studioBlueprint.commonProblems[studioEventIndex].sapResponse}</strong></div>
+                </div>
+              </article>
+
+              {studioError && <div className="workflow-error" role="alert">{studioError}</div>}
+              <div className="studio-layout">
+                <aside className="studio-saved panel">
+                  <div className="panel-header"><div><span className="section-kicker">Learner workspace</span><h2>Saved packages</h2></div><strong>{generatedSimulations.length}</strong></div>
+                  <div>
+                    {generatedSimulations.map((simulation) => (
+                      <button
+                        className={selectedGeneratedSimulation?.signature === simulation.signature ? "selected" : ""}
+                        onClick={() => setSelectedSimulationId(simulation.id)}
+                        key={simulation.signature}
+                      >
+                        <span>{simulation.industry} / {simulation.fiscalYear}</span>
+                        <strong>{simulation.title}</strong>
+                        <code>{simulation.id}</code>
+                        <small>{simulation.exposure}</small>
+                      </button>
+                    ))}
+                    {!studioLoading && !generatedSimulations.length && <div className="workflow-empty">Generate your first scenario package.</div>}
+                  </div>
+                </aside>
+
+                {selectedGeneratedSimulation ? (
+                  <div className="studio-workspace">
+                    <article className="studio-brief panel">
+                      <header>
+                        <div><span className="section-kicker">{selectedGeneratedSimulation.id} / {selectedGeneratedSimulation.fiscalYear}</span><h2>{selectedGeneratedSimulation.title}</h2><p>{selectedGeneratedSimulation.businessContext}</p></div>
+                        <div><span>Deterministic exposure</span><strong>{selectedGeneratedSimulation.exposure}</strong><code>{selectedGeneratedSimulation.signature.slice(0, 12)}</code></div>
+                      </header>
+                      <div className="studio-facts">
+                        <div><span>Trigger</span><strong>{selectedGeneratedSimulation.trigger}</strong></div>
+                        <div><span>Root-cause dependency</span><strong>{selectedGeneratedSimulation.rootCause}</strong></div>
+                        <div><span>Seasonality</span><strong>{selectedGeneratedSimulation.seasonality}</strong></div>
+                      </div>
+                      <div className="industry-module-strip">{selectedGeneratedSimulation.modules.map((module) => <span key={module}>{module}</span>)}</div>
+                    </article>
+
+                    <article className="studio-history panel">
+                      <div className="panel-header"><div><span className="section-kicker">Enterprise evolution</span><h2>Three-year chronology</h2></div></div>
+                      <div>{selectedGeneratedSimulation.history.map((period) => <div className={period.fiscalYear === selectedGeneratedSimulation.fiscalYear ? "active" : ""} key={period.fiscalYear}><strong>{period.fiscalYear}</strong><p>{period.state}</p></div>)}</div>
+                    </article>
+
+                    <article className="studio-documents panel">
+                      <div className="panel-header"><div><span className="section-kicker">Relational document flow</span><h2>Generated SAP evidence chain</h2></div><strong>6 linked objects</strong></div>
+                      <div>
+                        {selectedGeneratedSimulation.documents.map((document, index) => (
+                          <div key={document.number}><span>{document.sequence}</span><div><small>{document.module}</small><strong>{document.type}</strong><code>{document.number}</code><p>{document.purpose}</p></div>{index < selectedGeneratedSimulation.documents.length - 1 && <ArrowRight size={15} />}</div>
+                        ))}
+                      </div>
+                    </article>
+
+                    <div className="studio-impact-grid">
+                      <article className="panel"><Factory size={18} /><div><span>Operational impact</span><p>{selectedGeneratedSimulation.operationalImpact}</p></div></article>
+                      <article className="panel"><Package size={18} /><div><span>Inventory impact</span><p>{selectedGeneratedSimulation.inventoryImpact}</p></div></article>
+                      <article className="panel"><TrendingUp size={18} /><div><span>Financial impact</span><p>{selectedGeneratedSimulation.financialImpact}</p></div></article>
+                    </div>
+
+                    <article className="studio-response panel">
+                      <div className="panel-header"><div><span className="section-kicker">Tutor-ready response</span><h2>Controlled recovery sequence</h2></div></div>
+                      <div>
+                        {selectedGeneratedSimulation.steps.map((step) => (
+                          <div key={step.sequence}><span>{step.sequence}</span><div><small>{step.role} / {step.app}</small><h3>{step.title}</h3><p>{step.instruction}</p><div><strong>Why</strong>{step.why}</div><div><strong>Result</strong>{step.result}</div></div></div>
+                        ))}
+                      </div>
+                    </article>
+
+                    <div className="studio-evidence-grid">
+                      <article className="panel">
+                        <div className="panel-header"><div><span className="section-kicker">Posting logic</span><h2>Accounting evidence</h2></div></div>
+                        {selectedGeneratedSimulation.accountingEntries.map((entry) => <div className="studio-journal" key={entry.debit}><span>Dr</span><strong>{entry.debit}</strong><span>Cr</span><strong>{entry.credit}</strong><code>{entry.amount}</code><p>{entry.explanation}</p></div>)}
+                      </article>
+                      <article className="panel">
+                        <div className="panel-header"><div><span className="section-kicker">Generation controls</span><h2>Integrity checks</h2></div></div>
+                        <div className="studio-control-list">{selectedGeneratedSimulation.controls.map((control) => <p key={control}><ShieldCheck size={15} />{control}</p>)}</div>
+                      </article>
+                    </div>
+                  </div>
+                ) : (
+                  <article className="studio-empty panel"><Sparkles size={25} /><h2>No generated package selected</h2><p>Choose an industry, fiscal year, and curated exception above.</p></article>
+                )}
               </div>
             </section>
           )}
@@ -2515,6 +2764,13 @@ export function SapWorld({
                     typeof result.industryId === "string"
                   ) {
                     setSelectedIndustryBlueprintId(result.industryId as IndustryId);
+                  }
+                  if (
+                    result.target === "studio" &&
+                    "simulationId" in result &&
+                    typeof result.simulationId === "string"
+                  ) {
+                    setSelectedSimulationId(result.simulationId);
                   }
                   navigateTo(result.target);
                 }} key={`${result.target}-${result.id}`}>

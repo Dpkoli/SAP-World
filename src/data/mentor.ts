@@ -13,7 +13,8 @@ export type MentorSource = {
     | "Analytics"
     | "Governance"
     | "Advanced Transaction"
-    | "Industry Blueprint";
+    | "Industry Blueprint"
+    | "Generated Simulation";
   title: string;
   reference: string;
 };

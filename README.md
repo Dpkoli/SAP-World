@@ -12,6 +12,11 @@ The first release demonstrates a brewery enterprise with:
 - Detailed implementation blueprints for all ten industries covering value
   chains, lifecycles, organization, master data, KPIs, compliance, reporting,
   dependencies, operational failures, and seasonality
+- A deterministic Simulation Studio that converts industry, fiscal-year, and
+  curated event templates into account-backed SAP scenario packages
+- Stable scenario signatures, three-year chronology, organizational and
+  master-data dependencies, six-document flows, tutor steps, controls, and
+  operational, inventory, and financial impacts
 - A connected Procure-to-Pay document flow
 - Inventory, accounting, and operational impact explanations
 - A guided SAP goods-receipt lesson using realistic business data
@@ -93,6 +98,17 @@ Industry blueprints can be filtered by industry or SAP capability:
 
 `/api/industries?module=TM`
 
+Authenticated learners can generate and retrieve deterministic scenario
+packages through:
+
+`GET /api/simulation-studio`
+
+`POST /api/simulation-studio`
+
+The same industry, fiscal year, and curated event always produce the same
+scenario signature and business content. Repeated generation returns the
+learner's existing saved package rather than creating a duplicate.
+
 Implementation-consultant blueprints can be queried by process:
 
 `/api/implementation?id=p2p`
@@ -159,7 +175,8 @@ During local development, accounts and sessions are stored in the ignored
 `.data/learning-progress.json` and workflow decisions are stored in
 `.data/workflow-decisions.json`. Governance decisions are stored in
 `.data/governance-decisions.json`, and advanced transaction evidence is stored
-in `.data/advanced-transaction-progress.json`. Passwords use salted `scrypt`
+in `.data/advanced-transaction-progress.json`. Generated industry simulations
+are stored in `.data/generated-simulations.json`. Passwords use salted `scrypt`
 hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
 service is unavailable.
@@ -189,7 +206,7 @@ Planned phases include:
 
 1. Persistent PostgreSQL enterprise, document, and learning models
 2. Managed identity integration and role-based authorization
-3. Configurable industry templates with generated enterprise data
+3. Full-volume generated industry enterprises with multi-year transaction ledgers
 4. External AI model integration using the grounded mentor contract
 5. Deployment, observability, and controlled content administration
 
