@@ -17,6 +17,8 @@ The first release demonstrates a brewery enterprise with:
 - Stable scenario signatures, three-year chronology, organizational and
   master-data dependencies, six-document flows, tutor steps, controls, and
   operational, inventory, and financial impacts
+- Event-sourced scenario execution with ordered commands, optimistic version
+  checks, immutable learner evidence, derived process state, and replayable audit logs
 - A connected Procure-to-Pay document flow
 - Inventory, accounting, and operational impact explanations
 - A guided SAP goods-receipt lesson using realistic business data
@@ -109,6 +111,16 @@ The same industry, fiscal year, and curated event always produce the same
 scenario signature and business content. Repeated generation returns the
 learner's existing saved package rather than creating a duplicate.
 
+Each generated scenario exposes an authenticated execution endpoint:
+
+`GET /api/simulation-studio/{simulationId}/execution`
+
+`POST /api/simulation-studio/{simulationId}/execution`
+
+Execution commands must match the current step and aggregate version. Accepted
+commands append immutable events; operational, inventory, financial, document,
+and completion status are rebuilt by replaying that event stream.
+
 Implementation-consultant blueprints can be queried by process:
 
 `/api/implementation?id=p2p`
@@ -176,7 +188,10 @@ During local development, accounts and sessions are stored in the ignored
 `.data/workflow-decisions.json`. Governance decisions are stored in
 `.data/governance-decisions.json`, and advanced transaction evidence is stored
 in `.data/advanced-transaction-progress.json`. Generated industry simulations
-are stored in `.data/generated-simulations.json`. Passwords use salted `scrypt`
+are stored in `.data/generated-simulations.json`. Simulation execution events
+are stored separately in
+`.data/simulation-executions.json`, preserving generated templates as immutable
+inputs. Passwords use salted `scrypt`
 hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
 service is unavailable.

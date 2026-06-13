@@ -52,9 +52,12 @@ export function getEnterpriseSnapshot() {
     })),
     simulationStudio: {
       deterministic: true,
+      eventSourcedExecution: true,
+      optimisticConcurrency: true,
       fiscalYears: simulationFiscalYears,
       templateVersion: "sap-world-v1",
       maxSavedPerLearner: 25,
+      eventsPerExecution: 6,
     },
     organization: enterpriseUnits,
     plants,

@@ -180,6 +180,7 @@ export function SapWorld({
   const [selectedSimulationId, setSelectedSimulationId] = useState("");
   const [studioLoading, setStudioLoading] = useState(true);
   const [studioError, setStudioError] = useState("");
+  const [studioExecutionNote, setStudioExecutionNote] = useState("");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
@@ -713,6 +714,59 @@ export function SapWorld({
         error instanceof Error
           ? error.message
           : "Simulation could not be generated.",
+      );
+    } finally {
+      setStudioLoading(false);
+    }
+  }
+
+  async function executeStudioStep() {
+    const execution = selectedGeneratedSimulation?.execution;
+    if (
+      !selectedGeneratedSimulation ||
+      !execution ||
+      execution.currentStep === null ||
+      studioExecutionNote.trim().length < 5 ||
+      studioLoading
+    ) {
+      return;
+    }
+
+    setStudioLoading(true);
+    setStudioError("");
+    try {
+      const response = await fetch(
+        `/api/simulation-studio/${selectedGeneratedSimulation.id}/execution`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expectedVersion: execution.version,
+            step: execution.currentStep,
+            note: studioExecutionNote,
+          }),
+        },
+      );
+      const result = (await response.json()) as {
+        execution?: NonNullable<GeneratedSimulation["execution"]>;
+        error?: string;
+      };
+      if (!response.ok || !result.execution) {
+        throw new Error(result.error ?? "Simulation step could not be executed.");
+      }
+      setGeneratedSimulations((current) =>
+        current.map((simulation) =>
+          simulation.id === selectedGeneratedSimulation.id
+            ? { ...simulation, execution: result.execution }
+            : simulation,
+        ),
+      );
+      setStudioExecutionNote("");
+    } catch (error) {
+      setStudioError(
+        error instanceof Error
+          ? error.message
+          : "Simulation step could not be executed.",
       );
     } finally {
       setStudioLoading(false);
@@ -1466,11 +1520,63 @@ export function SapWorld({
                     <article className="studio-response panel">
                       <div className="panel-header"><div><span className="section-kicker">Tutor-ready response</span><h2>Controlled recovery sequence</h2></div></div>
                       <div>
-                        {selectedGeneratedSimulation.steps.map((step) => (
-                          <div key={step.sequence}><span>{step.sequence}</span><div><small>{step.role} / {step.app}</small><h3>{step.title}</h3><p>{step.instruction}</p><div><strong>Why</strong>{step.why}</div><div><strong>Result</strong>{step.result}</div></div></div>
-                        ))}
+                        {selectedGeneratedSimulation.steps.map((step) => {
+                          const execution = selectedGeneratedSimulation.execution;
+                          const complete = execution?.completedSteps.includes(step.sequence);
+                          const current = execution?.currentStep === step.sequence;
+                          return (
+                            <div className={complete ? "complete" : current ? "current" : ""} key={step.sequence}>
+                              <span>{complete ? <Check size={14} /> : step.sequence}</span>
+                              <div><small>{step.role} / {step.app}</small><h3>{step.title}</h3><p>{step.instruction}</p><div><strong>Why</strong>{step.why}</div><div><strong>Result</strong>{step.result}</div></div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </article>
+
+                    {selectedGeneratedSimulation.execution && (
+                      <article className="studio-execution panel">
+                        <div className="panel-header">
+                          <div><span className="section-kicker">Event-driven execution</span><h2>Simulation command console</h2></div>
+                          <span className={`advanced-status ${selectedGeneratedSimulation.execution.status.toLowerCase().replaceAll(" ", "-")}`}>{selectedGeneratedSimulation.execution.status}</span>
+                        </div>
+                        <div className="studio-state-grid">
+                          <div><span>Aggregate version</span><strong>v{selectedGeneratedSimulation.execution.version}</strong></div>
+                          <div><span>Operational state</span><strong>{selectedGeneratedSimulation.execution.operationalState}</strong></div>
+                          <div><span>Inventory state</span><strong>{selectedGeneratedSimulation.execution.inventoryState}</strong></div>
+                          <div><span>Financial state</span><strong>{selectedGeneratedSimulation.execution.financialState}</strong></div>
+                        </div>
+                        {selectedGeneratedSimulation.execution.currentStep !== null ? (() => {
+                          const currentStep = selectedGeneratedSimulation.steps.find((step) => step.sequence === selectedGeneratedSimulation.execution!.currentStep)!;
+                          const currentDocument = selectedGeneratedSimulation.documents.find((document) => document.sequence === currentStep.sequence)!;
+                          return (
+                            <div className="studio-command">
+                              <div className="studio-command-brief">
+                                <span>Next command / Step {currentStep.sequence}</span>
+                                <h3>{currentStep.title}</h3>
+                                <p>{currentStep.instruction}</p>
+                                <code>{currentDocument.type} {currentDocument.number}</code>
+                              </div>
+                              <label htmlFor="studio-execution-note">Execution evidence</label>
+                              <textarea id="studio-execution-note" maxLength={500} value={studioExecutionNote} onChange={(event) => setStudioExecutionNote(event.target.value)} placeholder="Record what you validated, posted, or approved before executing this command..." />
+                              <div><small>{studioExecutionNote.trim().length}/500 characters / expected version {selectedGeneratedSimulation.execution.version}</small><button className="primary-button" disabled={studioLoading || studioExecutionNote.trim().length < 5} onClick={() => void executeStudioStep()}>Execute step <ArrowRight size={15} /></button></div>
+                            </div>
+                          );
+                        })() : (
+                          <div className="completion-banner"><Award size={22} /><div><strong>Simulation execution completed</strong><span>All six commands, documents, and evidence events replay to a closed state.</span></div></div>
+                        )}
+                        <div className="studio-event-ledger">
+                          <div><span className="section-kicker">Immutable event ledger</span><strong>{selectedGeneratedSimulation.execution.events.length} events</strong></div>
+                          {selectedGeneratedSimulation.execution.events.map((event) => (
+                            <div key={event.id}>
+                              <span>v{event.version}</span>
+                              <div><strong>{event.title}</strong><code>{event.documentNumber} / {event.id}</code><p>{event.note}</p><small>{event.actor} / {new Date(event.occurredAt).toLocaleString("en-GB")}</small></div>
+                            </div>
+                          ))}
+                          {!selectedGeneratedSimulation.execution.events.length && <p className="no-journal">No commands have been executed. The generated package remains unchanged.</p>}
+                        </div>
+                      </article>
+                    )}
 
                     <div className="studio-evidence-grid">
                       <article className="panel">

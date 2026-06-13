@@ -11,6 +11,10 @@ import {
   getGeneratedSimulations,
   saveGeneratedSimulation,
 } from "@/server/generated-simulation-repository";
+import {
+  getSimulationExecution,
+  getSimulationExecutionMap,
+} from "@/server/simulation-execution-repository";
 
 export const runtime = "nodejs";
 
@@ -23,6 +27,7 @@ export async function GET(request: NextRequest) {
   const industry = request.nextUrl.searchParams.get("industry");
   const year = request.nextUrl.searchParams.get("year");
   let simulations = await getGeneratedSimulations(learner.id);
+  const executionMap = await getSimulationExecutionMap(learner.id);
 
   if (industry) {
     simulations = simulations.filter(
@@ -37,7 +42,10 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     total: simulations.length,
-    simulations,
+    simulations: simulations.map((simulation) => ({
+      ...simulation,
+      execution: executionMap[simulation.id],
+    })),
   });
 }
 
@@ -86,6 +94,10 @@ export async function POST(request: Request) {
     fiscalYear: input.fiscalYear as SimulationFiscalYear,
     eventIndex,
   });
+  const execution = await getSimulationExecution(learner.id, simulation.id);
 
-  return NextResponse.json({ simulation }, { status: 201 });
+  return NextResponse.json(
+    { simulation: { ...simulation, execution: execution! } },
+    { status: 201 },
+  );
 }

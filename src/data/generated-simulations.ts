@@ -23,6 +23,34 @@ export type GeneratedSimulationStep = {
   result: string;
 };
 
+export type SimulationExecutionEvent = {
+  id: string;
+  simulationId: string;
+  signature: string;
+  version: number;
+  type: "SimulationStepCompleted";
+  step: number;
+  title: string;
+  documentNumber: string;
+  actor: string;
+  note: string;
+  occurredAt: string;
+};
+
+export type SimulationExecution = {
+  simulationId: string;
+  signature: string;
+  status: "Not started" | "In progress" | "Completed";
+  version: number;
+  currentStep: number | null;
+  completedSteps: number[];
+  completedDocuments: string[];
+  operationalState: string;
+  inventoryState: string;
+  financialState: string;
+  events: SimulationExecutionEvent[];
+};
+
 export type GeneratedSimulation = {
   id: string;
   signature: string;
@@ -67,6 +95,7 @@ export type GeneratedSimulation = {
     fiscalYear: SimulationFiscalYear;
     state: string;
   }>;
+  execution?: SimulationExecution;
 };
 
 export const simulationFiscalYears: SimulationFiscalYear[] = [
