@@ -55,6 +55,10 @@ The first release demonstrates a brewery enterprise with:
   approvals, inventory movements, and journal-entry evidence
 - An account-backed approval inbox with multi-step routing, evidence review,
   simulated approve/reject/request-information decisions, and audit trails
+- Account-backed advanced transaction labs for stock transfers, customer
+  returns, asset acquisition and depreciation, VAT adjustments, and year-end close
+- Step-level SAP app and transaction guidance with inventory, accounting,
+  document, control-check, and learner-evidence explanations
 - A filterable simulation-history API at `/api/simulation/events`
 - A filterable cross-module document API at `/api/simulation/documents`
 - Reusable definitions for all eight processes at `/api/simulation/processes`
@@ -121,6 +125,15 @@ Authenticated master-data change requests can be reviewed and filtered through
 `/api/governance`. Learners can submit drafts, approve valid stages, reject
 changes, or return them for correction.
 
+Authenticated advanced transaction labs can be read and progressed through:
+
+`/api/advanced-transactions`
+
+`/api/advanced-transactions?type=Stock%20Transfer`
+
+Each completed step requires a learner evidence note and is enforced in
+sequence.
+
 Authenticated mentor questions are handled through `POST /api/mentor`. Answers
 include the simulation records used as evidence, and the service does not
 invent facts when the local data cannot support a precise response.
@@ -136,8 +149,9 @@ During local development, accounts and sessions are stored in the ignored
 `.data/accounts.json` file, while server progress is stored in
 `.data/learning-progress.json` and workflow decisions are stored in
 `.data/workflow-decisions.json`. Governance decisions are stored in
-`.data/governance-decisions.json`. Passwords use salted `scrypt` hashes and
-browser sessions use opaque, HTTP-only cookies. The browser keeps a
+`.data/governance-decisions.json`, and advanced transaction evidence is stored
+in `.data/advanced-transaction-progress.json`. Passwords use salted `scrypt`
+hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
 service is unavailable.
 
@@ -167,8 +181,7 @@ Planned phases include:
 1. Persistent PostgreSQL enterprise, document, and learning models
 2. Managed identity integration and role-based authorization
 3. Configurable industry templates with generated enterprise data
-4. Asset, tax, stock-transfer, returns, and year-end-close simulations
-5. External AI model integration using the grounded mentor contract
-6. Deployment, observability, and controlled content administration
+4. External AI model integration using the grounded mentor contract
+5. Deployment, observability, and controlled content administration
 
 The source product vision is retained in `Prompt_v2.txt`.

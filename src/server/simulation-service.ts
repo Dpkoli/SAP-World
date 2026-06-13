@@ -35,6 +35,7 @@ import {
   governanceDefinitions,
 } from "@/data/governance";
 import { workflowAuditTrail, workflowDefinitions } from "@/data/workflows";
+import { advancedTransactionDefinitions } from "@/data/advanced-transactions";
 
 export function getEnterpriseSnapshot() {
   return {
@@ -61,6 +62,7 @@ export function getEnterpriseSnapshot() {
       documentFlows,
       workflows: workflowDefinitions,
       workflowAuditTrail,
+      advancedTransactions: advancedTransactionDefinitions,
       analytics: {
         periods: analyticsPeriods,
         drivers: performanceDrivers,

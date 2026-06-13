@@ -12,6 +12,7 @@ import {
   profitabilitySegments,
 } from "@/data/analytics";
 import { documentFlows } from "@/data/document-flows";
+import { advancedTransactionDefinitions } from "@/data/advanced-transactions";
 import {
   governanceAuditTrail,
   governanceDefinitions,
@@ -62,6 +63,8 @@ const sapDomainTerms = new Set([
   "analytics", "downtime", "margin", "performance", "profitability", "revenue",
   "service", "waste", "workingcapital",
   "change", "governance", "steward", "validation", "effective", "dependency",
+  "asset", "capitalization", "depreciation", "return", "transfer", "tax", "vat",
+  "yearend", "close", "transport", "scrap",
 ]);
 
 function tokens(value: string) {
@@ -129,6 +132,32 @@ function scenarioDocuments(scenario: ProcessScenario): MentorDocument[] {
 
 const mentorDocuments: MentorDocument[] = [
   ...processScenarios.flatMap(scenarioDocuments),
+  ...advancedTransactionDefinitions.flatMap((transaction) => [
+    {
+      id: `advanced-${transaction.id}`,
+      type: "Advanced Transaction" as const,
+      title: transaction.title,
+      reference: `${transaction.id} / ${transaction.type}`,
+      content: [
+        transaction.scenario,
+        transaction.businessTrigger,
+        transaction.value,
+        ...transaction.objectReferences,
+        ...transaction.validations,
+        ...transaction.steps.map(
+          (step) =>
+            `${step.sequence} ${step.title} ${step.role} ${step.app} ${step.transactionCode} ${step.instruction} ${step.why} ${step.result} ${step.documentType} ${step.documentNumber} ${step.inventoryImpact} ${step.controlChecks.join(" ")} ${step.accountingEntries.map((entry) => `${entry.debit} ${entry.credit} ${entry.amount} ${entry.explanation}`).join(" ")}`,
+        ),
+      ].join(" "),
+    },
+    ...transaction.steps.map((step) => ({
+      id: `advanced-${transaction.id}-${step.sequence}`,
+      type: "Advanced Transaction" as const,
+      title: `${transaction.title}: ${step.title}`,
+      reference: `${transaction.id} / ${step.transactionCode} / ${step.documentNumber}`,
+      content: `${step.instruction} ${step.why} ${step.result} ${step.inventoryImpact} ${step.controlChecks.join(" ")} ${step.accountingEntries.map((entry) => `${entry.debit} ${entry.credit} ${entry.amount} ${entry.explanation}`).join(" ")}`,
+    })),
+  ]),
   ...analyticsPeriods.map((period) => ({
     id: `analytics-period-${period.id}`,
     type: "Analytics" as const,
@@ -428,6 +457,18 @@ export function answerMentorQuestion(input: {
       normalizedQuestion.includes(workflow.id.toLowerCase()) ||
       normalizedQuestion.includes(workflow.documentNumber.toLowerCase()),
   );
+  const referencedAdvancedTransaction = advancedTransactionDefinitions.find(
+    (transaction) =>
+      normalizedQuestion.includes(transaction.id.toLowerCase()) ||
+      transaction.steps.some((transactionStep) =>
+        normalizedQuestion.includes(
+          transactionStep.documentNumber.toLowerCase(),
+        ),
+      ) ||
+      tokens(transaction.title).filter((token) =>
+        normalizedQuestion.includes(token),
+      ).length >= 3,
+  );
   const referencedDriver = performanceDrivers.find(
     (driver) =>
       normalizedQuestion.includes(driver.id.toLowerCase()) ||
@@ -455,6 +496,21 @@ export function answerMentorQuestion(input: {
   let answer: string;
   if (exactAnswer) {
     answer = exactAnswer;
+  } else if (referencedAdvancedTransaction) {
+    const requestedStep =
+      referencedAdvancedTransaction.steps.find(
+        (transactionStep) =>
+          normalizedQuestion.includes(
+            transactionStep.documentNumber.toLowerCase(),
+          ) ||
+          normalizedQuestion.includes(
+            transactionStep.transactionCode.toLowerCase(),
+          ),
+      ) ?? referencedAdvancedTransaction.steps[0];
+    const accounting = requestedStep.accountingEntries.length
+      ? `The illustrative posting is ${requestedStep.accountingEntries.map((entry) => `debit ${entry.debit} and credit ${entry.credit} for ${entry.amount}`).join("; ")}.`
+      : "No general-ledger posting is expected at this step.";
+    answer = `${referencedAdvancedTransaction.id} teaches ${referencedAdvancedTransaction.title.toLowerCase()}. At step ${requestedStep.sequence}, use ${requestedStep.app} (${requestedStep.transactionCode}) to ${requestedStep.instruction.charAt(0).toLowerCase()}${requestedStep.instruction.slice(1)} ${requestedStep.result} ${requestedStep.inventoryImpact} ${accounting}`;
   } else if (referencedGovernance) {
     const failed = referencedGovernance.validations.filter(
       (validation) => validation.status === "Fail",
@@ -570,6 +626,9 @@ export function answerMentorQuestion(input: {
       : null,
     referencedGovernance
       ? `governance-${referencedGovernance.id}`
+      : null,
+    referencedAdvancedTransaction
+      ? `advanced-${referencedAdvancedTransaction.id}`
       : null,
   ].filter((id): id is string => Boolean(id));
   const directReferences = mentorDocuments.filter((document) =>

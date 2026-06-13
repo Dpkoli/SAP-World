@@ -25,6 +25,7 @@ import {
   MessageCircleMore,
   Package,
   PlayCircle,
+  Repeat2,
   Search,
   Send,
   Settings,
@@ -69,6 +70,10 @@ import {
   mentorSuggestions,
   type MentorSource,
 } from "@/data/mentor";
+import type {
+  AdvancedTransactionCase,
+  AdvancedTransactionType,
+} from "@/data/advanced-transactions";
 import { implementationBlueprintFor } from "@/data/implementation";
 import {
   batches,
@@ -112,6 +117,7 @@ type View =
   | "overview"
   | "academy"
   | "processes"
+  | "advanced"
   | "tutor"
   | "history"
   | "analytics"
@@ -126,6 +132,7 @@ const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
   { id: "processes" as const, label: "Process explorer", icon: Boxes },
+  { id: "advanced" as const, label: "Advanced transactions", icon: Repeat2 },
   { id: "analytics" as const, label: "Performance analytics", icon: BarChart3 },
   { id: "history" as const, label: "Simulation history", icon: CalendarDays },
   { id: "workflows" as const, label: "Approval inbox", icon: ClipboardCheck },
@@ -177,6 +184,17 @@ export function SapWorld({
   const [workflowLoading, setWorkflowLoading] = useState(true);
   const [workflowError, setWorkflowError] = useState("");
   const [workflowOverdue, setWorkflowOverdue] = useState(0);
+  const [advancedTransactions, setAdvancedTransactions] = useState<
+    AdvancedTransactionCase[]
+  >([]);
+  const [selectedAdvancedId, setSelectedAdvancedId] =
+    useState("ADV-STO-001");
+  const [advancedTypeFilter, setAdvancedTypeFilter] = useState<
+    "All" | AdvancedTransactionType
+  >("All");
+  const [advancedNote, setAdvancedNote] = useState("");
+  const [advancedLoading, setAdvancedLoading] = useState(true);
+  const [advancedError, setAdvancedError] = useState("");
   const [selectedYear, setSelectedYear] = useState<FiscalYear>("2025–2026");
   const [analyticsYear, setAnalyticsYear] = useState<FiscalYear>("2025–2026");
   const [analyticsMetric, setAnalyticsMetric] =
@@ -194,6 +212,47 @@ export function SapWorld({
   const [mentorSources, setMentorSources] = useState<MentorSource[]>([]);
   const [mentorLoading, setMentorLoading] = useState(false);
   const [mentorError, setMentorError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAdvancedTransactions() {
+      setAdvancedLoading(true);
+      try {
+        const response = await fetch("/api/advanced-transactions", {
+          cache: "no-store",
+        });
+        const result = (await response.json()) as {
+          transactions?: AdvancedTransactionCase[];
+          error?: string;
+        };
+        if (!response.ok || !result.transactions) {
+          throw new Error(
+            result.error ?? "Advanced transaction service unavailable.",
+          );
+        }
+        if (!cancelled) {
+          setAdvancedTransactions(result.transactions);
+          setAdvancedError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAdvancedError(
+            error instanceof Error
+              ? error.message
+              : "Advanced transaction service unavailable.",
+          );
+        }
+      } finally {
+        if (!cancelled) setAdvancedLoading(false);
+      }
+    }
+
+    void loadAdvancedTransactions();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -503,6 +562,55 @@ export function SapWorld({
     }
   }
 
+  async function completeAdvancedStep() {
+    if (
+      !selectedAdvancedTransaction ||
+      selectedAdvancedTransaction.currentStep === null ||
+      advancedNote.trim().length < 5
+    ) {
+      return;
+    }
+
+    setAdvancedLoading(true);
+    setAdvancedError("");
+    try {
+      const response = await fetch("/api/advanced-transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactionId: selectedAdvancedTransaction.id,
+          step: selectedAdvancedTransaction.currentStep,
+          note: advancedNote,
+        }),
+      });
+      const result = (await response.json()) as {
+        transaction?: AdvancedTransactionCase;
+        error?: string;
+      };
+      if (!response.ok || !result.transaction) {
+        throw new Error(
+          result.error ?? "Transaction evidence could not be saved.",
+        );
+      }
+      setAdvancedTransactions((current) =>
+        current.map((transaction) =>
+          transaction.id === result.transaction!.id
+            ? result.transaction!
+            : transaction,
+        ),
+      );
+      setAdvancedNote("");
+    } catch (error) {
+      setAdvancedError(
+        error instanceof Error
+          ? error.message
+          : "Transaction evidence could not be saved.",
+      );
+    } finally {
+      setAdvancedLoading(false);
+    }
+  }
+
   const activeScenario =
     processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
     processScenarios[0];
@@ -563,6 +671,20 @@ export function SapWorld({
       workflow.scenarioId === activeScenarioId &&
       workflow.status === "Pending",
   ) ?? workflows.find((workflow) => workflow.scenarioId === activeScenarioId);
+  const visibleAdvancedTransactions = advancedTransactions.filter(
+    (transaction) =>
+      advancedTypeFilter === "All" ||
+      transaction.type === advancedTypeFilter,
+  );
+  const selectedAdvancedTransaction =
+    advancedTransactions.find(
+      (transaction) => transaction.id === selectedAdvancedId,
+    ) ??
+    visibleAdvancedTransactions[0] ??
+    advancedTransactions[0];
+  const currentAdvancedStep = selectedAdvancedTransaction?.steps.find(
+    (step) => step.sequence === selectedAdvancedTransaction.currentStep,
+  );
   const analyticsYearPeriods = periodsForYear(analyticsYear);
   const analyticsYearDrivers = driversForYear(analyticsYear);
   const selectedPerformanceDriver =
@@ -682,6 +804,13 @@ export function SapWorld({
           subtitle: `${workflow.status} / ${workflow.module}`,
           target: "workflows" as View,
           workflowId: workflow.id,
+        })),
+        ...advancedTransactions.map((transaction) => ({
+          id: transaction.id,
+          title: transaction.title,
+          subtitle: `${transaction.type} / ${transaction.status}`,
+          target: "advanced" as View,
+          advancedId: transaction.id,
         })),
         ...performanceDrivers.map((driver) => ({
           id: driver.id,
@@ -1713,6 +1842,171 @@ export function SapWorld({
             </section>
           )}
 
+          {view === "advanced" && (
+            <section className="advanced-page">
+              <div className="page-heading compact">
+                <div>
+                  <p className="eyebrow">Connected SAP practice lab</p>
+                  <h1>Advanced lifecycle transactions</h1>
+                  <p>
+                    Execute realistic cross-module transactions step by step,
+                    understand each posting, and retain your own evidence trail.
+                  </p>
+                </div>
+                <span className="api-badge">API /api/advanced-transactions</span>
+              </div>
+
+              <div className="advanced-summary">
+                <article className="panel">
+                  <Repeat2 size={18} />
+                  <div><span>Practice cases</span><strong>{advancedTransactions.length}</strong></div>
+                </article>
+                <article className="panel">
+                  <PlayCircle size={18} />
+                  <div><span>In progress</span><strong>{advancedTransactions.filter((item) => item.status === "In progress").length}</strong></div>
+                </article>
+                <article className="panel">
+                  <Check size={18} />
+                  <div><span>Completed</span><strong>{advancedTransactions.filter((item) => item.status === "Completed").length}</strong></div>
+                </article>
+                <article className="panel">
+                  <Boxes size={18} />
+                  <div><span>Modules covered</span><strong>{new Set(advancedTransactions.flatMap((item) => item.modules)).size}</strong></div>
+                </article>
+              </div>
+
+              <div className="advanced-toolbar">
+                <div><span className="section-kicker">Transaction portfolio</span><h2>Choose a business lifecycle</h2></div>
+                <div className="category-filters">
+                  {([
+                    "All",
+                    "Stock Transfer",
+                    "Customer Return",
+                    "Asset Accounting",
+                    "Tax Adjustment",
+                    "Year-End Close",
+                  ] as const).map((type) => (
+                    <button
+                      className={advancedTypeFilter === type ? "active" : ""}
+                      onClick={() => setAdvancedTypeFilter(type)}
+                      key={type}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {advancedError && <div className="workflow-error" role="alert">{advancedError}</div>}
+              <div className="advanced-layout">
+                <aside className="advanced-list panel">
+                  {visibleAdvancedTransactions.map((transaction) => (
+                    <button
+                      className={selectedAdvancedTransaction?.id === transaction.id ? "selected" : ""}
+                      onClick={() => setSelectedAdvancedId(transaction.id)}
+                      key={transaction.id}
+                    >
+                      <span>{transaction.type}</span>
+                      <strong>{transaction.title}</strong>
+                      <code>{transaction.id}</code>
+                      <small>{transaction.completedSteps.length} of {transaction.steps.length} steps</small>
+                      <b className={transaction.status.toLowerCase().replaceAll(" ", "-")}>{transaction.status}</b>
+                    </button>
+                  ))}
+                  {!advancedLoading && visibleAdvancedTransactions.length === 0 && <div className="workflow-empty">No cases match this filter.</div>}
+                </aside>
+
+                {selectedAdvancedTransaction && (
+                  <div className="advanced-workspace">
+                    <article className="advanced-brief panel">
+                      <header>
+                        <div>
+                          <span className="section-kicker">{selectedAdvancedTransaction.id} / {selectedAdvancedTransaction.type}</span>
+                          <h2>{selectedAdvancedTransaction.title}</h2>
+                          <p>{selectedAdvancedTransaction.scenario}</p>
+                        </div>
+                        <span className={`advanced-status ${selectedAdvancedTransaction.status.toLowerCase().replaceAll(" ", "-")}`}>{selectedAdvancedTransaction.status}</span>
+                      </header>
+                      <div className="advanced-facts">
+                        <div><span>Business trigger</span><strong>{selectedAdvancedTransaction.businessTrigger}</strong></div>
+                        <div><span>Value</span><strong>{selectedAdvancedTransaction.value}</strong></div>
+                        <div><span>Integrated modules</span><strong>{selectedAdvancedTransaction.modules.join(" / ")}</strong></div>
+                        <div><span>Priority</span><strong>{selectedAdvancedTransaction.priority}</strong></div>
+                      </div>
+                      <div className="advanced-references">
+                        {selectedAdvancedTransaction.objectReferences.map((reference) => <span key={reference}><FileText size={13} />{reference}</span>)}
+                      </div>
+                    </article>
+
+                    <article className="advanced-timeline panel">
+                      <div className="panel-header">
+                        <div><span className="section-kicker">Document sequence</span><h2>End-to-end process</h2></div>
+                        <strong>{selectedAdvancedTransaction.completedSteps.length}/{selectedAdvancedTransaction.steps.length}</strong>
+                      </div>
+                      <div>
+                        {selectedAdvancedTransaction.steps.map((step) => {
+                          const complete = selectedAdvancedTransaction.completedSteps.includes(step.sequence);
+                          const current = step.sequence === selectedAdvancedTransaction.currentStep;
+                          return (
+                            <div className={`advanced-step ${complete ? "complete" : current ? "current" : ""}`} key={step.sequence}>
+                              <span>{complete ? <Check size={14} /> : step.sequence}</span>
+                              <div><strong>{step.title}</strong><small>{step.role} / {step.app}</small></div>
+                              <code>{step.transactionCode}</code>
+                              <b>{step.documentNumber}</b>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </article>
+
+                    {currentAdvancedStep ? (
+                      <article className="advanced-current panel">
+                        <div className="advanced-current-heading">
+                          <div><span className="step-label">STEP {currentAdvancedStep.sequence}</span><h2>{currentAdvancedStep.title}</h2><p>{currentAdvancedStep.role}</p></div>
+                          <div><span>{currentAdvancedStep.app}</span><code>{currentAdvancedStep.transactionCode}</code></div>
+                        </div>
+                        <p className="advanced-instruction">{currentAdvancedStep.instruction}</p>
+                        <div className="advanced-explanations">
+                          <div><Sparkles size={18} /><p><strong>Why this matters</strong>{currentAdvancedStep.why}</p></div>
+                          <div><Check size={18} /><p><strong>Expected result</strong>{currentAdvancedStep.result}</p></div>
+                        </div>
+                        <div className="advanced-impact-grid">
+                          <div><Package size={17} /><p><strong>Inventory impact</strong>{currentAdvancedStep.inventoryImpact}</p></div>
+                          <div><FileText size={17} /><p><strong>Document output</strong>{currentAdvancedStep.documentType}<code>{currentAdvancedStep.documentNumber}</code></p></div>
+                        </div>
+                        <div className="advanced-postings">
+                          <div className="panel-header"><div><span className="section-kicker">Accounting impact</span><h3>Journal evidence</h3></div></div>
+                          {currentAdvancedStep.accountingEntries.length ? currentAdvancedStep.accountingEntries.map((entry, index) => (
+                            <div key={`${entry.debit}-${index}`}><span>Dr</span><strong>{entry.debit}</strong><span>Cr</span><strong>{entry.credit}</strong><code>{entry.amount}</code><p>{entry.explanation}</p></div>
+                          )) : <p>No general-ledger posting is expected at this step.</p>}
+                        </div>
+                        <div className="advanced-controls">
+                          <span className="section-kicker">Before you post</span>
+                          {currentAdvancedStep.controlChecks.map((check) => <p key={check}><ShieldCheck size={15} />{check}</p>)}
+                        </div>
+                        <div className="advanced-action">
+                          <label htmlFor="advanced-note">Evidence note</label>
+                          <textarea id="advanced-note" maxLength={500} value={advancedNote} onChange={(event) => setAdvancedNote(event.target.value)} placeholder="Record what you checked and the document evidence created..." />
+                          <div><small>{advancedNote.trim().length}/500 characters</small><button className="primary-button" disabled={advancedLoading || advancedNote.trim().length < 5} onClick={() => void completeAdvancedStep()}>Complete step <ArrowRight size={15} /></button></div>
+                        </div>
+                      </article>
+                    ) : (
+                      <article className="completion-banner panel"><Award size={22} /><div><strong>Transaction completed</strong><span>Every step and evidence note is saved to your learner account.</span></div></article>
+                    )}
+
+                    <article className="advanced-audit panel">
+                      <div className="panel-header"><div><span className="section-kicker">Learner evidence</span><h2>Practice audit trail</h2></div><strong>{selectedAdvancedTransaction.auditTrail.length} entries</strong></div>
+                      {selectedAdvancedTransaction.auditTrail.map((entry) => (
+                        <div key={`${entry.step}-${entry.completedAt}`}><span>{new Date(entry.completedAt).toLocaleString("en-GB")}</span><div><strong>Step {entry.step}: {entry.title}</strong><p>{entry.note}</p></div></div>
+                      ))}
+                      {!selectedAdvancedTransaction.auditTrail.length && <p className="no-journal">Complete the first step to create your evidence trail.</p>}
+                    </article>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           {view === "tutor" && (
             <section className="tutor-page">
               <div className="page-heading compact">
@@ -2057,6 +2351,13 @@ export function SapWorld({
                     typeof result.governanceId === "string"
                   ) {
                     setSelectedGovernanceId(result.governanceId);
+                  }
+                  if (
+                    result.target === "advanced" &&
+                    "advancedId" in result &&
+                    typeof result.advancedId === "string"
+                  ) {
+                    setSelectedAdvancedId(result.advancedId);
                   }
                   navigateTo(result.target);
                 }} key={`${result.target}-${result.id}`}>
