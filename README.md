@@ -46,6 +46,8 @@ The first release demonstrates a brewery enterprise with:
   historical simulation evidence
 - A role-based learning centre across MM, SD, PP, FI, QM, PM, HCM, EWM, and TM
 - Learner registration and sign-in with hashed passwords and secure sessions
+- Role-based authorization with learner and admin roles, admin-only operations
+  APIs, and environment-seeded platform administrators
 - Durable PostgreSQL persistence for accounts, sessions, progress, workflow
   decisions, governance, transaction evidence, generated simulations, and events
 - Automatic local JSON-to-PostgreSQL aggregate migration with transaction
@@ -203,6 +205,15 @@ The current implementation uses deterministic local retrieval, so it requires
 no external AI key; a production model can later consume the same grounded
 response contract.
 
+Admin operations are available only to users whose normalized email appears in
+`SAP_WORLD_ADMIN_EMAILS`:
+
+`GET /api/admin/operations`
+
+The endpoint returns safe platform counts, storage status, role distribution,
+content coverage, and recent account metadata. It never returns password
+hashes, salts, or session tokens.
+
 Authenticated learner progress can be loaded or updated through:
 
 `/api/learning/progress`
@@ -229,6 +240,10 @@ protect concurrent serverless writes. See `docs/deployment.md`.
 Production cookies are secure by default. For HTTP-only local production
 testing, set `SAP_WORLD_INSECURE_COOKIES=true`; never use this override on a
 hosted environment.
+
+To seed platform administrators, configure a comma-separated list:
+
+`SAP_WORLD_ADMIN_EMAILS=admin@example.com,owner@example.com`
 
 Learner readiness is calculated from demonstrated performance rather than a
 static catalogue value: guided transaction progress contributes 60%, and a

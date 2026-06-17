@@ -1,0 +1,58 @@
+import { NextResponse } from "next/server";
+
+import { rolePermissions } from "@/data/auth";
+import { getAuthAdministrationSnapshot } from "@/server/auth-repository";
+import { requireLearnerRole } from "@/server/auth-session";
+import { getStorageHealth } from "@/server/durable-store";
+import { getGeneratedSimulationStats } from "@/server/generated-simulation-repository";
+import { getLearningProgressStats } from "@/server/progress-repository";
+import { getEnterpriseSnapshot } from "@/server/simulation-service";
+
+export const runtime = "nodejs";
+
+export async function GET() {
+  const auth = await requireLearnerRole("admin");
+  if (!auth.learner || auth.error) {
+    return NextResponse.json(
+      { error: auth.error },
+      { status: auth.status },
+    );
+  }
+
+  const [storage, accounts, progress, simulations] = await Promise.all([
+    getStorageHealth(),
+    getAuthAdministrationSnapshot(),
+    getLearningProgressStats(),
+    getGeneratedSimulationStats(),
+  ]);
+  const enterprise = getEnterpriseSnapshot();
+
+  return NextResponse.json({
+    generatedAt: new Date().toISOString(),
+    admin: {
+      id: auth.learner.id,
+      email: auth.learner.email,
+      permissions: rolePermissions.admin,
+    },
+    storage,
+    accounts,
+    progress,
+    simulations,
+    content: {
+      industries: enterprise.industryPortfolio.length,
+      processScenarios: enterprise.operations.processScenarios.length,
+      processDefinitions: enterprise.learning.processCatalog.length,
+      workflowDefinitions: enterprise.operations.workflows.length,
+      governanceDefinitions: enterprise.operations.governance.changeRequests.length,
+      advancedTransactions: enterprise.operations.advancedTransactions.length,
+      masterDataMaterials: enterprise.masterData.materials.length,
+      masterDataPartners: enterprise.businessPartners.length,
+    },
+    controls: [
+      "Admin access is granted only by SAP_WORLD_ADMIN_EMAILS.",
+      "Learner mutations remain scoped to the authenticated learner id.",
+      "Storage health is verified server-side before this response is returned.",
+      "This endpoint never returns password hashes, salts, or session tokens.",
+    ],
+  });
+}

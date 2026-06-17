@@ -40,15 +40,37 @@ The persisted aggregates are:
 `GET /api/health` reports the active storage backend. PostgreSQL mode performs a
 live query and returns HTTP `503` when the database cannot be reached.
 
+## Admin access
+
+Admin access is granted by email allow-list. Configure:
+
+```text
+SAP_WORLD_ADMIN_EMAILS=admin@example.com,owner@example.com
+```
+
+Any matching registered account receives the `admin` role at session read time,
+so adding an email to the environment can elevate an existing account without a
+database migration. Admin-only operations are exposed at:
+
+```text
+GET /api/admin/operations
+```
+
+This endpoint is protected inside the route handler and returns HTTP `403` for
+authenticated learners without the admin role.
+
 ## Vercel
 
 1. Import the GitHub repository into Vercel.
 2. Add a Neon integration from the Vercel Marketplace.
 3. Confirm that `DATABASE_URL` is available to Production and Preview.
-4. Deploy the `codex/mvp-foundation` branch or merge it into the production
+4. Add `SAP_WORLD_ADMIN_EMAILS` for the platform owner accounts.
+5. Deploy the `codex/mvp-foundation` branch or merge it into the production
    branch.
-5. Verify `/api/health` returns `status: "ok"` and
+6. Verify `/api/health` returns `status: "ok"` and
    `storage.backend: "postgresql"`.
+7. Sign in with an admin email and verify `/api/admin/operations` returns
+   platform counts.
 
 Secure cookies are enabled automatically in production. Do not configure
 `SAP_WORLD_INSECURE_COOKIES` on a hosted deployment.

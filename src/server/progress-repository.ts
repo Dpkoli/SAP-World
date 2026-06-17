@@ -45,3 +45,34 @@ export async function saveLearnerProgress(
   });
   return progress;
 }
+
+export async function getLearningProgressStats() {
+  const database = await progressStore.read();
+  const progress = Object.entries(database.learners).map(
+    ([learnerId, learner]) => normalizeLearnerProgress(learnerId, learner),
+  );
+  return {
+    learners: progress.length,
+    completedLessons: progress.reduce(
+      (total, learner) =>
+        total +
+        Object.values(learner.scenarios).filter((scenario) => scenario.complete)
+          .length,
+      0,
+    ),
+    completedDiagnostics: progress.reduce(
+      (total, learner) =>
+        total +
+        Object.values(learner.diagnostics).filter(
+          (diagnostic) => diagnostic.complete,
+        ).length,
+      0,
+    ),
+    latestUpdatedAt:
+      progress
+        .map((learner) => learner.updatedAt)
+        .filter(Boolean)
+        .sort()
+        .at(-1) ?? null,
+  };
+}

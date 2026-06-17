@@ -113,6 +113,34 @@ button { cursor: pointer; }
 .kpi-card small.good { color: var(--green); }
 .kpi-card small.warn { color: #c7442f; }
 .kpi-card small.neutral { color: var(--muted); }
+.admin-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 15px; }
+.admin-grid article { padding: 18px; }
+.admin-grid span, .admin-grid strong, .admin-grid small { display: block; }
+.admin-grid span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.admin-grid strong { margin-top: 7px; color: var(--blue); font-size: 24px; text-transform: capitalize; }
+.admin-grid small { margin-top: 6px; color: #526371; font-size: 9px; }
+.admin-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+.admin-permissions { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+.admin-permissions > div { padding: 16px; background: #fbfcfd; }
+.admin-permissions strong { display: block; margin-bottom: 10px; color: var(--blue); font-size: 11px; }
+.admin-permissions span { display: inline-block; margin: 0 6px 7px 0; padding: 5px 7px; border-radius: 999px; background: #edf5fc; color: #31526a; font-family: var(--font-mono); font-size: 7px; }
+.admin-users { display: grid; }
+.admin-users > div { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); }
+.admin-users strong, .admin-users small { display: block; }
+.admin-users strong { font-size: 9px; }
+.admin-users small { margin-top: 3px; color: var(--muted); font-size: 8px; }
+.admin-users span { padding: 4px 7px; border-radius: 999px; background: #eaf7ef; color: var(--green); font-size: 7px; font-weight: 800; text-transform: uppercase; }
+.admin-users code { color: var(--blue); font-size: 7px; }
+.admin-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--line); }
+.admin-metrics > div { padding: 18px; background: #fbfcfd; }
+.admin-metrics span, .admin-metrics strong { display: block; }
+.admin-metrics span { color: var(--muted); font-size: 8px; text-transform: uppercase; }
+.admin-metrics strong { margin-top: 8px; color: var(--blue); font-size: 22px; }
+.admin-content-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--line); }
+.admin-content-grid > div { padding: 13px 15px; background: #fbfcfd; }
+.admin-content-grid span, .admin-content-grid strong { display: block; }
+.admin-content-grid span { color: var(--muted); font-size: 7px; text-transform: uppercase; }
+.admin-content-grid strong { margin-top: 5px; color: var(--blue); font-size: 16px; }
 .overview-grid { display: grid; grid-template-columns: minmax(0,1.65fr) minmax(310px,.75fr); gap: 18px; }
 .panel-header { min-height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #edf0f2; }
 .panel-header h2 { margin: 3px 0 0; font-size: 16px; letter-spacing: -.02em; }
@@ -1323,6 +1351,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .content { padding: 24px 16px 90px; }
   .page-heading { align-items: flex-start; flex-direction: column; }
   .kpi-grid, .impact-grid, .academy-summary, .enterprise-stats { grid-template-columns: 1fr 1fr; }
+  .admin-grid, .admin-content-grid { grid-template-columns: 1fr 1fr; }
+  .admin-layout { grid-template-columns: 1fr; }
   .process-context { grid-template-columns: 1fr 1fr; }
   .flow { grid-template-columns: repeat(6,100px); }
   .learning-banner { grid-template-columns: auto 1fr; }
@@ -1409,6 +1439,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .tutor-mode-switch { display: grid; }
   .implementation-counts { grid-template-columns: repeat(2,1fr); }
   .kpi-grid, .impact-grid, .academy-summary, .path-grid, .enterprise-stats { grid-template-columns: 1fr; }
+  .admin-grid, .admin-content-grid, .admin-permissions, .admin-metrics { grid-template-columns: 1fr; }
+  .admin-users > div { grid-template-columns: 1fr; align-items: start; }
   .process-context { grid-template-columns: 1fr; }
   .attention { align-items: flex-start; flex-wrap: wrap; }
   .attention button { margin-left: 30px; }

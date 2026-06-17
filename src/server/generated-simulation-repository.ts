@@ -64,3 +64,20 @@ export async function saveGeneratedSimulation(
     return generated;
   });
 }
+
+export async function getGeneratedSimulationStats() {
+  const database = await simulationStore.read();
+  const simulations = Object.values(database.learners).flat();
+  return {
+    learners: Object.keys(database.learners).length,
+    simulations: simulations.length,
+    industries: Array.from(
+      new Set(simulations.map((simulation) => simulation.industryId)),
+    ).length,
+    latestGeneratedAt:
+      simulations
+        .map((simulation) => simulation.generatedAt)
+        .sort()
+        .at(-1) ?? null,
+  };
+}

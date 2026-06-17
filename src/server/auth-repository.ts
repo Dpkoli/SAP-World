@@ -7,7 +7,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { promisify } from "node:util";
-import type { LearnerProfile } from "@/data/auth";
+import type { LearnerProfile, UserRole } from "@/data/auth";
 import { createDurableStore } from "@/server/durable-store";
 
 type StoredUser = LearnerProfile & {
@@ -61,12 +61,27 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function configuredAdminEmails() {
+  return new Set(
+    (process.env.SAP_WORLD_ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((email) => normalizeEmail(email))
+      .filter(Boolean),
+  );
+}
+
+function roleForEmail(email: string): UserRole {
+  return configuredAdminEmails().has(normalizeEmail(email))
+    ? "admin"
+    : "learner";
+}
+
 function publicProfile(user: StoredUser): LearnerProfile {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: roleForEmail(user.email) === "admin" ? "admin" : user.role,
   };
 }
 
@@ -101,7 +116,7 @@ export async function createLearner(
       id,
       name: name.trim(),
       email: normalizedEmail,
-      role: "learner",
+      role: roleForEmail(normalizedEmail),
       passwordHash,
       passwordSalt,
       createdAt: new Date().toISOString(),
@@ -168,4 +183,35 @@ export async function revokeLearnerSession(token: string | undefined) {
   await updateDatabase((database) => {
     delete database.sessions[hashSessionToken(token)];
   });
+}
+
+export async function getAuthAdministrationSnapshot() {
+  const database = await authStore.read();
+  const now = Date.now();
+  const users = Object.values(database.users).map(publicProfile);
+  const activeSessions = Object.values(database.sessions).filter(
+    (session) => new Date(session.expiresAt).getTime() > now,
+  );
+  return {
+    users: users.length,
+    roles: {
+      learner: users.filter((user) => user.role === "learner").length,
+      admin: users.filter((user) => user.role === "admin").length,
+    },
+    sessions: {
+      total: Object.keys(database.sessions).length,
+      active: activeSessions.length,
+      expired: Object.keys(database.sessions).length - activeSessions.length,
+    },
+    recentUsers: Object.values(database.users)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, 8)
+      .map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: publicProfile(user).role,
+        createdAt: user.createdAt,
+      })),
+  };
 }

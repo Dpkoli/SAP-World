@@ -6,6 +6,7 @@ import {
   getLearnerBySession,
   revokeLearnerSession,
 } from "@/server/auth-repository";
+import type { UserRole } from "@/data/auth";
 
 const sessionCookieName = "sap-world-session";
 const useSecureCookies =
@@ -15,6 +16,21 @@ const useSecureCookies =
 export async function getCurrentLearner() {
   const cookieStore = await cookies();
   return getLearnerBySession(cookieStore.get(sessionCookieName)?.value);
+}
+
+export async function requireLearnerRole(role: UserRole) {
+  const learner = await getCurrentLearner();
+  if (!learner) {
+    return { learner: null, status: 401 as const, error: "Sign in required." };
+  }
+  if (role === "admin" && learner.role !== "admin") {
+    return {
+      learner,
+      status: 403 as const,
+      error: "Admin role required.",
+    };
+  }
+  return { learner, status: 200 as const, error: null };
 }
 
 export async function startLearnerSession(userId: string) {

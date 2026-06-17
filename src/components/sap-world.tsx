@@ -38,7 +38,12 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { learnerInitials, type LearnerProfile } from "@/data/auth";
+import {
+  learnerInitials,
+  roleLabels,
+  rolePermissions,
+  type LearnerProfile,
+} from "@/data/auth";
 import {
   analyticsMetrics,
   driversForYear,
@@ -142,7 +147,44 @@ type View =
   | "structure"
   | "masterdata"
   | "plants"
-  | "partners";
+  | "partners"
+  | "admin";
+
+type AdminOperations = {
+  generatedAt: string;
+  storage: {
+    backend: "local-file" | "postgresql";
+    durable: boolean;
+    configured: boolean;
+    checkedAt?: string;
+  };
+  accounts: {
+    users: number;
+    roles: { learner: number; admin: number };
+    sessions: { total: number; active: number; expired: number };
+    recentUsers: Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: LearnerProfile["role"];
+      createdAt: string;
+    }>;
+  };
+  progress: {
+    learners: number;
+    completedLessons: number;
+    completedDiagnostics: number;
+    latestUpdatedAt: string | null;
+  };
+  simulations: {
+    learners: number;
+    simulations: number;
+    industries: number;
+    latestGeneratedAt: string | null;
+  };
+  content: Record<string, number>;
+  controls: string[];
+};
 
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
@@ -258,6 +300,10 @@ export function SapWorld({
   const [mentorSources, setMentorSources] = useState<MentorSource[]>([]);
   const [mentorLoading, setMentorLoading] = useState(false);
   const [mentorError, setMentorError] = useState("");
+  const [adminOperations, setAdminOperations] =
+    useState<AdminOperations | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -590,6 +636,49 @@ export function SapWorld({
     window.addEventListener("keydown", handleSearchShortcut);
     return () => window.removeEventListener("keydown", handleSearchShortcut);
   }, []);
+
+  useEffect(() => {
+    if (view !== "admin" || user.role !== "admin") return;
+    let cancelled = false;
+
+    async function loadAdminOperations() {
+      setAdminLoading(true);
+      setAdminError("");
+      try {
+        const response = await fetch("/api/admin/operations", {
+          cache: "no-store",
+        });
+        const result = (await response.json()) as
+          | AdminOperations
+          | { error?: string };
+        if (!response.ok || ("error" in result && result.error)) {
+          throw new Error(
+            "error" in result && result.error
+              ? result.error
+              : "Admin operations are unavailable.",
+          );
+        }
+        if (!cancelled) {
+          setAdminOperations(result as AdminOperations);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAdminError(
+            error instanceof Error
+              ? error.message
+              : "Admin operations are unavailable.",
+          );
+        }
+      } finally {
+        if (!cancelled) setAdminLoading(false);
+      }
+    }
+
+    void loadAdminOperations();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.role, view]);
 
   async function askMentor(prompt: string) {
     const cleanPrompt = prompt.trim();
@@ -1128,6 +1217,7 @@ export function SapWorld({
       ),
     ),
   ];
+  const isAdmin = user.role === "admin";
 
   return (
     <div className="app-shell">
@@ -1163,6 +1253,12 @@ export function SapWorld({
           <button className={view === "governance" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("governance")}><ShieldCheck size={18} />Data governance</button>
           <button className={view === "plants" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("plants")}><Factory size={18} />Plants & operations</button>
           <button className={view === "partners" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("partners")}><Users size={18} />Business partners</button>
+          {isAdmin && (
+            <>
+              <p className="nav-label nav-spacer">Administration</p>
+              <button className={view === "admin" ? "nav-item active" : "nav-item"} onClick={() => navigateTo("admin")}><Settings size={18} />Control plane</button>
+            </>
+          )}
         </nav>
 
         <div className="sidebar-footer">
@@ -1170,7 +1266,7 @@ export function SapWorld({
           <button className="nav-item" onClick={onSignOut}><LogOut size={18} />Sign out</button>
           <div className="user-card">
             <div className="avatar">{learnerInitials(user.name)}</div>
-            <div><strong>{user.name}</strong><span>SAP learner</span></div>
+            <div><strong>{user.name}</strong><span>{roleLabels[user.role]}</span></div>
           </div>
         </div>
       </aside>
@@ -1275,6 +1371,83 @@ export function SapWorld({
                 <button onClick={() => setView("tutor")}>Resume lesson <ChevronRight size={16} /></button>
               </section>
             </>
+          )}
+
+          {view === "admin" && isAdmin && (
+            <section className="admin-page">
+              <div className="page-heading compact">
+                <div><p className="eyebrow">Role-based platform control</p><h1>Admin control plane</h1><p>Monitor storage, learner activity, simulation generation, and content coverage without exposing credentials or session tokens.</p></div>
+                <span className="api-badge">API /api/admin/operations</span>
+              </div>
+
+              {adminError && <div className="workflow-error" role="alert">{adminError}</div>}
+              {adminLoading && <article className="panel workflow-empty">Loading admin operations...</article>}
+
+              {adminOperations && !adminLoading && (
+                <>
+                  <section className="admin-grid">
+                    <article className="panel"><span>Storage backend</span><strong>{adminOperations.storage.backend}</strong><small>{adminOperations.storage.durable ? "Durable database mode" : "Local development fallback"}</small></article>
+                    <article className="panel"><span>Total users</span><strong>{adminOperations.accounts.users}</strong><small>{adminOperations.accounts.roles.admin} admins / {adminOperations.accounts.roles.learner} learners</small></article>
+                    <article className="panel"><span>Active sessions</span><strong>{adminOperations.accounts.sessions.active}</strong><small>{adminOperations.accounts.sessions.expired} expired retained</small></article>
+                    <article className="panel"><span>Generated simulations</span><strong>{adminOperations.simulations.simulations}</strong><small>{adminOperations.simulations.industries} industries represented</small></article>
+                  </section>
+
+                  <div className="admin-layout">
+                    <article className="panel">
+                      <div className="panel-header"><div><span className="section-kicker">Authorization model</span><h2>Role permissions</h2></div></div>
+                      <div className="admin-permissions">
+                        {Object.entries(rolePermissions).map(([role, permissions]) => (
+                          <div key={role}>
+                            <strong>{roleLabels[role as LearnerProfile["role"]]}</strong>
+                            {permissions.map((permission) => <span key={permission}>{permission}</span>)}
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+
+                    <article className="panel">
+                      <div className="panel-header"><div><span className="section-kicker">Recent accounts</span><h2>Safe learner directory</h2></div></div>
+                      <div className="admin-users">
+                        {adminOperations.accounts.recentUsers.map((account) => (
+                          <div key={account.id}>
+                            <div><strong>{account.name}</strong><small>{account.email}</small></div>
+                            <span>{roleLabels[account.role]}</span>
+                            <code>{new Date(account.createdAt).toLocaleDateString("en-GB")}</code>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  </div>
+
+                  <div className="admin-layout">
+                    <article className="panel">
+                      <div className="panel-header"><div><span className="section-kicker">Learning activity</span><h2>Progress evidence</h2></div></div>
+                      <div className="admin-metrics">
+                        <div><span>Learners with progress</span><strong>{adminOperations.progress.learners}</strong></div>
+                        <div><span>Completed lessons</span><strong>{adminOperations.progress.completedLessons}</strong></div>
+                        <div><span>Completed diagnostics</span><strong>{adminOperations.progress.completedDiagnostics}</strong></div>
+                      </div>
+                    </article>
+
+                    <article className="panel">
+                      <div className="panel-header"><div><span className="section-kicker">Control evidence</span><h2>Server-side safeguards</h2></div></div>
+                      <div className="studio-control-list">
+                        {adminOperations.controls.map((control) => <p key={control}><ShieldCheck size={15} />{control}</p>)}
+                      </div>
+                    </article>
+                  </div>
+
+                  <article className="panel">
+                    <div className="panel-header"><div><span className="section-kicker">Content coverage</span><h2>Simulation catalogue inventory</h2></div><strong>{new Date(adminOperations.generatedAt).toLocaleString("en-GB")}</strong></div>
+                    <div className="admin-content-grid">
+                      {Object.entries(adminOperations.content).map(([key, value]) => (
+                        <div key={key}><span>{key.replace(/([A-Z])/g, " $1")}</span><strong>{value}</strong></div>
+                      ))}
+                    </div>
+                  </article>
+                </>
+              )}
+            </section>
           )}
 
           {view === "academy" && (
