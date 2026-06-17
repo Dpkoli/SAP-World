@@ -126,6 +126,7 @@ import {
   processCatalog,
   processScenarios,
 } from "@/data/simulation";
+import { transactionPlaybooks } from "@/data/transaction-playbooks";
 import { troubleshootingCaseFor } from "@/data/troubleshooting";
 import type {
   WorkflowAction,
@@ -947,6 +948,10 @@ export function SapWorld({
   const activeScenario =
     processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
     processScenarios[0];
+  const activePlaybook =
+    transactionPlaybooks.find(
+      (playbook) => playbook.scenarioId === activeScenario.id,
+    ) ?? transactionPlaybooks[0];
   const activeDocumentFlow = documentFlowFor(activeScenarioId);
   const selectedDocument =
     activeDocumentFlow.nodes.find(
@@ -1049,6 +1054,10 @@ export function SapWorld({
       segment.dimension === profitabilityDimension,
   );
   const currentTutorStep = activeScenario.tutorSteps[activeProgress.step];
+  const currentPlaybookStage =
+    activePlaybook.stages.find(
+      (stage) => stage.sequence === currentTutorStep.number,
+    ) ?? activePlaybook.stages[0];
   const lessonProgress = activeProgress.complete
     ? 100
     : Math.round(((activeProgress.step + 1) / activeScenario.tutorSteps.length) * 100);
@@ -2898,6 +2907,68 @@ export function SapWorld({
                   )}
                   <div className="explanation-box why"><Sparkles size={20} /><div><strong>Why are we doing this?</strong><p>{currentTutorStep.why}</p></div></div>
                   <div className="explanation-box result"><Check size={20} /><div><strong>What will you achieve?</strong><p>{currentTutorStep.result}</p></div></div>
+                  <div className="playbook-panel">
+                    <div className="playbook-heading">
+                      <div>
+                        <span className="section-kicker">SAP processing playbook</span>
+                        <h3>{activePlaybook.title}</h3>
+                        <p>{activePlaybook.businessTrigger}</p>
+                      </div>
+                      <code>{activePlaybook.sapEntry.transactionCode}</code>
+                    </div>
+                    <div className="playbook-grid">
+                      <div>
+                        <strong>Before you start</strong>
+                        {activePlaybook.prerequisites.slice(0, 3).map((item) => (
+                          <p key={item}><Check size={13} />{item}</p>
+                        ))}
+                      </div>
+                      <div>
+                        <strong>Current SAP area</strong>
+                        <p><MapPin size={13} />{currentPlaybookStage.screenArea}</p>
+                        <p><FileText size={13} />{currentPlaybookStage.app}</p>
+                        <p><ShieldCheck size={13} />{currentPlaybookStage.validations[0]}</p>
+                      </div>
+                    </div>
+                    {currentPlaybookStage.keyFields.length > 0 && (
+                      <div className="playbook-fields">
+                        {currentPlaybookStage.keyFields.map((field) => (
+                          <div key={field.label}><span>{field.label}</span><strong>{field.value}</strong></div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="playbook-checks">
+                      <div>
+                        <strong>Validation checks</strong>
+                        {currentPlaybookStage.validations.map((validation) => (
+                          <p key={validation}>{validation}</p>
+                        ))}
+                      </div>
+                      <div>
+                        <strong>Completion evidence</strong>
+                        {activePlaybook.completionEvidence.slice(0, 4).map((evidence) => (
+                          <p key={evidence}>{evidence}</p>
+                        ))}
+                      </div>
+                    </div>
+                    <details className="playbook-details">
+                      <summary>Show document chain and common mistakes</summary>
+                      <div>
+                        <section>
+                          <strong>Document chain</strong>
+                          {activePlaybook.documentChain.map((document) => (
+                            <p key={document}>{document}</p>
+                          ))}
+                        </section>
+                        <section>
+                          <strong>Common mistakes</strong>
+                          {activePlaybook.commonErrors.map((error) => (
+                            <p key={error.symptom}><b>{error.symptom}</b>{error.prevention} Correction: {error.correction}</p>
+                          ))}
+                        </section>
+                      </div>
+                    </details>
+                  </div>
                   {activeProgress.step === activeScenario.tutorSteps.length - 1 && (
                     <div className="knowledge-check">
                       <div className="knowledge-title"><Award size={20} /><div><span>Knowledge check</span><strong>{activeScenario.knowledgeCheck.question}</strong></div></div>

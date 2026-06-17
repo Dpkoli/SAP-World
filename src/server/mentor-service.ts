@@ -43,6 +43,7 @@ import {
   processScenarios,
   type ProcessScenario,
 } from "@/data/simulation";
+import { transactionPlaybooks } from "@/data/transaction-playbooks";
 import { troubleshootingCaseFor } from "@/data/troubleshooting";
 
 type MentorDocument = MentorSource & {
@@ -137,6 +138,43 @@ function scenarioDocuments(scenario: ProcessScenario): MentorDocument[] {
 
 const mentorDocuments: MentorDocument[] = [
   ...processScenarios.flatMap(scenarioDocuments),
+  ...transactionPlaybooks.flatMap((playbook) => [
+    {
+      id: `playbook-${playbook.scenarioId}`,
+      type: "Tutor" as const,
+      title: `${playbook.title} transaction playbook`,
+      reference: `${playbook.processCode} / ${playbook.sapEntry.transactionCode}`,
+      scenarioId: playbook.scenarioId,
+      content: [
+        playbook.businessTrigger,
+        playbook.sapEntry.fioriApp,
+        ...playbook.prerequisites,
+        ...playbook.processingRules,
+        ...playbook.documentChain,
+        ...playbook.completionEvidence,
+        ...playbook.commonErrors.map(
+          (error) =>
+            `${error.symptom} ${error.prevention} ${error.correction}`,
+        ),
+      ].join(" "),
+    },
+    ...playbook.stages.map((stage) => ({
+      id: `playbook-${playbook.scenarioId}-${stage.sequence}`,
+      type: "Tutor" as const,
+      title: `${playbook.title}: ${stage.title}`,
+      reference: `${stage.transactionCode} stage ${stage.sequence}`,
+      scenarioId: playbook.scenarioId,
+      content: [
+        stage.app,
+        stage.screenArea,
+        stage.action,
+        stage.why,
+        stage.expectedResult,
+        ...stage.validations,
+        ...stage.keyFields.map((field) => `${field.label} ${field.value}`),
+      ].join(" "),
+    })),
+  ]),
   ...industryEnterprises.flatMap((industry) => {
     const blueprint = industryBlueprints.find(
       (item) => item.id === industry.id,

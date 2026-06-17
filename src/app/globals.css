@@ -588,6 +588,25 @@ button { cursor: pointer; }
 .transaction-bar span { color: var(--muted); font-size: 9px; text-transform: uppercase; }
 .transaction-bar strong { font-size: 11px; }
 .transaction-bar code { margin-left: auto; padding: 4px 7px; border: 1px solid #cfe1f1; border-radius: 4px; background: #eaf4fd; color: var(--blue); font-size: 10px; }
+.playbook-panel { margin: 18px 0 4px; padding: 16px; border: 1px solid #d8e6f2; border-radius: 10px; background: #f8fbfe; }
+.playbook-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.playbook-heading h3 { margin: 3px 0 5px; font-size: 14px; }
+.playbook-heading p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.playbook-heading code { flex: 0 0 auto; padding: 5px 8px; border: 1px solid #cfe1f1; border-radius: 5px; background: white; color: var(--blue); font-size: 10px; }
+.playbook-grid, .playbook-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 13px; }
+.playbook-grid > div, .playbook-checks > div { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.playbook-grid strong, .playbook-checks strong, .playbook-details strong { display: block; margin-bottom: 8px; font-size: 10px; color: var(--foreground); }
+.playbook-grid p { display: flex; align-items: flex-start; gap: 7px; margin: 7px 0 0; color: #435767; font-size: 9px; line-height: 1.45; }
+.playbook-grid svg { flex: 0 0 auto; color: var(--blue); }
+.playbook-fields { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 10px; }
+.playbook-fields div { padding: 10px; border: 1px solid #dce8f1; border-radius: 7px; background: white; }
+.playbook-fields span { display: block; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+.playbook-fields strong { display: block; margin-top: 3px; font-size: 10px; }
+.playbook-checks p, .playbook-details p { margin: 6px 0 0; color: #4f6270; font-size: 9px; line-height: 1.45; }
+.playbook-details { margin-top: 10px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.playbook-details summary { cursor: pointer; color: var(--blue); font-size: 10px; font-weight: 800; }
+.playbook-details > div { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+.playbook-details b { display: block; margin-bottom: 2px; color: var(--foreground); }
 .step-label { color: var(--blue); font-size: 9px; font-weight: 800; letter-spacing: .1em; }
 .lesson-content h2 { margin: 7px 0 10px; font-size: 22px; letter-spacing: -.03em; }
 .instruction { max-width: 780px; margin: 0; color: #465664; font-size: 13px; line-height: 1.7; }
@@ -1359,6 +1378,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .learning-banner .lesson-progress { display: none; }
   .learning-banner > button { grid-column: 2; }
   .tutor-layout { grid-template-columns: 1fr; }
+  .playbook-fields { grid-template-columns: 1fr 1fr; }
   .tutor-mode-switch { width: 100%; }
   .tutor-mode-switch button { min-width: 0; flex: 1; }
   .troubleshooting-layout { grid-template-columns: 1fr; }
@@ -1445,6 +1465,9 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .attention { align-items: flex-start; flex-wrap: wrap; }
   .attention button { margin-left: 30px; }
   .field-preview { grid-template-columns: 1fr; }
+  .playbook-grid, .playbook-checks, .playbook-details > div, .playbook-fields { grid-template-columns: 1fr; }
+  .playbook-heading { display: block; }
+  .playbook-heading code { display: inline-block; margin-top: 10px; }
   .document-flow-summary, .document-facts, .document-impact-grid { grid-template-columns: 1fr; }
   .dependency-grid, .master-data-summary, .material-core-facts { grid-template-columns: 1fr; }
   .dependency-grid > div, .material-core-facts > div { border-right: 0; border-bottom: 1px solid var(--line); }

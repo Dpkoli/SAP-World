@@ -42,6 +42,9 @@ The first release demonstrates a brewery enterprise with:
 - Account-backed diagnostic attempts, exception completion, XP, and dynamic
   process-readiness scoring
 - Step-by-step explanations of why each action is performed
+- Structured transaction playbooks for every guided process, covering
+  prerequisites, SAP entry points, key fields, validation checks, document
+  chains, completion evidence, and common processing mistakes
 - An authenticated SAP mentor grounded in process, exception, enterprise, and
   historical simulation evidence
 - A role-based learning centre across MM, SD, PP, FI, QM, PM, HCM, EWM, and TM
@@ -85,6 +88,7 @@ The first release demonstrates a brewery enterprise with:
 - A filterable simulation-history API at `/api/simulation/events`
 - A filterable cross-module document API at `/api/simulation/documents`
 - Reusable definitions for all eight processes at `/api/simulation/processes`
+- Authenticated SAP transaction playbooks at `/api/tutor/playbooks`
 - Responsive desktop and mobile layouts
 
 The simulation follows a real business chain:
@@ -160,6 +164,15 @@ Process flows and tutor content can be queried by process (`p2p`, `o2c`,
 `ptp`, `r2r`, `qm`, `pm`, `h2r`, or `w2d`):
 
 `/api/simulation/processes?id=o2c`
+
+Authenticated transaction playbooks can be queried for all guided scenarios or
+for a single process. These responses are designed for the tutor layer and
+include the SAP app or transaction code, prerequisites, step-level validations,
+document chain, completion evidence, and common mistakes:
+
+`/api/tutor/playbooks`
+
+`/api/tutor/playbooks?scenarioId=p2p`
 
 Connected SAP documents can be queried by process, document number, or module:
 
