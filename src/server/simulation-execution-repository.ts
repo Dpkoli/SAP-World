@@ -1,13 +1,11 @@
 import "server-only";
 
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import type {
   GeneratedSimulation,
   SimulationExecution,
   SimulationExecutionEvent,
 } from "@/data/generated-simulations";
+import { createDurableStore } from "@/server/durable-store";
 import { getGeneratedSimulations } from "@/server/generated-simulation-repository";
 
 type ExecutionDatabase = {
@@ -15,39 +13,21 @@ type ExecutionDatabase = {
   learners: Record<string, Record<string, SimulationExecutionEvent[]>>;
 };
 
-const dataDirectory = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDirectory, "simulation-executions.json");
-const temporaryFile = path.join(
-  dataDirectory,
-  "simulation-executions.tmp.json",
-);
-let writeQueue = Promise.resolve();
-
 function emptyDatabase(): ExecutionDatabase {
   return { version: 1, learners: {} };
 }
 
-async function readDatabase(): Promise<ExecutionDatabase> {
-  try {
-    const parsed = JSON.parse(
-      await readFile(dataFile, "utf8"),
-    ) as ExecutionDatabase;
-    return parsed?.version === 1 && parsed.learners
-      ? parsed
-      : emptyDatabase();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyDatabase();
-    }
-    throw error;
-  }
+function isExecutionDatabase(value: unknown): value is ExecutionDatabase {
+  const candidate = value as Partial<ExecutionDatabase> | null;
+  return Boolean(candidate?.version === 1 && candidate.learners);
 }
 
-async function writeDatabase(database: ExecutionDatabase) {
-  await mkdir(dataDirectory, { recursive: true });
-  await writeFile(temporaryFile, JSON.stringify(database, null, 2), "utf8");
-  await rename(temporaryFile, dataFile);
-}
+const executionStore = createDurableStore<ExecutionDatabase>({
+  key: "simulation-executions",
+  fileName: "simulation-executions.json",
+  empty: emptyDatabase,
+  validate: isExecutionDatabase,
+});
 
 export function replaySimulationExecution(
   simulation: GeneratedSimulation,
@@ -117,14 +97,14 @@ export async function getSimulationExecution(
   const simulation = simulations.find((item) => item.id === simulationId);
   if (!simulation) return null;
 
-  const database = await readDatabase();
+  const database = await executionStore.read();
   const events = database.learners[learnerId]?.[simulation.signature] ?? [];
   return replaySimulationExecution(simulation, events);
 }
 
 export async function getSimulationExecutionMap(learnerId: string) {
   const simulations = await getGeneratedSimulations(learnerId);
-  const database = await readDatabase();
+  const database = await executionStore.read();
   const learnerEvents = database.learners[learnerId] ?? {};
 
   return Object.fromEntries(
@@ -154,9 +134,7 @@ export async function appendSimulationStep(input: {
     throw new Error("Generated simulation not found.");
   }
 
-  let result: SimulationExecution | null = null;
-  writeQueue = writeQueue.catch(() => undefined).then(async () => {
-    const database = await readDatabase();
+  return executionStore.update((database) => {
     database.learners[input.learnerId] ??= {};
     const events =
       database.learners[input.learnerId][simulation.signature] ?? [];
@@ -198,9 +176,6 @@ export async function appendSimulationStep(input: {
     };
     const nextEvents = [...events, event];
     database.learners[input.learnerId][simulation.signature] = nextEvents;
-    await writeDatabase(database);
-    result = replaySimulationExecution(simulation, nextEvents);
+    return replaySimulationExecution(simulation, nextEvents);
   });
-  await writeQueue;
-  return result!;
 }

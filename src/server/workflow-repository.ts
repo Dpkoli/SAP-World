@@ -1,7 +1,5 @@
 import "server-only";
 
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   workflowAuditTrail,
   workflowDefinitions,
@@ -10,6 +8,7 @@ import {
   type WorkflowCase,
   type WorkflowStatus,
 } from "@/data/workflows";
+import { createDurableStore } from "@/server/durable-store";
 
 type LearnerWorkflowDecision = {
   step: number;
@@ -27,32 +26,21 @@ type WorkflowDatabase = {
   learners: Record<string, Record<string, LearnerWorkflowState>>;
 };
 
-const dataDirectory = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDirectory, "workflow-decisions.json");
-const temporaryFile = path.join(dataDirectory, "workflow-decisions.tmp.json");
-let writeQueue = Promise.resolve();
-
 function emptyDatabase(): WorkflowDatabase {
   return { version: 1, learners: {} };
 }
 
-async function readDatabase(): Promise<WorkflowDatabase> {
-  try {
-    const parsed = JSON.parse(await readFile(dataFile, "utf8")) as WorkflowDatabase;
-    return parsed?.version === 1 && parsed.learners ? parsed : emptyDatabase();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyDatabase();
-    }
-    throw error;
-  }
+function isWorkflowDatabase(value: unknown): value is WorkflowDatabase {
+  const candidate = value as Partial<WorkflowDatabase> | null;
+  return Boolean(candidate?.version === 1 && candidate.learners);
 }
 
-async function writeDatabase(database: WorkflowDatabase) {
-  await mkdir(dataDirectory, { recursive: true });
-  await writeFile(temporaryFile, JSON.stringify(database, null, 2), "utf8");
-  await rename(temporaryFile, dataFile);
-}
+const workflowStore = createDurableStore<WorkflowDatabase>({
+  key: "workflow-decisions",
+  fileName: "workflow-decisions.json",
+  empty: emptyDatabase,
+  validate: isWorkflowDatabase,
+});
 
 function statusForAction(
   action: WorkflowAction,
@@ -128,7 +116,7 @@ function mergeWorkflow(
 }
 
 export async function getWorkflowCases(learnerId: string) {
-  const database = await readDatabase();
+  const database = await workflowStore.read();
   const learnerStates = database.learners[learnerId] ?? {};
   return workflowDefinitions.map((workflow) =>
     mergeWorkflow(workflow, learnerId, learnerStates[workflow.id]),
@@ -143,40 +131,30 @@ export async function decideWorkflow(
 ) {
   const workflow = workflowDefinitions.find((item) => item.id === workflowId);
   if (!workflow || workflow.status !== "Pending") return null;
-  const database = await readDatabase();
-  const existingState = database.learners[learnerId]?.[workflowId] ?? {
-    decisions: [],
-  };
-  const currentCase = mergeWorkflow(workflow, learnerId, existingState);
-  if (
-    currentCase.status !== "Pending" ||
-    !currentCase.allowedActions.includes(action)
-  ) {
-    return null;
-  }
 
-  const decision: LearnerWorkflowDecision = {
-    step: currentCase.currentStep,
-    decisionAt: new Date().toISOString(),
-    action,
-    comment,
-  };
-  const nextState: LearnerWorkflowState = {
-    decisions: [...existingState.decisions, decision],
-  };
-
-  writeQueue = writeQueue.catch(() => undefined).then(async () => {
-    const latestDatabase = await readDatabase();
+  return workflowStore.update((latestDatabase) => {
     latestDatabase.learners[learnerId] ??= {};
     const latestState = latestDatabase.learners[learnerId][workflowId] ?? {
       decisions: [],
     };
-    latestDatabase.learners[learnerId][workflowId] = {
+    const currentCase = mergeWorkflow(workflow, learnerId, latestState);
+    if (
+      currentCase.status !== "Pending" ||
+      !currentCase.allowedActions.includes(action)
+    ) {
+      return null;
+    }
+
+    const decision: LearnerWorkflowDecision = {
+      step: currentCase.currentStep,
+      decisionAt: new Date().toISOString(),
+      action,
+      comment,
+    };
+    const nextState = {
       decisions: [...latestState.decisions, decision],
     };
-    await writeDatabase(latestDatabase);
+    latestDatabase.learners[learnerId][workflowId] = nextState;
+    return mergeWorkflow(workflow, learnerId, nextState);
   });
-  await writeQueue;
-
-  return mergeWorkflow(workflow, learnerId, nextState);
 }

@@ -46,6 +46,11 @@ The first release demonstrates a brewery enterprise with:
   historical simulation evidence
 - A role-based learning centre across MM, SD, PP, FI, QM, PM, HCM, EWM, and TM
 - Learner registration and sign-in with hashed passwords and secure sessions
+- Durable PostgreSQL persistence for accounts, sessions, progress, workflow
+  decisions, governance, transaction evidence, generated simulations, and events
+- Automatic local JSON-to-PostgreSQL aggregate migration with transaction
+  locks and revisions that prevent lost concurrent serverless writes
+- A live storage health endpoint at `/api/health`
 - Server-backed lesson progress with an automatic browser fallback
 - An assessed knowledge check with corrective feedback
 - Searchable company structure, plants, storage locations, suppliers, and customers
@@ -216,9 +221,10 @@ hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
 service is unavailable.
 
-The local repository adapters are intentionally isolated. Production
-deployment will replace them with a managed identity provider and PostgreSQL
-because serverless filesystems are not durable.
+When `DATABASE_URL` is configured, all mutable repositories use PostgreSQL
+instead of the local files. The schema is created lazily, existing local
+aggregates are imported into an empty database once, and transactional updates
+protect concurrent serverless writes. See `docs/deployment.md`.
 
 Production cookies are secure by default. For HTTP-only local production
 testing, set `SAP_WORLD_INSECURE_COOKIES=true`; never use this override on a
@@ -239,7 +245,8 @@ npm run build
 
 Planned phases include:
 
-1. Persistent PostgreSQL enterprise, document, and learning models
+1. Normalize the PostgreSQL enterprise and document aggregates for high-volume
+   analytical workloads
 2. Managed identity integration and role-based authorization
 3. Expand generated industry ledgers from representative connected histories
    to configurable full-volume enterprise scale

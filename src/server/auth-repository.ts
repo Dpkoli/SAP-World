@@ -6,10 +6,9 @@ import {
   scrypt as scryptCallback,
   timingSafeEqual,
 } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { promisify } from "node:util";
 import type { LearnerProfile } from "@/data/auth";
+import { createDurableStore } from "@/server/durable-store";
 
 type StoredUser = LearnerProfile & {
   passwordHash: string;
@@ -29,48 +28,33 @@ type AuthDatabase = {
 };
 
 const scrypt = promisify(scryptCallback);
-const dataDirectory = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDirectory, "accounts.json");
-const temporaryFile = path.join(dataDirectory, "accounts.tmp.json");
 const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;
-
-let writeQueue = Promise.resolve();
 
 function emptyDatabase(): AuthDatabase {
   return { version: 1, users: {}, sessions: {} };
 }
 
-async function readDatabase(): Promise<AuthDatabase> {
-  try {
-    const parsed = JSON.parse(await readFile(dataFile, "utf8")) as AuthDatabase;
-    return parsed?.version === 1 && parsed.users && parsed.sessions
-      ? parsed
-      : emptyDatabase();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyDatabase();
-    }
-    throw error;
-  }
+function isAuthDatabase(value: unknown): value is AuthDatabase {
+  const candidate = value as Partial<AuthDatabase> | null;
+  return Boolean(
+    candidate &&
+      candidate.version === 1 &&
+      candidate.users &&
+      candidate.sessions,
+  );
 }
 
-async function writeDatabase(database: AuthDatabase) {
-  await mkdir(dataDirectory, { recursive: true });
-  await writeFile(temporaryFile, JSON.stringify(database, null, 2), "utf8");
-  await rename(temporaryFile, dataFile);
-}
+const authStore = createDurableStore<AuthDatabase>({
+  key: "auth",
+  fileName: "accounts.json",
+  empty: emptyDatabase,
+  validate: isAuthDatabase,
+});
 
 async function updateDatabase<T>(
   update: (database: AuthDatabase) => Promise<T> | T,
 ) {
-  let result: T;
-  writeQueue = writeQueue.catch(() => undefined).then(async () => {
-    const database = await readDatabase();
-    result = await update(database);
-    await writeDatabase(database);
-  });
-  await writeQueue;
-  return result!;
+  return authStore.update(update);
 }
 
 function normalizeEmail(email: string) {
@@ -128,7 +112,7 @@ export async function createLearner(
 }
 
 export async function verifyLearner(email: string, password: string) {
-  const database = await readDatabase();
+  const database = await authStore.read();
   const user = Object.values(database.users).find(
     (candidate) => candidate.email === normalizeEmail(email),
   );
@@ -168,7 +152,7 @@ export async function createLearnerSession(userId: string) {
 export async function getLearnerBySession(token: string | undefined) {
   if (!token) return null;
 
-  const database = await readDatabase();
+  const database = await authStore.read();
   const tokenHash = hashSessionToken(token);
   const session = database.sessions[tokenHash];
   if (!session || new Date(session.expiresAt).getTime() <= Date.now()) {

@@ -1,48 +1,34 @@
 import "server-only";
 
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   normalizeLearnerProgress,
   type LearnerProgress,
 } from "@/data/progress";
+import { createDurableStore } from "@/server/durable-store";
 
 type ProgressDatabase = {
   version: 1;
   learners: Record<string, LearnerProgress>;
 };
 
-const dataDirectory = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDirectory, "learning-progress.json");
-const temporaryFile = path.join(dataDirectory, "learning-progress.tmp.json");
-
-let writeQueue = Promise.resolve();
-
 function emptyDatabase(): ProgressDatabase {
   return { version: 1, learners: {} };
 }
 
-async function readDatabase(): Promise<ProgressDatabase> {
-  try {
-    const raw = await readFile(dataFile, "utf8");
-    const parsed = JSON.parse(raw) as ProgressDatabase;
-    return parsed?.version === 1 && parsed.learners ? parsed : emptyDatabase();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyDatabase();
-    }
-    throw error;
-  }
+function isProgressDatabase(value: unknown): value is ProgressDatabase {
+  const candidate = value as Partial<ProgressDatabase> | null;
+  return Boolean(candidate?.version === 1 && candidate.learners);
 }
 
-async function writeDatabase(database: ProgressDatabase) {
-  await mkdir(dataDirectory, { recursive: true });
-  await writeFile(temporaryFile, JSON.stringify(database, null, 2), "utf8");
-  await rename(temporaryFile, dataFile);
-}
+const progressStore = createDurableStore<ProgressDatabase>({
+  key: "learning-progress",
+  fileName: "learning-progress.json",
+  empty: emptyDatabase,
+  validate: isProgressDatabase,
+});
 
 export async function getLearnerProgress(learnerId: string) {
-  const database = await readDatabase();
+  const database = await progressStore.read();
   const stored = database.learners[learnerId];
   return stored ? normalizeLearnerProgress(learnerId, stored) : null;
 }
@@ -54,11 +40,8 @@ export async function saveLearnerProgress(
   const progress = normalizeLearnerProgress(learnerId, input);
   progress.updatedAt = new Date().toISOString();
 
-  writeQueue = writeQueue.catch(() => undefined).then(async () => {
-    const database = await readDatabase();
+  await progressStore.update((database) => {
     database.learners[learnerId] = progress;
-    await writeDatabase(database);
   });
-  await writeQueue;
   return progress;
 }

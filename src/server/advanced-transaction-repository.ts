@@ -1,10 +1,8 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
 import {
   advancedTransactionDefinitions,
   type AdvancedTransactionCase,
 } from "@/data/advanced-transactions";
+import { createDurableStore } from "@/server/durable-store";
 
 type ProgressEntry = {
   step: number;
@@ -14,30 +12,16 @@ type ProgressEntry = {
 
 type ProgressStore = Record<string, Record<string, ProgressEntry[]>>;
 
-const dataDirectory = path.join(process.cwd(), ".data");
-const progressFile = path.join(
-  dataDirectory,
-  "advanced-transaction-progress.json",
-);
-
-let writeQueue = Promise.resolve();
-
-async function readStore(): Promise<ProgressStore> {
-  try {
-    return JSON.parse(await fs.readFile(progressFile, "utf8")) as ProgressStore;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return {};
-    }
-
-    throw error;
-  }
+function isProgressStore(value: unknown): value is ProgressStore {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-async function writeStore(store: ProgressStore) {
-  await fs.mkdir(dataDirectory, { recursive: true });
-  await fs.writeFile(progressFile, `${JSON.stringify(store, null, 2)}\n`);
-}
+const progressStore = createDurableStore<ProgressStore>({
+  key: "advanced-transaction-progress",
+  fileName: "advanced-transaction-progress.json",
+  empty: () => ({}),
+  validate: isProgressStore,
+});
 
 function mergeProgress(
   transaction: AdvancedTransactionCase,
@@ -69,7 +53,7 @@ function mergeProgress(
 }
 
 export async function getAdvancedTransactions(learnerId: string) {
-  const store = await readStore();
+  const store = await progressStore.read();
   const learnerProgress = store[learnerId] ?? {};
 
   return advancedTransactionDefinitions.map((transaction) =>
@@ -91,40 +75,34 @@ export async function completeAdvancedTransactionStep(
     throw new Error("Transaction case not found.");
   }
 
-  return new Promise<AdvancedTransactionCase>((resolve, reject) => {
-    writeQueue = writeQueue
-      .then(async () => {
-        const store = await readStore();
-        const learnerProgress = store[learnerId] ?? {};
-        const progress = learnerProgress[transactionId] ?? [];
-        const merged = mergeProgress(transaction, progress);
+  return progressStore.update((store) => {
+    const learnerProgress = store[learnerId] ?? {};
+    const progress = learnerProgress[transactionId] ?? [];
+    const merged = mergeProgress(transaction, progress);
 
-        if (merged.currentStep === null) {
-          throw new Error("This transaction case is already complete.");
-        }
+    if (merged.currentStep === null) {
+      throw new Error("This transaction case is already complete.");
+    }
 
-        if (merged.currentStep !== step) {
-          throw new Error(
-            `Complete step ${merged.currentStep} before step ${step}.`,
-          );
-        }
+    if (merged.currentStep !== step) {
+      throw new Error(
+        `Complete step ${merged.currentStep} before step ${step}.`,
+      );
+    }
 
-        const nextProgress = [
-          ...progress,
-          {
-            step,
-            note,
-            completedAt: new Date().toISOString(),
-          },
-        ];
+    const nextProgress = [
+      ...progress,
+      {
+        step,
+        note,
+        completedAt: new Date().toISOString(),
+      },
+    ];
 
-        store[learnerId] = {
-          ...learnerProgress,
-          [transactionId]: nextProgress,
-        };
-        await writeStore(store);
-        resolve(mergeProgress(transaction, nextProgress));
-      })
-      .catch(reject);
+    store[learnerId] = {
+      ...learnerProgress,
+      [transactionId]: nextProgress,
+    };
+    return mergeProgress(transaction, nextProgress);
   });
 }

@@ -1,7 +1,5 @@
 import "server-only";
 
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   actionsForGovernanceCase,
   governanceAuditTrail,
@@ -11,6 +9,7 @@ import {
   type GovernanceCase,
   type GovernanceStatus,
 } from "@/data/governance";
+import { createDurableStore } from "@/server/durable-store";
 
 type LearnerGovernanceDecision = {
   step: number;
@@ -28,35 +27,21 @@ type GovernanceDatabase = {
   learners: Record<string, Record<string, LearnerGovernanceState>>;
 };
 
-const dataDirectory = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDirectory, "governance-decisions.json");
-const temporaryFile = path.join(
-  dataDirectory,
-  "governance-decisions.tmp.json",
-);
-let writeQueue = Promise.resolve();
-
 function emptyDatabase(): GovernanceDatabase {
   return { version: 1, learners: {} };
 }
 
-async function readDatabase(): Promise<GovernanceDatabase> {
-  try {
-    const parsed = JSON.parse(await readFile(dataFile, "utf8")) as GovernanceDatabase;
-    return parsed?.version === 1 && parsed.learners ? parsed : emptyDatabase();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyDatabase();
-    }
-    throw error;
-  }
+function isGovernanceDatabase(value: unknown): value is GovernanceDatabase {
+  const candidate = value as Partial<GovernanceDatabase> | null;
+  return Boolean(candidate?.version === 1 && candidate.learners);
 }
 
-async function writeDatabase(database: GovernanceDatabase) {
-  await mkdir(dataDirectory, { recursive: true });
-  await writeFile(temporaryFile, JSON.stringify(database, null, 2), "utf8");
-  await rename(temporaryFile, dataFile);
-}
+const governanceStore = createDurableStore<GovernanceDatabase>({
+  key: "governance-decisions",
+  fileName: "governance-decisions.json",
+  empty: emptyDatabase,
+  validate: isGovernanceDatabase,
+});
 
 function actionLabel(action: GovernanceAction) {
   if (action === "submit") return "Submitted";
@@ -131,7 +116,7 @@ function mergeGovernanceCase(
 }
 
 export async function getGovernanceCases(learnerId: string) {
-  const database = await readDatabase();
+  const database = await governanceStore.read();
   const learnerStates = database.learners[learnerId] ?? {};
   return governanceDefinitions.map((definition) =>
     mergeGovernanceCase(definition, learnerId, learnerStates[definition.id]),
@@ -149,39 +134,28 @@ export async function decideGovernanceCase(
   );
   if (!definition) return null;
 
-  const database = await readDatabase();
-  const existingState = database.learners[learnerId]?.[requestId] ?? {
-    decisions: [],
-  };
-  const currentCase = mergeGovernanceCase(
-    definition,
-    learnerId,
-    existingState,
-  );
-  if (!currentCase.allowedActions.includes(action)) return null;
-
-  const decision: LearnerGovernanceDecision = {
-    step: currentCase.currentStep,
-    at: new Date().toISOString(),
-    action,
-    comment,
-  };
-  const nextState = {
-    decisions: [...existingState.decisions, decision],
-  };
-
-  writeQueue = writeQueue.catch(() => undefined).then(async () => {
-    const latestDatabase = await readDatabase();
+  return governanceStore.update((latestDatabase) => {
     latestDatabase.learners[learnerId] ??= {};
     const latestState = latestDatabase.learners[learnerId][requestId] ?? {
       decisions: [],
     };
-    latestDatabase.learners[learnerId][requestId] = {
+    const currentCase = mergeGovernanceCase(
+      definition,
+      learnerId,
+      latestState,
+    );
+    if (!currentCase.allowedActions.includes(action)) return null;
+
+    const decision: LearnerGovernanceDecision = {
+      step: currentCase.currentStep,
+      at: new Date().toISOString(),
+      action,
+      comment,
+    };
+    const nextState = {
       decisions: [...latestState.decisions, decision],
     };
-    await writeDatabase(latestDatabase);
+    latestDatabase.learners[learnerId][requestId] = nextState;
+    return mergeGovernanceCase(definition, learnerId, nextState);
   });
-  await writeQueue;
-
-  return mergeGovernanceCase(definition, learnerId, nextState);
 }

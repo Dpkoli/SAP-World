@@ -1,13 +1,11 @@
 import "server-only";
 
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import type {
   GeneratedSimulation,
   SimulationFiscalYear,
 } from "@/data/generated-simulations";
 import type { IndustryId } from "@/data/industries";
+import { createDurableStore } from "@/server/durable-store";
 import { generateIndustrySimulation } from "@/server/industry-simulation-generator";
 
 type SimulationDatabase = {
@@ -15,42 +13,24 @@ type SimulationDatabase = {
   learners: Record<string, GeneratedSimulation[]>;
 };
 
-const dataDirectory = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDirectory, "generated-simulations.json");
-const temporaryFile = path.join(
-  dataDirectory,
-  "generated-simulations.tmp.json",
-);
-let writeQueue = Promise.resolve();
-
 function emptyDatabase(): SimulationDatabase {
   return { version: 1, learners: {} };
 }
 
-async function readDatabase(): Promise<SimulationDatabase> {
-  try {
-    const parsed = JSON.parse(
-      await readFile(dataFile, "utf8"),
-    ) as SimulationDatabase;
-    return parsed?.version === 1 && parsed.learners
-      ? parsed
-      : emptyDatabase();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyDatabase();
-    }
-    throw error;
-  }
+function isSimulationDatabase(value: unknown): value is SimulationDatabase {
+  const candidate = value as Partial<SimulationDatabase> | null;
+  return Boolean(candidate?.version === 1 && candidate.learners);
 }
 
-async function writeDatabase(database: SimulationDatabase) {
-  await mkdir(dataDirectory, { recursive: true });
-  await writeFile(temporaryFile, JSON.stringify(database, null, 2), "utf8");
-  await rename(temporaryFile, dataFile);
-}
+const simulationStore = createDurableStore<SimulationDatabase>({
+  key: "generated-simulations",
+  fileName: "generated-simulations.json",
+  empty: emptyDatabase,
+  validate: isSimulationDatabase,
+});
 
 export async function getGeneratedSimulations(learnerId: string) {
-  const database = await readDatabase();
+  const database = await simulationStore.read();
   return database.learners[learnerId] ?? [];
 }
 
@@ -71,22 +51,16 @@ export async function saveGeneratedSimulation(
   },
 ) {
   const generated = generateIndustrySimulation(input);
-  let result = generated;
-
-  writeQueue = writeQueue.catch(() => undefined).then(async () => {
-    const database = await readDatabase();
+  return simulationStore.update((database) => {
     const simulations = database.learners[learnerId] ?? [];
     const existing = simulations.find(
       (simulation) => simulation.signature === generated.signature,
     );
     if (existing) {
-      result = existing;
-      return;
+      return existing;
     }
 
     database.learners[learnerId] = [generated, ...simulations].slice(0, 25);
-    await writeDatabase(database);
+    return generated;
   });
-  await writeQueue;
-  return result;
 }
