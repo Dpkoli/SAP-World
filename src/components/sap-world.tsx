@@ -167,6 +167,16 @@ type AdminOperations = {
     model: string | null;
     timeoutMs: number;
   };
+  readiness: {
+    status: "Ready" | "Ready with warnings" | "Blocked";
+    summary: {
+      checks: number;
+      passed: number;
+      warnings: number;
+      failed: number;
+    };
+    deploymentGate: string;
+  };
   accounts: {
     users: number;
     roles: { learner: number; admin: number };
@@ -1428,10 +1438,23 @@ export function SapWorld({
                   <section className="admin-grid">
                     <article className="panel"><span>Storage backend</span><strong>{adminOperations.storage.backend}</strong><small>{adminOperations.storage.durable ? "Durable database mode" : "Local development fallback"}</small></article>
                     <article className="panel"><span>Mentor provider</span><strong>{adminOperations.mentor.mode}</strong><small>{adminOperations.mentor.configured ? `${adminOperations.mentor.model} / ${adminOperations.mentor.timeoutMs}ms` : "Deterministic local fallback"}</small></article>
+                    <article className="panel"><span>Readiness gate</span><strong>{adminOperations.readiness.status}</strong><small>{adminOperations.readiness.deploymentGate}</small></article>
                     <article className="panel"><span>Total users</span><strong>{adminOperations.accounts.users}</strong><small>{adminOperations.accounts.roles.admin} admins / {adminOperations.accounts.roles.learner} learners</small></article>
                     <article className="panel"><span>Active sessions</span><strong>{adminOperations.accounts.sessions.active}</strong><small>{adminOperations.accounts.sessions.expired} expired retained</small></article>
                     <article className="panel"><span>Generated simulations</span><strong>{adminOperations.simulations.simulations}</strong><small>{adminOperations.simulations.industries} industries represented</small></article>
                   </section>
+
+                  <article className="panel admin-ledger">
+                    <div className="panel-header"><div><span className="section-kicker">Production operations readiness</span><h2>Deployment gate summary</h2></div><strong>/api/admin/readiness</strong></div>
+                    <div className="admin-metrics">
+                      <div><span>Total checks</span><strong>{adminOperations.readiness.summary.checks}</strong></div>
+                      <div><span>Passed</span><strong>{adminOperations.readiness.summary.passed}</strong></div>
+                      <div><span>Warnings</span><strong>{adminOperations.readiness.summary.warnings}</strong></div>
+                      <div><span>Failed</span><strong>{adminOperations.readiness.summary.failed}</strong></div>
+                      <div><span>Status</span><strong>{adminOperations.readiness.status}</strong></div>
+                      <div><span>Gate</span><strong>{adminOperations.readiness.summary.failed === 0 ? "Review" : "Fix"}</strong></div>
+                    </div>
+                  </article>
 
                   <article className="panel admin-ledger">
                     <div className="panel-header"><div><span className="section-kicker">Normalized ledger projection</span><h2>Enterprise document analytics</h2></div><strong>{adminOperations.ledgerAnalytics.integrity.status}</strong></div>

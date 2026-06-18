@@ -56,6 +56,8 @@ The first release demonstrates a brewery enterprise with:
   APIs, and environment-seeded platform administrators
 - Admin-only controlled content register covering release readiness, owners,
   versions, evidence gates, blockers, and content-domain status
+- Admin-only production readiness gate combining storage, security, content,
+  ledger integrity, mentor provider, and deployment configuration checks
 - Durable PostgreSQL persistence for accounts, sessions, progress, workflow
   decisions, governance, transaction evidence, generated simulations, and events
 - Automatic local JSON-to-PostgreSQL aggregate migration with transaction
@@ -255,6 +257,14 @@ It scores SAP World content domains against release gates such as owner,
 version, coverage, evidence, validation tests, common mistakes, and go-live
 controls.
 
+Production readiness can be checked through:
+
+`GET /api/admin/readiness`
+
+The readiness gate reports pass, warning, and fail checks across durable
+storage, admin allow-list, cookie security, controlled content release, ledger
+integrity, and mentor-provider configuration.
+
 Authenticated learner progress can be loaded or updated through:
 
 `/api/learning/progress`
@@ -306,6 +316,6 @@ Planned phases include:
 2. Managed identity integration and role-based authorization
 3. Expand generated industry ledgers from representative connected histories
    to configurable full-volume enterprise scale
-4. Deployment automation, observability, and production runbooks
+4. Deployment automation and external observability integrations
 
 The source product vision is retained in `Prompt_v2.txt`.

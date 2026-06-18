@@ -78,6 +78,18 @@ The register scores each SAP World content domain against controlled release
 gates such as owner, version, coverage, validation evidence, go-live controls,
 common mistakes, and blockers.
 
+Admins can also run the production readiness gate:
+
+```text
+GET /api/admin/readiness
+```
+
+The readiness response combines deployment checks for durable storage, admin
+allow-list, cookie security, content release, ledger integrity, and mentor
+provider configuration. A `Blocked` status should stop deployment until failed
+checks are resolved. `Ready with warnings` can be released only when the owner
+has accepted the documented warnings.
+
 ## Optional AI mentor provider
 
 The SAP Mentor works without an external model by using deterministic local
@@ -112,6 +124,8 @@ local grounded answer instead.
 8. Sign in with an admin email and verify `/api/admin/operations` returns
    platform counts.
 9. Verify `/api/admin/content-control` returns the content release register.
+10. Verify `/api/admin/readiness` returns `Ready` or an accepted
+    `Ready with warnings` status before go-live.
 
 Secure cookies are enabled automatically in production. Do not configure
 `SAP_WORLD_INSECURE_COOKIES` on a hosted deployment.

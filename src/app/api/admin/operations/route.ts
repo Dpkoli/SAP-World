@@ -8,6 +8,7 @@ import { getStorageHealth } from "@/server/durable-store";
 import { getGeneratedSimulationStats } from "@/server/generated-simulation-repository";
 import { getPlatformLedgerAnalytics } from "@/server/ledger-analytics-repository";
 import { getMentorProviderStatus } from "@/server/mentor-provider";
+import { getOperationsReadiness } from "@/server/operations-readiness-service";
 import { getLearningProgressStats } from "@/server/progress-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
 
@@ -31,6 +32,13 @@ export async function GET() {
   ]);
   const enterprise = getEnterpriseSnapshot();
   const contentControl = getContentControlRegister();
+  const mentor = getMentorProviderStatus();
+  const readiness = getOperationsReadiness({
+    storage,
+    mentor,
+    ledgerAnalytics,
+    contentControl,
+  });
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
@@ -40,7 +48,8 @@ export async function GET() {
       permissions: rolePermissions.admin,
     },
     storage,
-    mentor: getMentorProviderStatus(),
+    mentor,
+    readiness,
     accounts,
     progress,
     simulations,
@@ -62,6 +71,7 @@ export async function GET() {
       "Storage health is verified server-side before this response is returned.",
       "Ledger analytics are projected from deterministic simulation documents with link-integrity checks.",
       "Content release readiness is calculated from controlled owner, version, evidence, and validation gates.",
+      "Operations readiness combines deployment, security, content, ledger, storage, and mentor checks.",
       "External mentor configuration is reported without exposing endpoint or API key values.",
       "This endpoint never returns password hashes, salts, or session tokens.",
     ],
