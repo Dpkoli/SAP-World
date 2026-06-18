@@ -143,3 +143,14 @@ local grounded answer instead.
 
 Secure cookies are enabled automatically in production. Do not configure
 `SAP_WORLD_INSECURE_COOKIES` on a hosted deployment.
+
+## GitHub verification
+
+The repository includes a GitHub Actions workflow at
+`.github/workflows/ci.yml`. It runs on pushes and pull requests for `main`,
+`master`, and `codex/mvp-foundation`.
+
+The workflow installs dependencies with `npm ci`, runs `npm run lint`, builds
+the Next.js app with `npm run build`, and blocks high-severity production
+dependency vulnerabilities through `npm audit --omit=dev --audit-level=high`.
+Treat a failed workflow as a release blocker before merging or deploying.

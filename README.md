@@ -318,6 +318,9 @@ npm run lint
 npm run build
 ```
 
+GitHub Actions runs the same lint and build checks on pushes and pull requests,
+plus a high-severity production dependency audit.
+
 ## Product direction
 
 Planned phases include:
@@ -327,6 +330,6 @@ Planned phases include:
 2. Managed identity integration and role-based authorization
 3. Expand generated industry ledgers from representative connected histories
    to configurable full-volume enterprise scale
-4. Deployment automation and external observability integrations
+4. External observability integrations and managed release promotion
 
 The source product vision is retained in `Prompt_v2.txt`.
