@@ -37,8 +37,9 @@ The persisted aggregates are:
 
 ## Health check
 
-`GET /api/health` reports the active storage backend. PostgreSQL mode performs a
-live query and returns HTTP `503` when the database cannot be reached.
+`GET /api/health` reports the active storage backend and AI mentor provider
+mode. PostgreSQL mode performs a live query and returns HTTP `503` when the
+database cannot be reached.
 
 ## Admin access
 
@@ -57,7 +58,8 @@ GET /api/admin/operations
 ```
 
 This endpoint is protected inside the route handler and returns HTTP `403` for
-authenticated learners without the admin role.
+authenticated learners without the admin role. It also reports mentor-provider
+configuration status without exposing the endpoint URL or API key.
 
 ## Optional AI mentor provider
 

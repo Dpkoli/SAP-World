@@ -113,7 +113,7 @@ button { cursor: pointer; }
 .kpi-card small.good { color: var(--green); }
 .kpi-card small.warn { color: #c7442f; }
 .kpi-card small.neutral { color: var(--muted); }
-.admin-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 15px; }
+.admin-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 15px; }
 .admin-grid article { padding: 18px; }
 .admin-grid span, .admin-grid strong, .admin-grid small { display: block; }
 .admin-grid span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }

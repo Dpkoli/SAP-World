@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getMentorProviderStatus } from "@/server/mentor-provider";
 import { getStorageHealth } from "@/server/durable-store";
 
 export const runtime = "nodejs";
@@ -11,6 +12,7 @@ export async function GET() {
       status: "ok",
       service: "sap-world",
       storage,
+      mentor: getMentorProviderStatus(),
       checkedAt: new Date().toISOString(),
     });
   } catch {
@@ -24,6 +26,7 @@ export async function GET() {
           configured: true,
           reachable: false,
         },
+        mentor: getMentorProviderStatus(),
         checkedAt: new Date().toISOString(),
       },
       { status: 503 },

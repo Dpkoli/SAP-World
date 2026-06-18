@@ -5,6 +5,7 @@ import { getAuthAdministrationSnapshot } from "@/server/auth-repository";
 import { requireLearnerRole } from "@/server/auth-session";
 import { getStorageHealth } from "@/server/durable-store";
 import { getGeneratedSimulationStats } from "@/server/generated-simulation-repository";
+import { getMentorProviderStatus } from "@/server/mentor-provider";
 import { getLearningProgressStats } from "@/server/progress-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
 
@@ -35,6 +36,7 @@ export async function GET() {
       permissions: rolePermissions.admin,
     },
     storage,
+    mentor: getMentorProviderStatus(),
     accounts,
     progress,
     simulations,
@@ -52,6 +54,7 @@ export async function GET() {
       "Admin access is granted only by SAP_WORLD_ADMIN_EMAILS.",
       "Learner mutations remain scoped to the authenticated learner id.",
       "Storage health is verified server-side before this response is returned.",
+      "External mentor configuration is reported without exposing endpoint or API key values.",
       "This endpoint never returns password hashes, salts, or session tokens.",
     ],
   });

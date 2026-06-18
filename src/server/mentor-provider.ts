@@ -33,6 +33,22 @@ function providerConfig() {
   };
 }
 
+export function getMentorProviderStatus() {
+  const config = providerConfig();
+  const endpointConfigured = Boolean(process.env.SAP_WORLD_AI_ENDPOINT?.trim());
+  const apiKeyConfigured = Boolean(process.env.SAP_WORLD_AI_API_KEY?.trim());
+  const model = process.env.SAP_WORLD_AI_MODEL?.trim() || null;
+
+  return {
+    mode: config ? "external" as const : "local" as const,
+    configured: Boolean(config),
+    endpointConfigured,
+    apiKeyConfigured,
+    model,
+    timeoutMs: config?.timeoutMs ?? defaultTimeoutMs,
+  };
+}
+
 function evidenceSummary(response: MentorResponse) {
   return response.sources
     .map(

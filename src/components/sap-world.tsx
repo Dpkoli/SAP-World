@@ -159,6 +159,14 @@ type AdminOperations = {
     configured: boolean;
     checkedAt?: string;
   };
+  mentor: {
+    mode: "local" | "external";
+    configured: boolean;
+    endpointConfigured: boolean;
+    apiKeyConfigured: boolean;
+    model: string | null;
+    timeoutMs: number;
+  };
   accounts: {
     users: number;
     roles: { learner: number; admin: number };
@@ -1396,6 +1404,7 @@ export function SapWorld({
                 <>
                   <section className="admin-grid">
                     <article className="panel"><span>Storage backend</span><strong>{adminOperations.storage.backend}</strong><small>{adminOperations.storage.durable ? "Durable database mode" : "Local development fallback"}</small></article>
+                    <article className="panel"><span>Mentor provider</span><strong>{adminOperations.mentor.mode}</strong><small>{adminOperations.mentor.configured ? `${adminOperations.mentor.model} / ${adminOperations.mentor.timeoutMs}ms` : "Deterministic local fallback"}</small></article>
                     <article className="panel"><span>Total users</span><strong>{adminOperations.accounts.users}</strong><small>{adminOperations.accounts.roles.admin} admins / {adminOperations.accounts.roles.learner} learners</small></article>
                     <article className="panel"><span>Active sessions</span><strong>{adminOperations.accounts.sessions.active}</strong><small>{adminOperations.accounts.sessions.expired} expired retained</small></article>
                     <article className="panel"><span>Generated simulations</span><strong>{adminOperations.simulations.simulations}</strong><small>{adminOperations.simulations.industries} industries represented</small></article>
