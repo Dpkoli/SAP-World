@@ -15,6 +15,7 @@ import {
   getSimulationExecution,
   getSimulationExecutionMap,
 } from "@/server/simulation-execution-repository";
+import { recordObservabilityEvent } from "@/server/observability-repository";
 
 export const runtime = "nodejs";
 
@@ -95,6 +96,19 @@ export async function POST(request: Request) {
     eventIndex,
   });
   const execution = await getSimulationExecution(learner.id, simulation.id);
+  await recordObservabilityEvent({
+    type: "simulation.generated",
+    actorId: learner.id,
+    actorRole: learner.role,
+    entityId: simulation.id,
+    summary: "Learner generated or reused an industry simulation.",
+    metadata: {
+      industryId: simulation.industryId,
+      fiscalYear: simulation.fiscalYear,
+      eventIndex: simulation.eventIndex,
+      signature: simulation.signature.slice(0, 12),
+    },
+  });
 
   return NextResponse.json(
     { simulation: { ...simulation, execution: execution! } },

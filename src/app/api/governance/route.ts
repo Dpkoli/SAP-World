@@ -8,6 +8,7 @@ import {
   decideGovernanceCase,
   getGovernanceCases,
 } from "@/server/governance-repository";
+import { recordObservabilityEvent } from "@/server/observability-repository";
 
 export const runtime = "nodejs";
 
@@ -103,6 +104,19 @@ export async function POST(request: Request) {
       { status: 409 },
     );
   }
+  await recordObservabilityEvent({
+    type: "governance.decision",
+    actorId: learner.id,
+    actorRole: learner.role,
+    entityId: governanceCase.id,
+    summary: "Learner recorded a master-data governance decision.",
+    metadata: {
+      action,
+      domain: governanceCase.domain,
+      status: governanceCase.status,
+      currentStep: governanceCase.currentStep,
+    },
+  });
 
   return NextResponse.json({ request: governanceCase });
 }

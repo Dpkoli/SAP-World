@@ -34,6 +34,7 @@ The persisted aggregates are:
 - `advanced-transaction-progress`
 - `generated-simulations`
 - `simulation-executions`
+- `observability-events`
 
 Generated ledger analytics are currently projected from these saved simulation
 aggregates at request time. The projection is exposed to learners through
@@ -90,6 +91,17 @@ provider configuration. A `Blocked` status should stop deployment until failed
 checks are resolved. `Ready with warnings` can be released only when the owner
 has accepted the documented warnings.
 
+Admins can inspect compact server-side telemetry through:
+
+```text
+GET /api/admin/observability
+```
+
+Telemetry events are capped to the latest 1,000 retained records and are stored
+without learner notes, passwords, session tokens, or raw mentor prompts. Use
+this endpoint for release smoke checks, support triage, and operational trend
+inspection.
+
 ## Optional AI mentor provider
 
 The SAP Mentor works without an external model by using deterministic local
@@ -126,6 +138,8 @@ local grounded answer instead.
 9. Verify `/api/admin/content-control` returns the content release register.
 10. Verify `/api/admin/readiness` returns `Ready` or an accepted
     `Ready with warnings` status before go-live.
+11. Verify `/api/admin/observability` returns retained event counts after a
+    mentor question or simulation action.
 
 Secure cookies are enabled automatically in production. Do not configure
 `SAP_WORLD_INSECURE_COOKIES` on a hosted deployment.

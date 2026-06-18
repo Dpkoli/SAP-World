@@ -5,6 +5,7 @@ import {
   appendSimulationStep,
   getSimulationExecution,
 } from "@/server/simulation-execution-repository";
+import { recordObservabilityEvent } from "@/server/observability-repository";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,18 @@ export async function POST(
       expectedVersion: input.expectedVersion as number,
       step: input.step as number,
       note,
+    });
+    await recordObservabilityEvent({
+      type: "simulation.step.completed",
+      actorId: learner.id,
+      actorRole: learner.role,
+      entityId: simulationId,
+      summary: "Learner completed a generated simulation step.",
+      metadata: {
+        step: input.step as number,
+        version: execution.version,
+        status: execution.status,
+      },
     });
     return NextResponse.json({ execution });
   } catch (error) {

@@ -8,6 +8,7 @@ import { getStorageHealth } from "@/server/durable-store";
 import { getGeneratedSimulationStats } from "@/server/generated-simulation-repository";
 import { getPlatformLedgerAnalytics } from "@/server/ledger-analytics-repository";
 import { getMentorProviderStatus } from "@/server/mentor-provider";
+import { getObservabilitySnapshot } from "@/server/observability-repository";
 import { getOperationsReadiness } from "@/server/operations-readiness-service";
 import { getLearningProgressStats } from "@/server/progress-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
@@ -23,12 +24,20 @@ export async function GET() {
     );
   }
 
-  const [storage, accounts, progress, simulations, ledgerAnalytics] = await Promise.all([
+  const [
+    storage,
+    accounts,
+    progress,
+    simulations,
+    ledgerAnalytics,
+    observability,
+  ] = await Promise.all([
     getStorageHealth(),
     getAuthAdministrationSnapshot(),
     getLearningProgressStats(),
     getGeneratedSimulationStats(),
     getPlatformLedgerAnalytics(),
+    getObservabilitySnapshot(),
   ]);
   const enterprise = getEnterpriseSnapshot();
   const contentControl = getContentControlRegister();
@@ -50,6 +59,7 @@ export async function GET() {
     storage,
     mentor,
     readiness,
+    observability,
     accounts,
     progress,
     simulations,
@@ -72,6 +82,7 @@ export async function GET() {
       "Ledger analytics are projected from deterministic simulation documents with link-integrity checks.",
       "Content release readiness is calculated from controlled owner, version, evidence, and validation gates.",
       "Operations readiness combines deployment, security, content, ledger, storage, and mentor checks.",
+      "Observability records compact server-side events without storing learner notes, passwords, or session tokens.",
       "External mentor configuration is reported without exposing endpoint or API key values.",
       "This endpoint never returns password hashes, salts, or session tokens.",
     ],

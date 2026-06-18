@@ -58,6 +58,8 @@ The first release demonstrates a brewery enterprise with:
   versions, evidence gates, blockers, and content-domain status
 - Admin-only production readiness gate combining storage, security, content,
   ledger integrity, mentor provider, and deployment configuration checks
+- Admin-only observability stream for compact server-side events across mentor,
+  simulations, workflow, governance, advanced transactions, and admin checks
 - Durable PostgreSQL persistence for accounts, sessions, progress, workflow
   decisions, governance, transaction evidence, generated simulations, and events
 - Automatic local JSON-to-PostgreSQL aggregate migration with transaction
@@ -265,6 +267,14 @@ The readiness gate reports pass, warning, and fail checks across durable
 storage, admin allow-list, cookie security, controlled content release, ledger
 integrity, and mentor-provider configuration.
 
+Operational telemetry is available to admins at:
+
+`GET /api/admin/observability`
+
+It returns retained event counts, recent 24-hour activity, event status totals,
+event type totals, and the latest compact events. The stream avoids learner
+notes, passwords, session tokens, and raw mentor prompts.
+
 Authenticated learner progress can be loaded or updated through:
 
 `/api/learning/progress`
@@ -278,7 +288,8 @@ in `.data/advanced-transaction-progress.json`. Generated industry simulations
 are stored in `.data/generated-simulations.json`. Simulation execution events
 are stored separately in
 `.data/simulation-executions.json`, preserving generated templates as immutable
-inputs. Passwords use salted `scrypt`
+inputs. Operational telemetry is stored in `.data/observability-events.json`.
+Passwords use salted `scrypt`
 hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
 service is unavailable.

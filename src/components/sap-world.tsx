@@ -177,6 +177,19 @@ type AdminOperations = {
     };
     deploymentGate: string;
   };
+  observability: {
+    retention: {
+      maxEvents: number;
+      storedEvents: number;
+    };
+    totals: {
+      events: number;
+      recent24h: number;
+      successes: number;
+      warnings: number;
+      failures: number;
+    };
+  };
   accounts: {
     users: number;
     roles: { learner: number; admin: number };
@@ -1453,6 +1466,18 @@ export function SapWorld({
                       <div><span>Failed</span><strong>{adminOperations.readiness.summary.failed}</strong></div>
                       <div><span>Status</span><strong>{adminOperations.readiness.status}</strong></div>
                       <div><span>Gate</span><strong>{adminOperations.readiness.summary.failed === 0 ? "Review" : "Fix"}</strong></div>
+                    </div>
+                  </article>
+
+                  <article className="panel admin-ledger">
+                    <div className="panel-header"><div><span className="section-kicker">Operational observability</span><h2>Server-side event stream</h2></div><strong>/api/admin/observability</strong></div>
+                    <div className="admin-metrics">
+                      <div><span>Total events</span><strong>{adminOperations.observability.totals.events.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Recent 24h</span><strong>{adminOperations.observability.totals.recent24h.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Successes</span><strong>{adminOperations.observability.totals.successes.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Warnings</span><strong>{adminOperations.observability.totals.warnings.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Failures</span><strong>{adminOperations.observability.totals.failures.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Retention</span><strong>{adminOperations.observability.retention.storedEvents}/{adminOperations.observability.retention.maxEvents}</strong></div>
                     </div>
                   </article>
 

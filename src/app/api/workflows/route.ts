@@ -5,6 +5,7 @@ import {
   getWorkflowCases,
 } from "@/server/workflow-repository";
 import type { WorkflowAction } from "@/data/workflows";
+import { recordObservabilityEvent } from "@/server/observability-repository";
 
 export const runtime = "nodejs";
 
@@ -90,9 +91,24 @@ export async function POST(request: Request) {
       { status: 409 },
     );
   }
+  const wasOverdue = new Date(workflow.dueAt).getTime() < Date.now();
+  await recordObservabilityEvent({
+    type: "workflow.decision",
+    actorId: learner.id,
+    actorRole: learner.role,
+    entityId: workflow.id,
+    status: wasOverdue ? "warning" : "success",
+    summary: "Learner recorded a workflow decision.",
+    metadata: {
+      action,
+      status: workflow.status,
+      scenarioId: workflow.scenarioId,
+      wasOverdue,
+    },
+  });
 
   return NextResponse.json({
     workflow,
-    wasOverdue: new Date(workflow.dueAt).getTime() < Date.now(),
+    wasOverdue,
   });
 }

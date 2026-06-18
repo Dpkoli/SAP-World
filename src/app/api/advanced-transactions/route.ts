@@ -5,6 +5,7 @@ import {
   completeAdvancedTransactionStep,
   getAdvancedTransactions,
 } from "@/server/advanced-transaction-repository";
+import { recordObservabilityEvent } from "@/server/observability-repository";
 
 export const runtime = "nodejs";
 
@@ -73,6 +74,18 @@ export async function POST(request: NextRequest) {
       body.step as number,
       note,
     );
+    await recordObservabilityEvent({
+      type: "advanced.step.completed",
+      actorId: user.id,
+      actorRole: user.role,
+      entityId: transaction.id,
+      summary: "Learner completed an advanced transaction step.",
+      metadata: {
+        step: body.step as number,
+        type: transaction.type,
+        status: transaction.status,
+      },
+    });
 
     return NextResponse.json({ transaction });
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { answerMentorQuestion } from "@/server/mentor-service";
 import { enhanceMentorResponse } from "@/server/mentor-provider";
 import { getCurrentLearner } from "@/server/auth-session";
+import { recordObservabilityEvent } from "@/server/observability-repository";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,21 @@ export async function POST(request: Request) {
     step: input.step,
   });
 
-  return NextResponse.json(
-    await enhanceMentorResponse({ question, localResponse }),
-  );
+  const mentorResponse = await enhanceMentorResponse({ question, localResponse });
+  await recordObservabilityEvent({
+    type: "mentor.question",
+    actorId: learner.id,
+    actorRole: learner.role,
+    entityId: String(input.scenarioId ?? "p2p"),
+    status: mentorResponse.fallbackReason ? "warning" : "success",
+    summary: "Learner received a grounded SAP Mentor answer.",
+    metadata: {
+      provider: mentorResponse.provider ?? "local",
+      model: mentorResponse.model ?? null,
+      sources: mentorResponse.sources.length,
+      fallback: Boolean(mentorResponse.fallbackReason),
+    },
+  });
+
+  return NextResponse.json(mentorResponse);
 }
