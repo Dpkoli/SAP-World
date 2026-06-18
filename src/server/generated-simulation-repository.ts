@@ -34,6 +34,13 @@ export async function getGeneratedSimulations(learnerId: string) {
   return database.learners[learnerId] ?? [];
 }
 
+export async function getAllGeneratedSimulations() {
+  const database = await simulationStore.read();
+  return Object.entries(database.learners).flatMap(([learnerId, simulations]) =>
+    simulations.map((simulation) => ({ learnerId, simulation })),
+  );
+}
+
 export async function getGeneratedSimulation(
   learnerId: string,
   simulationId: string,

@@ -19,6 +19,9 @@ The first release demonstrates a brewery enterprise with:
   operational, inventory, and financial impacts
 - A deterministic three-year enterprise ledger for every generated simulation,
   with 144 chronological SAP documents across 24 connected process chains
+- A normalized ledger analytics projection across saved generated simulations,
+  including year, process, module, industry, journal, exception, and link
+  integrity summaries
 - Complete P2P, O2C, Plan-to-Produce, Record-to-Report,
   Warehouse-to-Dispatch, Quality, Maintenance, and Hire-to-Retire coverage
 - Upstream/downstream document references, quantities, statuses, inventory
@@ -89,6 +92,7 @@ The first release demonstrates a brewery enterprise with:
 - A filterable cross-module document API at `/api/simulation/documents`
 - Reusable definitions for all eight processes at `/api/simulation/processes`
 - Authenticated SAP transaction playbooks at `/api/tutor/playbooks`
+- Authenticated generated-ledger analytics at `/api/ledger/analytics`
 - Responsive desktop and mobile layouts
 
 The simulation follows a real business chain:
@@ -151,6 +155,17 @@ documents per chain. The response reports broken links and orphan records so
 relational integrity is visible rather than assumed. Ledger history is derived
 from the immutable scenario signature, so replay does not require another AI
 generation call and always returns the same document numbers and values.
+
+Authenticated learners can query a normalized analytics projection across their
+saved generated ledgers:
+
+`GET /api/ledger/analytics`
+
+`GET /api/ledger/analytics?process=Order-to-Cash`
+
+The projection summarizes ledger documents by fiscal year, process, SAP module,
+and industry, and reports broken document links, orphan chains, journal-bearing
+documents, and exception counts.
 
 Implementation-consultant blueprints can be queried by process:
 
@@ -226,8 +241,9 @@ Admin operations are available only to users whose normalized email appears in
 `GET /api/admin/operations`
 
 The endpoint returns safe platform counts, storage status, role distribution,
-content coverage, and recent account metadata. It never returns password
-hashes, salts, or session tokens.
+content coverage, generated-ledger analytics, mentor provider status, and
+recent account metadata. It never returns password hashes, salts, or session
+tokens.
 
 Authenticated learner progress can be loaded or updated through:
 
@@ -275,8 +291,8 @@ npm run build
 
 Planned phases include:
 
-1. Normalize the PostgreSQL enterprise and document aggregates for high-volume
-   analytical workloads
+1. Persist the normalized ledger analytics projection into dedicated
+   PostgreSQL read-model tables for high-volume analytical workloads
 2. Managed identity integration and role-based authorization
 3. Expand generated industry ledgers from representative connected histories
    to configurable full-volume enterprise scale

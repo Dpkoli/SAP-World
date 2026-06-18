@@ -191,6 +191,21 @@ type AdminOperations = {
     industries: number;
     latestGeneratedAt: string | null;
   };
+  ledgerAnalytics: {
+    totals: {
+      documents: number;
+      processChains: number;
+      transactionValue: number;
+      journalDocuments: number;
+      exceptions: number;
+    };
+    integrity: {
+      status: "Passed" | "Failed";
+      brokenLinks: number;
+      orphanDocuments: number;
+      uniqueDocumentNumbers: number;
+    };
+  };
   content: Record<string, number>;
   controls: string[];
 };
@@ -1409,6 +1424,18 @@ export function SapWorld({
                     <article className="panel"><span>Active sessions</span><strong>{adminOperations.accounts.sessions.active}</strong><small>{adminOperations.accounts.sessions.expired} expired retained</small></article>
                     <article className="panel"><span>Generated simulations</span><strong>{adminOperations.simulations.simulations}</strong><small>{adminOperations.simulations.industries} industries represented</small></article>
                   </section>
+
+                  <article className="panel admin-ledger">
+                    <div className="panel-header"><div><span className="section-kicker">Normalized ledger projection</span><h2>Enterprise document analytics</h2></div><strong>{adminOperations.ledgerAnalytics.integrity.status}</strong></div>
+                    <div className="admin-metrics">
+                      <div><span>Ledger documents</span><strong>{adminOperations.ledgerAnalytics.totals.documents.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Process chains</span><strong>{adminOperations.ledgerAnalytics.totals.processChains.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Journal documents</span><strong>{adminOperations.ledgerAnalytics.totals.journalDocuments.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Exceptions</span><strong>{adminOperations.ledgerAnalytics.totals.exceptions.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Broken links</span><strong>{adminOperations.ledgerAnalytics.integrity.brokenLinks}</strong></div>
+                      <div><span>Unique documents</span><strong>{adminOperations.ledgerAnalytics.integrity.uniqueDocumentNumbers.toLocaleString("en-GB")}</strong></div>
+                    </div>
+                  </article>
 
                   <div className="admin-layout">
                     <article className="panel">

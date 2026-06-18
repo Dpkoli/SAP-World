@@ -35,6 +35,12 @@ The persisted aggregates are:
 - `generated-simulations`
 - `simulation-executions`
 
+Generated ledger analytics are currently projected from these saved simulation
+aggregates at request time. The projection is exposed to learners through
+`GET /api/ledger/analytics` and to admins through `GET /api/admin/operations`;
+it reports document volume, process-chain coverage, journal-bearing documents,
+exceptions, and link-integrity checks without storing a second mutable copy.
+
 ## Health check
 
 `GET /api/health` reports the active storage backend and AI mentor provider
@@ -59,7 +65,8 @@ GET /api/admin/operations
 
 This endpoint is protected inside the route handler and returns HTTP `403` for
 authenticated learners without the admin role. It also reports mentor-provider
-configuration status without exposing the endpoint URL or API key.
+configuration status and normalized ledger analytics without exposing the
+endpoint URL or API key.
 
 ## Optional AI mentor provider
 
