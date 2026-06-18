@@ -658,6 +658,29 @@ button { cursor: pointer; }
 .completion-banner strong { font-size: 11px; }
 .completion-banner span { margin-top: 3px; color: #527262; font-size: 9px; }
 
+.capstone-workspace { display: grid; gap: 18px; }
+.capstone-brief { display: grid; grid-template-columns: minmax(0,1fr) 160px; gap: 18px; align-items: center; padding: 22px; }
+.capstone-brief h2 { margin: 4px 0 8px; font-size: 21px; letter-spacing: -.03em; }
+.capstone-brief p { margin: 0; color: #4e6070; font-size: 12px; line-height: 1.65; }
+.capstone-score { padding: 15px; border: 1px solid #d8e6f2; border-radius: 10px; background: #f8fbfe; text-align: center; }
+.capstone-score span, .capstone-score small { display: block; color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
+.capstone-score strong { display: block; margin: 6px 0 3px; color: var(--blue); font-family: var(--font-mono); font-size: 28px; }
+.capstone-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.capstone-card { padding: 19px; }
+.capstone-card p { display: flex; align-items: flex-start; gap: 9px; margin: 10px 0 0; color: #4e6070; font-size: 10px; line-height: 1.5; }
+.capstone-card p > svg { flex: 0 0 auto; color: var(--green); }
+.capstone-card p > span { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #eaf4fd; color: var(--blue); font-size: 8px; font-weight: 800; }
+.capstone-rubric { padding: 19px; }
+.capstone-rubric > div:not(.panel-header) { display: grid; grid-template-columns: 72px 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.capstone-rubric > div:not(.panel-header) > span { color: var(--blue); font-family: var(--font-mono); font-size: 10px; font-weight: 800; }
+.capstone-rubric strong { display: block; font-size: 11px; }
+.capstone-rubric p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.capstone-remediation { padding: 19px; }
+.capstone-remediation p { margin: 9px 0 0; padding: 10px 11px; border: 1px solid var(--line); border-radius: 7px; background: #fafbfc; color: #4e6070; font-size: 10px; line-height: 1.45; }
+.capstone-empty { display: flex; align-items: center; gap: 12px; padding: 20px; color: var(--blue); }
+.capstone-empty strong, .capstone-empty p { display: block; margin: 0; }
+.capstone-empty p { margin-top: 4px; color: var(--muted); font-size: 10px; }
+
 .troubleshooting-layout { display: grid; grid-template-columns: minmax(280px,.72fr) minmax(0,1.55fr); gap: 18px; align-items: start; }
 .case-brief { position: sticky; top: 18px; padding: 21px; }
 .case-brief-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
@@ -1399,6 +1422,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .tutor-mode-switch { width: 100%; }
   .tutor-mode-switch button { min-width: 0; flex: 1; }
   .troubleshooting-layout { grid-template-columns: 1fr; }
+  .capstone-brief, .capstone-grid { grid-template-columns: 1fr; }
   .implementation-summary { grid-template-columns: 1fr; }
   .implementation-counts { grid-template-columns: repeat(4,1fr); }
   .implementation-foundation { grid-template-columns: 1fr; }
@@ -1487,6 +1511,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .playbook-grid, .playbook-checks, .playbook-details > div, .playbook-fields { grid-template-columns: 1fr; }
   .playbook-heading { display: block; }
   .playbook-heading code { display: inline-block; margin-top: 10px; }
+  .capstone-rubric > div:not(.panel-header) { grid-template-columns: 1fr; }
   .document-flow-summary, .document-facts, .document-impact-grid { grid-template-columns: 1fr; }
   .dependency-grid, .master-data-summary, .material-core-facts { grid-template-columns: 1fr; }
   .dependency-grid > div, .material-core-facts > div { border-right: 0; border-bottom: 1px solid var(--line); }

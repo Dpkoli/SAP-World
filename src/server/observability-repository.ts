@@ -9,6 +9,7 @@ export type ObservabilityEventType =
   | "simulation.generated"
   | "simulation.step.completed"
   | "tutor.readiness.checked"
+  | "tutor.capstone.checked"
   | "advanced.step.completed"
   | "workflow.decision"
   | "governance.decision"

@@ -268,6 +268,34 @@ type TutorReadinessReview = {
   }>;
 };
 
+type TutorCapstoneReview = {
+  generatedAt: string;
+  summary: {
+    challenges: number;
+    open: number;
+    readyForReview: number;
+    locked: number;
+    portfolioReadiness: number;
+  };
+  challenges: Array<{
+    scenarioId: ScenarioId;
+    processCode: string;
+    title: string;
+    module: string;
+    status: "Locked" | "Open" | "Ready for review";
+    readinessScore: number;
+    prompt: string;
+    requiredEvidence: string[];
+    tasks: string[];
+    rubric: Array<{
+      area: string;
+      points: number;
+      expectation: string;
+    }>;
+    remediation: string[];
+  }>;
+};
+
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
@@ -329,7 +357,7 @@ export function SapWorld({
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
   const [tutorMode, setTutorMode] = useState<
-    "guided" | "troubleshoot" | "implementation"
+    "guided" | "troubleshoot" | "implementation" | "capstone"
   >("guided");
   const [diagnosisAnswers, setDiagnosisAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
@@ -337,6 +365,9 @@ export function SapWorld({
   const [tutorReadiness, setTutorReadiness] =
     useState<TutorReadinessReview | null>(null);
   const [tutorReadinessError, setTutorReadinessError] = useState("");
+  const [tutorCapstone, setTutorCapstone] =
+    useState<TutorCapstoneReview | null>(null);
+  const [tutorCapstoneError, setTutorCapstoneError] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -743,6 +774,46 @@ export function SapWorld({
     }
 
     void loadTutorReadiness();
+    return () => {
+      cancelled = true;
+    };
+  }, [progressLoaded, syncStatus, user.id]);
+
+  useEffect(() => {
+    if (!progressLoaded || syncStatus === "saving") return;
+    let cancelled = false;
+
+    async function loadTutorCapstone() {
+      try {
+        const response = await fetch("/api/tutor/capstone", {
+          cache: "no-store",
+        });
+        const result = (await response.json()) as
+          | TutorCapstoneReview
+          | { error?: string };
+        if (!response.ok || ("error" in result && result.error)) {
+          throw new Error(
+            "error" in result && result.error
+              ? result.error
+              : "Tutor capstone assessment is unavailable.",
+          );
+        }
+        if (!cancelled) {
+          setTutorCapstone(result as TutorCapstoneReview);
+          setTutorCapstoneError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setTutorCapstoneError(
+            error instanceof Error
+              ? error.message
+              : "Tutor capstone assessment is unavailable.",
+          );
+        }
+      }
+    }
+
+    void loadTutorCapstone();
     return () => {
       cancelled = true;
     };
@@ -1194,6 +1265,44 @@ export function SapWorld({
       .filter((process) => process.score < 90)
       .sort((a, b) => a.score - b.score)
       .slice(0, 3) ?? [];
+  const activeCapstoneChallenge =
+    tutorCapstone?.challenges.find(
+      (challenge) => challenge.scenarioId === activeScenarioId,
+    ) ?? null;
+  const tutorHeading =
+    tutorMode === "guided"
+      ? "Guided transaction"
+      : tutorMode === "troubleshoot"
+        ? "Troubleshooting lab"
+        : tutorMode === "implementation"
+          ? "Implementation blueprint"
+          : "Capstone assessment";
+  const tutorTitle =
+    tutorMode === "guided"
+      ? activeScenario.tutorTitle
+      : tutorMode === "troubleshoot"
+        ? troubleshootingCase.title
+        : tutorMode === "implementation"
+          ? implementationBlueprint.title
+          : activeCapstoneChallenge?.title ?? "SAP capstone assessment";
+  const tutorDescription =
+    tutorMode === "guided"
+      ? activeScenario.tutorDescription
+      : tutorMode === "troubleshoot"
+        ? troubleshootingCase.businessContext
+        : tutorMode === "implementation"
+          ? implementationBlueprint.objective
+          : activeCapstoneChallenge?.prompt ??
+            (tutorCapstoneError ||
+              "Preparing your capstone challenge from saved learner evidence.");
+  const tutorBadge =
+    tutorMode === "guided"
+      ? `Step ${activeProgress.step + 1} of ${activeScenario.tutorSteps.length}`
+      : tutorMode === "troubleshoot"
+        ? troubleshootingCase.id
+        : tutorMode === "implementation"
+          ? implementationBlueprint.consultantRole
+          : activeCapstoneChallenge?.status ?? "Loading";
 
   function updateActiveProgress(update: Partial<{ step: number; complete: boolean }>) {
     setScenarioProgress((current) => ({
@@ -3047,8 +3156,8 @@ export function SapWorld({
           {view === "tutor" && (
             <section className="tutor-page">
               <div className="page-heading compact">
-                <div><p className="eyebrow">{tutorMode === "guided" ? "Guided transaction" : tutorMode === "troubleshoot" ? "Troubleshooting lab" : "Implementation blueprint"} · {activeScenario.module}</p><h1>{tutorMode === "guided" ? activeScenario.tutorTitle : tutorMode === "troubleshoot" ? troubleshootingCase.title : implementationBlueprint.title}</h1><p>{tutorMode === "guided" ? activeScenario.tutorDescription : tutorMode === "troubleshoot" ? troubleshootingCase.businessContext : implementationBlueprint.objective}</p></div>
-                <span className="lesson-count">{tutorMode === "guided" ? `Step ${activeProgress.step + 1} of ${activeScenario.tutorSteps.length}` : tutorMode === "troubleshoot" ? troubleshootingCase.id : implementationBlueprint.consultantRole}</span>
+                <div><p className="eyebrow">{tutorHeading} · {activeScenario.module}</p><h1>{tutorTitle}</h1><p>{tutorDescription}</p></div>
+                <span className="lesson-count">{tutorBadge}</span>
               </div>
               <div className="scenario-tabs tutor-scenario-tabs">
                 {processScenarios.map((scenario) => (
@@ -3064,6 +3173,7 @@ export function SapWorld({
                 <button className={tutorMode === "guided" ? "active" : ""} onClick={() => setTutorMode("guided")}><GraduationCap size={16} /><span><strong>Guided transaction</strong><small>Learn the correct SAP process step by step</small></span></button>
                 <button className={tutorMode === "troubleshoot" ? "active" : ""} onClick={() => setTutorMode("troubleshoot")}><TriangleAlert size={16} /><span><strong>Troubleshooting lab</strong><small>Diagnose a realistic process failure</small></span></button>
                 <button className={tutorMode === "implementation" ? "active" : ""} onClick={() => setTutorMode("implementation")}><Settings size={16} /><span><strong>Implementation blueprint</strong><small>Understand configuration and dependencies</small></span></button>
+                <button className={tutorMode === "capstone" ? "active" : ""} onClick={() => setTutorMode("capstone")}><ClipboardCheck size={16} /><span><strong>Capstone assessment</strong><small>Prove readiness with evidence and impact</small></span></button>
               </div>
               <div className="tutor-readiness panel">
                 <div className="tutor-readiness-summary">
@@ -3114,7 +3224,9 @@ export function SapWorld({
                         setTutorMode(
                           process.guidedProgress < 100
                             ? "guided"
-                            : "troubleshoot",
+                            : process.diagnosticProgress < 100
+                              ? "troubleshoot"
+                              : "capstone",
                         );
                       }}
                     >
@@ -3324,7 +3436,7 @@ export function SapWorld({
                     )}
                   </div>
                 </div>
-              ) : (
+              ) : tutorMode === "implementation" ? (
                 <div className="implementation-workspace">
                   <section className="implementation-summary panel">
                     <div className="implementation-role">
@@ -3402,6 +3514,63 @@ export function SapWorld({
                       <div>{implementationBlueprint.goLiveControls.map((control) => <span key={control}><Check size={13} />{control}</span>)}</div>
                     </div>
                   </article>
+                </div>
+              ) : (
+                <div className="capstone-workspace">
+                  {activeCapstoneChallenge ? (
+                    <>
+                      <section className="capstone-brief panel">
+                        <div>
+                          <span className="section-kicker">SAP capstone challenge</span>
+                          <h2>{activeCapstoneChallenge.title}</h2>
+                          <p>{activeCapstoneChallenge.prompt}</p>
+                        </div>
+                        <div className="capstone-score">
+                          <span>{activeCapstoneChallenge.status}</span>
+                          <strong>{activeCapstoneChallenge.readinessScore}%</strong>
+                          <small>Readiness evidence</small>
+                        </div>
+                      </section>
+
+                      <div className="capstone-grid">
+                        <article className="panel capstone-card">
+                          <div className="diagnostic-heading"><FileText size={19} /><div><span>Evidence pack</span><h2>What you must reference</h2></div></div>
+                          {activeCapstoneChallenge.requiredEvidence.map((evidence) => (
+                            <p key={evidence}><Check size={14} />{evidence}</p>
+                          ))}
+                        </article>
+
+                        <article className="panel capstone-card">
+                          <div className="diagnostic-heading"><ClipboardCheck size={19} /><div><span>Assessment tasks</span><h2>What you must explain</h2></div></div>
+                          {activeCapstoneChallenge.tasks.map((task, index) => (
+                            <p key={task}><span>{index + 1}</span>{task}</p>
+                          ))}
+                        </article>
+                      </div>
+
+                      <article className="panel capstone-rubric">
+                        <div className="panel-header"><div><span className="section-kicker">Scoring guide</span><h2>Mentor review rubric</h2></div><strong>100 pts</strong></div>
+                        {activeCapstoneChallenge.rubric.map((item) => (
+                          <div key={item.area}>
+                            <span>{item.points} pts</span>
+                            <div><strong>{item.area}</strong><p>{item.expectation}</p></div>
+                          </div>
+                        ))}
+                      </article>
+
+                      <article className="panel capstone-remediation">
+                        <div className="diagnostic-heading"><Sparkles size={19} /><div><span>Before submission</span><h2>Recommended preparation</h2></div></div>
+                        {activeCapstoneChallenge.remediation.map((item) => (
+                          <p key={item}>{item}</p>
+                        ))}
+                      </article>
+                    </>
+                  ) : (
+                    <article className="panel capstone-empty">
+                      <ClipboardCheck size={24} />
+                      <div><strong>Capstone assessment loading</strong><p>{tutorCapstoneError || "Preparing assessment evidence from your saved progress."}</p></div>
+                    </article>
+                  )}
                 </div>
               )}
             </section>

@@ -106,11 +106,14 @@ Learner tutor readiness reviews are exposed through:
 
 ```text
 GET /api/tutor/readiness
+GET /api/tutor/capstone
 ```
 
-The response is generated from saved learner progress and returns guided
-completion, diagnostic completion, weak areas, evidence, and recommended next
-actions across all eight core SAP processes.
+The readiness response is generated from saved learner progress and returns
+guided completion, diagnostic completion, weak areas, evidence, and recommended
+next actions across all eight core SAP processes. The capstone response uses
+the same saved progress to expose locked, open, and review-ready assessment
+challenges with required SAP evidence and scoring rubrics.
 
 ## Optional AI mentor provider
 

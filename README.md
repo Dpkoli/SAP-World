@@ -99,6 +99,7 @@ The first release demonstrates a brewery enterprise with:
 - Reusable definitions for all eight processes at `/api/simulation/processes`
 - Authenticated SAP transaction playbooks at `/api/tutor/playbooks`
 - Authenticated tutor readiness reviews at `/api/tutor/readiness`
+- Authenticated capstone assessment plans at `/api/tutor/capstone`
 - Authenticated generated-ledger analytics at `/api/ledger/analytics`
 - Responsive desktop and mobile layouts
 
@@ -203,6 +204,14 @@ Learners can retrieve a progress-grounded SAP tutor readiness review:
 The review combines guided transaction completion, troubleshooting diagnostics,
 weak areas, completion evidence, and recommended next practice actions for all
 eight core processes.
+
+Learners can also retrieve capstone assessment plans:
+
+`/api/tutor/capstone`
+
+The capstone response uses saved progress to lock, open, or mark process
+challenges as ready for review. Each challenge includes the business prompt,
+required SAP evidence, assessment tasks, scoring rubric, and remediation steps.
 
 Connected SAP documents can be queried by process, document number, or module:
 
