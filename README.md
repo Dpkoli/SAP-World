@@ -213,10 +213,12 @@ sequence.
 
 Authenticated mentor questions are handled through `POST /api/mentor`. Answers
 include the simulation records used as evidence, and the service does not
-invent facts when the local data cannot support a precise response.
-The current implementation uses deterministic local retrieval, so it requires
-no external AI key; a production model can later consume the same grounded
-response contract.
+invent facts when the local data cannot support a precise response. By default,
+the mentor uses deterministic local retrieval. When `SAP_WORLD_AI_ENDPOINT`,
+`SAP_WORLD_AI_API_KEY`, and `SAP_WORLD_AI_MODEL` are configured, the route sends
+the grounded local answer and evidence list to an external chat-completion
+provider for learner-friendly explanation. The external model is never treated
+as the source of truth; failures fall back to the local answer.
 
 Admin operations are available only to users whose normalized email appears in
 `SAP_WORLD_ADMIN_EMAILS`:
@@ -278,7 +280,6 @@ Planned phases include:
 2. Managed identity integration and role-based authorization
 3. Expand generated industry ledgers from representative connected histories
    to configurable full-volume enterprise scale
-4. External AI model integration using the grounded mentor contract
-5. Deployment, observability, and controlled content administration
+4. Deployment, observability, and controlled content administration
 
 The source product vision is retained in `Prompt_v2.txt`.

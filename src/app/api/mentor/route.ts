@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { answerMentorQuestion } from "@/server/mentor-service";
+import { enhanceMentorResponse } from "@/server/mentor-provider";
 import { getCurrentLearner } from "@/server/auth-session";
 
 export const runtime = "nodejs";
@@ -26,11 +27,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const localResponse = answerMentorQuestion({
+    question,
+    scenarioId: input.scenarioId,
+    step: input.step,
+  });
+
   return NextResponse.json(
-    answerMentorQuestion({
-      question,
-      scenarioId: input.scenarioId,
-      step: input.step,
-    }),
+    await enhanceMentorResponse({ question, localResponse }),
   );
 }

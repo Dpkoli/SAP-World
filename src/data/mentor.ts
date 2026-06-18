@@ -24,6 +24,9 @@ export type MentorResponse = {
   sources: MentorSource[];
   suggestions: string[];
   grounded: true;
+  provider?: "local" | "external";
+  model?: string;
+  fallbackReason?: string;
 };
 
 export const mentorSuggestions: Record<ScenarioId, string[]> = {

@@ -59,17 +59,38 @@ GET /api/admin/operations
 This endpoint is protected inside the route handler and returns HTTP `403` for
 authenticated learners without the admin role.
 
+## Optional AI mentor provider
+
+The SAP Mentor works without an external model by using deterministic local
+retrieval. Hosted environments can optionally configure an external
+chat-completion provider:
+
+```text
+SAP_WORLD_AI_ENDPOINT=https://api.example.com/v1/chat/completions
+SAP_WORLD_AI_API_KEY=...
+SAP_WORLD_AI_MODEL=mentor-model-name
+SAP_WORLD_AI_TIMEOUT_MS=8000
+```
+
+The application first builds a grounded local answer from SAP World simulation
+evidence, then sends only that answer and the source list to the configured
+provider for clearer learner-facing wording. If the provider is missing,
+returns an error, times out, or sends an empty answer, the route returns the
+local grounded answer instead.
+
 ## Vercel
 
 1. Import the GitHub repository into Vercel.
 2. Add a Neon integration from the Vercel Marketplace.
 3. Confirm that `DATABASE_URL` is available to Production and Preview.
 4. Add `SAP_WORLD_ADMIN_EMAILS` for the platform owner accounts.
-5. Deploy the `codex/mvp-foundation` branch or merge it into the production
+5. Optionally add `SAP_WORLD_AI_ENDPOINT`, `SAP_WORLD_AI_API_KEY`, and
+   `SAP_WORLD_AI_MODEL` for enhanced mentor wording.
+6. Deploy the `codex/mvp-foundation` branch or merge it into the production
    branch.
-6. Verify `/api/health` returns `status: "ok"` and
+7. Verify `/api/health` returns `status: "ok"` and
    `storage.backend: "postgresql"`.
-7. Sign in with an admin email and verify `/api/admin/operations` returns
+8. Sign in with an admin email and verify `/api/admin/operations` returns
    platform counts.
 
 Secure cookies are enabled automatically in production. Do not configure
