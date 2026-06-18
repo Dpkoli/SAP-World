@@ -54,6 +54,8 @@ The first release demonstrates a brewery enterprise with:
 - Learner registration and sign-in with hashed passwords and secure sessions
 - Role-based authorization with learner and admin roles, admin-only operations
   APIs, and environment-seeded platform administrators
+- Admin-only controlled content register covering release readiness, owners,
+  versions, evidence gates, blockers, and content-domain status
 - Durable PostgreSQL persistence for accounts, sessions, progress, workflow
   decisions, governance, transaction evidence, generated simulations, and events
 - Automatic local JSON-to-PostgreSQL aggregate migration with transaction
@@ -245,6 +247,14 @@ content coverage, generated-ledger analytics, mentor provider status, and
 recent account metadata. It never returns password hashes, salts, or session
 tokens.
 
+The full controlled content register is available to admins at:
+
+`GET /api/admin/content-control`
+
+It scores SAP World content domains against release gates such as owner,
+version, coverage, evidence, validation tests, common mistakes, and go-live
+controls.
+
 Authenticated learner progress can be loaded or updated through:
 
 `/api/learning/progress`
@@ -296,6 +306,6 @@ Planned phases include:
 2. Managed identity integration and role-based authorization
 3. Expand generated industry ledgers from representative connected histories
    to configurable full-volume enterprise scale
-4. Deployment, observability, and controlled content administration
+4. Deployment automation, observability, and production runbooks
 
 The source product vision is retained in `Prompt_v2.txt`.

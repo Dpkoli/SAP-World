@@ -206,6 +206,14 @@ type AdminOperations = {
       uniqueDocumentNumbers: number;
     };
   };
+  contentControl: {
+    domains: number;
+    released: number;
+    reviewRequired: number;
+    blocked: number;
+    averageReadiness: number;
+    records: number;
+  };
   content: Record<string, number>;
   controls: string[];
 };
@@ -1434,6 +1442,18 @@ export function SapWorld({
                       <div><span>Exceptions</span><strong>{adminOperations.ledgerAnalytics.totals.exceptions.toLocaleString("en-GB")}</strong></div>
                       <div><span>Broken links</span><strong>{adminOperations.ledgerAnalytics.integrity.brokenLinks}</strong></div>
                       <div><span>Unique documents</span><strong>{adminOperations.ledgerAnalytics.integrity.uniqueDocumentNumbers.toLocaleString("en-GB")}</strong></div>
+                    </div>
+                  </article>
+
+                  <article className="panel admin-ledger">
+                    <div className="panel-header"><div><span className="section-kicker">Controlled content administration</span><h2>Release readiness register</h2></div><strong>{adminOperations.contentControl.averageReadiness}% ready</strong></div>
+                    <div className="admin-metrics">
+                      <div><span>Content domains</span><strong>{adminOperations.contentControl.domains}</strong></div>
+                      <div><span>Released</span><strong>{adminOperations.contentControl.released}</strong></div>
+                      <div><span>Review required</span><strong>{adminOperations.contentControl.reviewRequired}</strong></div>
+                      <div><span>Blocked</span><strong>{adminOperations.contentControl.blocked}</strong></div>
+                      <div><span>Controlled records</span><strong>{adminOperations.contentControl.records.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Register API</span><strong>/api/admin/content-control</strong></div>
                     </div>
                   </article>
 

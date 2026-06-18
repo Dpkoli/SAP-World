@@ -68,6 +68,16 @@ authenticated learners without the admin role. It also reports mentor-provider
 configuration status and normalized ledger analytics without exposing the
 endpoint URL or API key.
 
+Admins can inspect the full content release register through:
+
+```text
+GET /api/admin/content-control
+```
+
+The register scores each SAP World content domain against controlled release
+gates such as owner, version, coverage, validation evidence, go-live controls,
+common mistakes, and blockers.
+
 ## Optional AI mentor provider
 
 The SAP Mentor works without an external model by using deterministic local
@@ -101,6 +111,7 @@ local grounded answer instead.
    `storage.backend: "postgresql"`.
 8. Sign in with an admin email and verify `/api/admin/operations` returns
    platform counts.
+9. Verify `/api/admin/content-control` returns the content release register.
 
 Secure cookies are enabled automatically in production. Do not configure
 `SAP_WORLD_INSECURE_COOKIES` on a hosted deployment.
