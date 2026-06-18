@@ -241,6 +241,33 @@ type AdminOperations = {
   controls: string[];
 };
 
+type TutorReadinessReview = {
+  generatedAt: string;
+  overall: {
+    score: number;
+    level: "Not started" | "In progress" | "Practice ready" | "Scenario ready";
+    completedLessons: number;
+    completedDiagnostics: number;
+    processes: number;
+  };
+  nextBestActions: string[];
+  processes: Array<{
+    scenarioId: ScenarioId;
+    processCode: string;
+    title: string;
+    module: string;
+    score: number;
+    level: "Not started" | "In progress" | "Practice ready" | "Scenario ready";
+    guidedProgress: number;
+    diagnosticProgress: number;
+    completedStages: number;
+    totalStages: number;
+    nextAction: string;
+    weakAreas: string[];
+    evidence: string[];
+  }>;
+};
+
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
@@ -307,6 +334,9 @@ export function SapWorld({
   const [diagnosisAnswers, setDiagnosisAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "saved" | "offline">("loading");
+  const [tutorReadiness, setTutorReadiness] =
+    useState<TutorReadinessReview | null>(null);
+  const [tutorReadinessError, setTutorReadinessError] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -677,6 +707,46 @@ export function SapWorld({
     scenarioProgress,
     user.id,
   ]);
+
+  useEffect(() => {
+    if (!progressLoaded || syncStatus === "saving") return;
+    let cancelled = false;
+
+    async function loadTutorReadiness() {
+      try {
+        const response = await fetch("/api/tutor/readiness", {
+          cache: "no-store",
+        });
+        const result = (await response.json()) as
+          | TutorReadinessReview
+          | { error?: string };
+        if (!response.ok || ("error" in result && result.error)) {
+          throw new Error(
+            "error" in result && result.error
+              ? result.error
+              : "Tutor readiness is unavailable.",
+          );
+        }
+        if (!cancelled) {
+          setTutorReadiness(result as TutorReadinessReview);
+          setTutorReadinessError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setTutorReadinessError(
+            error instanceof Error
+              ? error.message
+              : "Tutor readiness is unavailable.",
+          );
+        }
+      }
+    }
+
+    void loadTutorReadiness();
+    return () => {
+      cancelled = true;
+    };
+  }, [progressLoaded, syncStatus, user.id]);
 
   useEffect(() => {
     function handleSearchShortcut(event: KeyboardEvent) {
@@ -1115,6 +1185,15 @@ export function SapWorld({
   const lessonProgress = activeProgress.complete
     ? 100
     : Math.round(((activeProgress.step + 1) / activeScenario.tutorSteps.length) * 100);
+  const activeReadinessProcess =
+    tutorReadiness?.processes.find(
+      (process) => process.scenarioId === activeScenarioId,
+    ) ?? null;
+  const priorityReadinessProcesses =
+    tutorReadiness?.processes
+      .filter((process) => process.score < 90)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 3) ?? [];
 
   function updateActiveProgress(update: Partial<{ step: number; complete: boolean }>) {
     setScenarioProgress((current) => ({
@@ -2985,6 +3064,66 @@ export function SapWorld({
                 <button className={tutorMode === "guided" ? "active" : ""} onClick={() => setTutorMode("guided")}><GraduationCap size={16} /><span><strong>Guided transaction</strong><small>Learn the correct SAP process step by step</small></span></button>
                 <button className={tutorMode === "troubleshoot" ? "active" : ""} onClick={() => setTutorMode("troubleshoot")}><TriangleAlert size={16} /><span><strong>Troubleshooting lab</strong><small>Diagnose a realistic process failure</small></span></button>
                 <button className={tutorMode === "implementation" ? "active" : ""} onClick={() => setTutorMode("implementation")}><Settings size={16} /><span><strong>Implementation blueprint</strong><small>Understand configuration and dependencies</small></span></button>
+              </div>
+              <div className="tutor-readiness panel">
+                <div className="tutor-readiness-summary">
+                  <span className="section-kicker">Tutor readiness review</span>
+                  <h2>
+                    {tutorReadiness
+                      ? `${tutorReadiness.overall.score}% · ${tutorReadiness.overall.level}`
+                      : "Review loading"}
+                  </h2>
+                  <p>
+                    {activeReadinessProcess
+                      ? activeReadinessProcess.nextAction
+                      : tutorReadinessError ||
+                        "Preparing your saved progress, diagnostics, and next SAP practice actions."}
+                  </p>
+                  {tutorReadiness && (
+                    <small>
+                      {tutorReadiness.overall.completedLessons}/
+                      {tutorReadiness.overall.processes} guided lessons and{" "}
+                      {tutorReadiness.overall.completedDiagnostics}/
+                      {tutorReadiness.overall.processes} diagnostics completed.
+                    </small>
+                  )}
+                </div>
+                {activeReadinessProcess && (
+                  <div className="tutor-readiness-active">
+                    <div>
+                      <span>Active process</span>
+                      <strong>{activeReadinessProcess.score}%</strong>
+                      <small>{activeReadinessProcess.level}</small>
+                    </div>
+                    <p>
+                      {activeReadinessProcess.completedStages}/
+                      {activeReadinessProcess.totalStages} SAP stages completed
+                    </p>
+                    <p>{activeReadinessProcess.evidence[1]}</p>
+                  </div>
+                )}
+                <div className="tutor-readiness-actions">
+                  {(priorityReadinessProcesses.length
+                    ? priorityReadinessProcesses
+                    : tutorReadiness?.processes.slice(0, 3) ?? []
+                  ).map((process) => (
+                    <button
+                      key={process.scenarioId}
+                      onClick={() => {
+                        setActiveScenarioId(process.scenarioId);
+                        setTutorMode(
+                          process.guidedProgress < 100
+                            ? "guided"
+                            : "troubleshoot",
+                        );
+                      }}
+                    >
+                      <span>{process.processCode}</span>
+                      <strong>{process.score}%</strong>
+                      <small>{process.weakAreas[0] ?? process.nextAction}</small>
+                    </button>
+                  ))}
+                </div>
               </div>
               {tutorMode === "guided" ? (
               <div className="tutor-layout">

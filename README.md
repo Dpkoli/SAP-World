@@ -98,6 +98,7 @@ The first release demonstrates a brewery enterprise with:
 - A filterable cross-module document API at `/api/simulation/documents`
 - Reusable definitions for all eight processes at `/api/simulation/processes`
 - Authenticated SAP transaction playbooks at `/api/tutor/playbooks`
+- Authenticated tutor readiness reviews at `/api/tutor/readiness`
 - Authenticated generated-ledger analytics at `/api/ledger/analytics`
 - Responsive desktop and mobile layouts
 
@@ -194,6 +195,14 @@ document chain, completion evidence, and common mistakes:
 `/api/tutor/playbooks`
 
 `/api/tutor/playbooks?scenarioId=p2p`
+
+Learners can retrieve a progress-grounded SAP tutor readiness review:
+
+`/api/tutor/readiness`
+
+The review combines guided transaction completion, troubleshooting diagnostics,
+weak areas, completion evidence, and recommended next practice actions for all
+eight core processes.
 
 Connected SAP documents can be queried by process, document number, or module:
 

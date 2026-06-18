@@ -102,6 +102,16 @@ without learner notes, passwords, session tokens, or raw mentor prompts. Use
 this endpoint for release smoke checks, support triage, and operational trend
 inspection.
 
+Learner tutor readiness reviews are exposed through:
+
+```text
+GET /api/tutor/readiness
+```
+
+The response is generated from saved learner progress and returns guided
+completion, diagnostic completion, weak areas, evidence, and recommended next
+actions across all eight core SAP processes.
+
 ## Optional AI mentor provider
 
 The SAP Mentor works without an external model by using deterministic local

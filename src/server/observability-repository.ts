@@ -8,6 +8,7 @@ export type ObservabilityEventType =
   | "mentor.question"
   | "simulation.generated"
   | "simulation.step.completed"
+  | "tutor.readiness.checked"
   | "advanced.step.completed"
   | "workflow.decision"
   | "governance.decision"
