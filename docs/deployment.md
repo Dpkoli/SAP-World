@@ -34,6 +34,7 @@ The persisted aggregates are:
 - `advanced-transaction-progress`
 - `generated-simulations`
 - `simulation-executions`
+- `tutor-capstone-submissions`
 - `observability-events`
 
 Generated ledger analytics are currently projected from these saved simulation
@@ -113,7 +114,9 @@ The readiness response is generated from saved learner progress and returns
 guided completion, diagnostic completion, weak areas, evidence, and recommended
 next actions across all eight core SAP processes. The capstone response uses
 the same saved progress to expose locked, open, and review-ready assessment
-challenges with required SAP evidence and scoring rubrics.
+challenges with required SAP evidence and scoring rubrics. `POST
+/api/tutor/capstone` stores a learner evidence response, scores it against the
+rubric, and returns the updated portfolio trail.
 
 ## Optional AI mentor provider
 

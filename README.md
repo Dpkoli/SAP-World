@@ -99,7 +99,8 @@ The first release demonstrates a brewery enterprise with:
 - Reusable definitions for all eight processes at `/api/simulation/processes`
 - Authenticated SAP transaction playbooks at `/api/tutor/playbooks`
 - Authenticated tutor readiness reviews at `/api/tutor/readiness`
-- Authenticated capstone assessment plans at `/api/tutor/capstone`
+- Authenticated capstone assessment plans and evidence submissions at
+  `/api/tutor/capstone`
 - Authenticated generated-ledger analytics at `/api/ledger/analytics`
 - Responsive desktop and mobile layouts
 
@@ -205,13 +206,15 @@ The review combines guided transaction completion, troubleshooting diagnostics,
 weak areas, completion evidence, and recommended next practice actions for all
 eight core processes.
 
-Learners can also retrieve capstone assessment plans:
+Learners can also retrieve and submit capstone assessment evidence:
 
 `/api/tutor/capstone`
 
 The capstone response uses saved progress to lock, open, or mark process
 challenges as ready for review. Each challenge includes the business prompt,
 required SAP evidence, assessment tasks, scoring rubric, and remediation steps.
+Learner submissions are scored against the rubric, retained in a portfolio
+trail, and returned with feedback for improvement.
 
 Connected SAP documents can be queried by process, document number, or module:
 
@@ -306,7 +309,9 @@ in `.data/advanced-transaction-progress.json`. Generated industry simulations
 are stored in `.data/generated-simulations.json`. Simulation execution events
 are stored separately in
 `.data/simulation-executions.json`, preserving generated templates as immutable
-inputs. Operational telemetry is stored in `.data/observability-events.json`.
+inputs. Tutor capstone submissions are stored in
+`.data/tutor-capstone-submissions.json`, and operational telemetry is stored in
+`.data/observability-events.json`.
 Passwords use salted `scrypt`
 hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress

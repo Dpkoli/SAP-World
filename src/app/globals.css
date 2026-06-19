@@ -665,6 +665,11 @@ button { cursor: pointer; }
 .capstone-score { padding: 15px; border: 1px solid #d8e6f2; border-radius: 10px; background: #f8fbfe; text-align: center; }
 .capstone-score span, .capstone-score small { display: block; color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
 .capstone-score strong { display: block; margin: 6px 0 3px; color: var(--blue); font-family: var(--font-mono); font-size: 28px; }
+.capstone-portfolio { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; overflow: hidden; padding: 0; }
+.capstone-portfolio > div { padding: 15px; background: #fafbfc; }
+.capstone-portfolio span, .capstone-portfolio strong { display: block; }
+.capstone-portfolio span { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .07em; }
+.capstone-portfolio strong { margin-top: 5px; font-family: var(--font-mono); font-size: 13px; }
 .capstone-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .capstone-card { padding: 19px; }
 .capstone-card p { display: flex; align-items: flex-start; gap: 9px; margin: 10px 0 0; color: #4e6070; font-size: 10px; line-height: 1.5; }
@@ -677,6 +682,22 @@ button { cursor: pointer; }
 .capstone-rubric p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .capstone-remediation { padding: 19px; }
 .capstone-remediation p { margin: 9px 0 0; padding: 10px 11px; border: 1px solid var(--line); border-radius: 7px; background: #fafbfc; color: #4e6070; font-size: 10px; line-height: 1.45; }
+.capstone-submission { padding: 19px; }
+.capstone-latest { margin: 14px 0; padding: 14px; border: 1px solid #d8e6f2; border-radius: 9px; background: #f8fbfe; }
+.capstone-latest > div:first-child { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; margin-bottom: 8px; }
+.capstone-latest span, .capstone-latest small { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .07em; }
+.capstone-latest strong { grid-row: span 2; align-self: center; color: var(--blue); font-family: var(--font-mono); font-size: 20px; }
+.capstone-latest p { margin: 6px 0 0; color: #4e6070; font-size: 10px; line-height: 1.45; }
+.capstone-rubric-scores { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 12px; }
+.capstone-rubric-scores div { padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: white; }
+.capstone-rubric-scores span, .capstone-rubric-scores strong, .capstone-rubric-scores small { display: block; }
+.capstone-rubric-scores strong { margin-top: 4px; color: var(--foreground); font-size: 11px; }
+.capstone-rubric-scores small { margin-top: 5px; line-height: 1.35; text-transform: none; letter-spacing: 0; }
+.capstone-submission textarea { width: 100%; min-height: 150px; margin-top: 14px; padding: 12px; border: 1px solid #ccd5dc; border-radius: 8px; resize: vertical; font: inherit; font-size: 11px; line-height: 1.6; outline: 0; }
+.capstone-submission textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(10,110,209,.08); }
+.capstone-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 11px; }
+.capstone-submit-row small { color: var(--muted); font-size: 9px; }
+.capstone-submit-row button:disabled { opacity: .45; cursor: not-allowed; }
 .capstone-empty { display: flex; align-items: center; gap: 12px; padding: 20px; color: var(--blue); }
 .capstone-empty strong, .capstone-empty p { display: block; margin: 0; }
 .capstone-empty p { margin-top: 4px; color: var(--muted); font-size: 10px; }
@@ -1422,7 +1443,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .tutor-mode-switch { width: 100%; }
   .tutor-mode-switch button { min-width: 0; flex: 1; }
   .troubleshooting-layout { grid-template-columns: 1fr; }
-  .capstone-brief, .capstone-grid { grid-template-columns: 1fr; }
+  .capstone-brief, .capstone-grid, .capstone-portfolio { grid-template-columns: 1fr; }
+  .capstone-rubric-scores { grid-template-columns: 1fr 1fr; }
   .implementation-summary { grid-template-columns: 1fr; }
   .implementation-counts { grid-template-columns: repeat(4,1fr); }
   .implementation-foundation { grid-template-columns: 1fr; }
@@ -1512,6 +1534,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .playbook-heading { display: block; }
   .playbook-heading code { display: inline-block; margin-top: 10px; }
   .capstone-rubric > div:not(.panel-header) { grid-template-columns: 1fr; }
+  .capstone-rubric-scores { grid-template-columns: 1fr; }
+  .capstone-submit-row { align-items: flex-start; flex-direction: column; }
   .document-flow-summary, .document-facts, .document-impact-grid { grid-template-columns: 1fr; }
   .dependency-grid, .master-data-summary, .material-core-facts { grid-template-columns: 1fr; }
   .dependency-grid > div, .material-core-facts > div { border-right: 0; border-bottom: 1px solid var(--line); }

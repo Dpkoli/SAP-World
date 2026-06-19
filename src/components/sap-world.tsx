@@ -277,6 +277,11 @@ type TutorCapstoneReview = {
     locked: number;
     portfolioReadiness: number;
   };
+  submissions: {
+    total: number;
+    reviewReady: number;
+    latestSubmittedAt: string | null;
+  };
   challenges: Array<{
     scenarioId: ScenarioId;
     processCode: string;
@@ -293,6 +298,21 @@ type TutorCapstoneReview = {
       expectation: string;
     }>;
     remediation: string[];
+    submissions: number;
+    latestSubmission: {
+      id: string;
+      submittedAt: string;
+      response: string;
+      score: number;
+      status: "Needs practice" | "Review ready" | "Strong evidence";
+      feedback: string[];
+      rubricScores: Array<{
+        area: string;
+        points: number;
+        awarded: number;
+        feedback: string;
+      }>;
+    } | null;
   }>;
 };
 
@@ -368,6 +388,8 @@ export function SapWorld({
   const [tutorCapstone, setTutorCapstone] =
     useState<TutorCapstoneReview | null>(null);
   const [tutorCapstoneError, setTutorCapstoneError] = useState("");
+  const [capstoneResponse, setCapstoneResponse] = useState("");
+  const [capstoneSubmitting, setCapstoneSubmitting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -910,6 +932,44 @@ export function SapWorld({
       );
     } finally {
       setMentorLoading(false);
+    }
+  }
+
+  async function submitCapstoneEvidence() {
+    if (
+      !activeCapstoneChallenge ||
+      activeCapstoneChallenge.status === "Locked" ||
+      capstoneResponse.trim().length < 80
+    ) {
+      return;
+    }
+
+    setCapstoneSubmitting(true);
+    setTutorCapstoneError("");
+    try {
+      const response = await fetch("/api/tutor/capstone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenarioId: activeScenarioId,
+          response: capstoneResponse,
+        }),
+      });
+      const result = (await response.json()) as {
+        portfolio?: TutorCapstoneReview;
+        error?: string;
+      };
+      if (!response.ok || !result.portfolio) {
+        throw new Error(result.error ?? "Capstone submission failed.");
+      }
+      setTutorCapstone(result.portfolio);
+      setCapstoneResponse("");
+    } catch (error) {
+      setTutorCapstoneError(
+        error instanceof Error ? error.message : "Capstone submission failed.",
+      );
+    } finally {
+      setCapstoneSubmitting(false);
     }
   }
 
@@ -3531,6 +3591,13 @@ export function SapWorld({
                           <small>Readiness evidence</small>
                         </div>
                       </section>
+                      {tutorCapstone && (
+                        <div className="capstone-portfolio panel">
+                          <div><span>Portfolio submissions</span><strong>{tutorCapstone.submissions.total}</strong></div>
+                          <div><span>Review-ready answers</span><strong>{tutorCapstone.submissions.reviewReady}</strong></div>
+                          <div><span>Latest submission</span><strong>{tutorCapstone.submissions.latestSubmittedAt ? new Date(tutorCapstone.submissions.latestSubmittedAt).toLocaleDateString("en-GB") : "None"}</strong></div>
+                        </div>
+                      )}
 
                       <div className="capstone-grid">
                         <article className="panel capstone-card">
@@ -3563,6 +3630,43 @@ export function SapWorld({
                         {activeCapstoneChallenge.remediation.map((item) => (
                           <p key={item}>{item}</p>
                         ))}
+                      </article>
+
+                      <article className="panel capstone-submission">
+                        <div className="diagnostic-heading"><Award size={19} /><div><span>Submit evidence</span><h2>Learner capstone response</h2></div></div>
+                        {activeCapstoneChallenge.latestSubmission && (
+                          <div className="capstone-latest">
+                            <div><span>Latest score</span><strong>{activeCapstoneChallenge.latestSubmission.score}/100</strong><small>{activeCapstoneChallenge.latestSubmission.status}</small></div>
+                            <p>Submitted {new Date(activeCapstoneChallenge.latestSubmission.submittedAt).toLocaleString("en-GB")}</p>
+                            {activeCapstoneChallenge.latestSubmission.feedback.map((item) => <p key={item}>{item}</p>)}
+                            <div className="capstone-rubric-scores">
+                              {activeCapstoneChallenge.latestSubmission.rubricScores.map((score) => (
+                                <div key={score.area}><span>{score.area}</span><strong>{score.awarded}/{score.points}</strong><small>{score.feedback}</small></div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <textarea
+                          value={capstoneResponse}
+                          onChange={(event) => setCapstoneResponse(event.target.value)}
+                          maxLength={2000}
+                          placeholder="Explain the SAP processing sequence, document evidence, inventory/accounting impact, and exception recovery..."
+                        />
+                        <div className="capstone-submit-row">
+                          <small>{capstoneResponse.trim().length}/2,000 characters · minimum 80</small>
+                          <button
+                            className="primary-button"
+                            disabled={
+                              capstoneSubmitting ||
+                              activeCapstoneChallenge.status === "Locked" ||
+                              capstoneResponse.trim().length < 80
+                            }
+                            onClick={() => void submitCapstoneEvidence()}
+                          >
+                            Submit capstone evidence <ArrowRight size={15} />
+                          </button>
+                        </div>
+                        {tutorCapstoneError && <p className="mentor-error">{tutorCapstoneError}</p>}
                       </article>
                     </>
                   ) : (
