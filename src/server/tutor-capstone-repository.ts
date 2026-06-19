@@ -224,3 +224,59 @@ export async function submitTutorCapstone(input: {
     return mergePortfolio(review, store[input.learnerId]);
   });
 }
+
+export async function getTutorCapstoneAdministrationStats() {
+  const store = await capstoneStore.read();
+  const learnerEntries = Object.entries(store);
+  const submissions = learnerEntries.flatMap(([learnerId, scenarios]) =>
+    Object.entries(scenarios).flatMap(([scenarioId, history]) =>
+      history.map((submission) => ({
+        learnerId,
+        scenarioId: scenarioId as ScenarioId,
+        submission,
+      })),
+    ),
+  );
+  const processBreakdown = processScenarios.map((scenario) => {
+    const processSubmissions = submissions.filter(
+      (item) => item.scenarioId === scenario.id,
+    );
+    return {
+      scenarioId: scenario.id,
+      processCode: scenario.code,
+      title: scenario.title,
+      submissions: processSubmissions.length,
+      reviewReady: processSubmissions.filter(
+        (item) => item.submission.status !== "Needs practice",
+      ).length,
+      averageScore: processSubmissions.length
+        ? Math.round(
+            processSubmissions.reduce(
+              (total, item) => total + item.submission.score,
+              0,
+            ) / processSubmissions.length,
+          )
+        : 0,
+    };
+  });
+
+  return {
+    learners: learnerEntries.length,
+    submissions: submissions.length,
+    reviewReady: submissions.filter(
+      (item) => item.submission.status === "Review ready",
+    ).length,
+    strongEvidence: submissions.filter(
+      (item) => item.submission.status === "Strong evidence",
+    ).length,
+    needsPractice: submissions.filter(
+      (item) => item.submission.status === "Needs practice",
+    ).length,
+    latestSubmittedAt:
+      submissions
+        .map((item) => item.submission.submittedAt)
+        .sort()
+        .at(-1) ?? null,
+    processBreakdown,
+  };
+}

@@ -12,6 +12,7 @@ import { getObservabilitySnapshot } from "@/server/observability-repository";
 import { getOperationsReadiness } from "@/server/operations-readiness-service";
 import { getLearningProgressStats } from "@/server/progress-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
+import { getTutorCapstoneAdministrationStats } from "@/server/tutor-capstone-repository";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,7 @@ export async function GET() {
     simulations,
     ledgerAnalytics,
     observability,
+    capstones,
   ] = await Promise.all([
     getStorageHealth(),
     getAuthAdministrationSnapshot(),
@@ -38,6 +40,7 @@ export async function GET() {
     getGeneratedSimulationStats(),
     getPlatformLedgerAnalytics(),
     getObservabilitySnapshot(),
+    getTutorCapstoneAdministrationStats(),
   ]);
   const enterprise = getEnterpriseSnapshot();
   const contentControl = getContentControlRegister();
@@ -62,6 +65,7 @@ export async function GET() {
     observability,
     accounts,
     progress,
+    capstones,
     simulations,
     ledgerAnalytics,
     contentControl: contentControl.summary,

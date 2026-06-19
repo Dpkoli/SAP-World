@@ -208,6 +208,22 @@ type AdminOperations = {
     completedDiagnostics: number;
     latestUpdatedAt: string | null;
   };
+  capstones: {
+    learners: number;
+    submissions: number;
+    reviewReady: number;
+    strongEvidence: number;
+    needsPractice: number;
+    latestSubmittedAt: string | null;
+    processBreakdown: Array<{
+      scenarioId: ScenarioId;
+      processCode: string;
+      title: string;
+      submissions: number;
+      reviewReady: number;
+      averageScore: number;
+    }>;
+  };
   simulations: {
     learners: number;
     simulations: number;
@@ -1797,6 +1813,27 @@ export function SapWorld({
                       </div>
                     </article>
                   </div>
+
+                  <article className="panel admin-ledger">
+                    <div className="panel-header"><div><span className="section-kicker">Tutor capstone evidence</span><h2>Assessment portfolio review</h2></div><strong>{adminOperations.capstones.submissions} submissions</strong></div>
+                    <div className="admin-metrics">
+                      <div><span>Learners</span><strong>{adminOperations.capstones.learners}</strong></div>
+                      <div><span>Review ready</span><strong>{adminOperations.capstones.reviewReady}</strong></div>
+                      <div><span>Strong evidence</span><strong>{adminOperations.capstones.strongEvidence}</strong></div>
+                      <div><span>Needs practice</span><strong>{adminOperations.capstones.needsPractice}</strong></div>
+                      <div><span>Latest</span><strong>{adminOperations.capstones.latestSubmittedAt ? new Date(adminOperations.capstones.latestSubmittedAt).toLocaleDateString("en-GB") : "None"}</strong></div>
+                      <div><span>Store</span><strong>tutor-capstone-submissions</strong></div>
+                    </div>
+                    <div className="admin-capstone-list">
+                      {adminOperations.capstones.processBreakdown.map((process) => (
+                        <div key={process.scenarioId}>
+                          <span>{process.processCode}</span>
+                          <strong>{process.title}</strong>
+                          <small>{process.submissions} submissions / {process.reviewReady} ready / {process.averageScore}% avg</small>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
 
                   <article className="panel">
                     <div className="panel-header"><div><span className="section-kicker">Content coverage</span><h2>Simulation catalogue inventory</h2></div><strong>{new Date(adminOperations.generatedAt).toLocaleString("en-GB")}</strong></div>

@@ -68,7 +68,9 @@ GET /api/admin/operations
 This endpoint is protected inside the route handler and returns HTTP `403` for
 authenticated learners without the admin role. It also reports mentor-provider
 configuration status and normalized ledger analytics without exposing the
-endpoint URL or API key.
+endpoint URL or API key. Capstone evidence is exposed only as aggregate counts,
+status totals, process averages, and latest submission date; raw learner
+response text remains scoped to the learner portfolio endpoint.
 
 Admins can inspect the full content release register through:
 

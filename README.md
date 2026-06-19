@@ -268,9 +268,9 @@ Admin operations are available only to users whose normalized email appears in
 `GET /api/admin/operations`
 
 The endpoint returns safe platform counts, storage status, role distribution,
-content coverage, generated-ledger analytics, mentor provider status, and
-recent account metadata. It never returns password hashes, salts, or session
-tokens.
+content coverage, generated-ledger analytics, capstone submission aggregates,
+mentor provider status, and recent account metadata. It never returns password
+hashes, salts, session tokens, or raw capstone response text.
 
 The full controlled content register is available to admins at:
 

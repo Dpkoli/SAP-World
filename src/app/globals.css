@@ -142,6 +142,12 @@ button { cursor: pointer; }
 .admin-content-grid span, .admin-content-grid strong { display: block; }
 .admin-content-grid span { color: var(--muted); font-size: 7px; text-transform: uppercase; }
 .admin-content-grid strong { margin-top: 5px; color: var(--blue); font-size: 16px; }
+.admin-capstone-list { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; border-top: 1px solid var(--line); background: var(--line); }
+.admin-capstone-list > div { padding: 12px 14px; background: white; }
+.admin-capstone-list span, .admin-capstone-list strong, .admin-capstone-list small { display: block; }
+.admin-capstone-list span { color: var(--blue); font-size: 8px; font-weight: 850; }
+.admin-capstone-list strong { margin-top: 4px; font-size: 9px; }
+.admin-capstone-list small { margin-top: 5px; color: var(--muted); font-size: 8px; line-height: 1.4; }
 .overview-grid { display: grid; grid-template-columns: minmax(0,1.65fr) minmax(310px,.75fr); gap: 18px; }
 .panel-header { min-height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #edf0f2; }
 .panel-header h2 { margin: 3px 0 0; font-size: 16px; letter-spacing: -.02em; }
@@ -1429,7 +1435,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .content { padding: 24px 16px 90px; }
   .page-heading { align-items: flex-start; flex-direction: column; }
   .kpi-grid, .impact-grid, .academy-summary, .enterprise-stats { grid-template-columns: 1fr 1fr; }
-  .admin-grid, .admin-content-grid { grid-template-columns: 1fr 1fr; }
+  .admin-grid, .admin-content-grid, .admin-capstone-list { grid-template-columns: 1fr 1fr; }
   .admin-layout { grid-template-columns: 1fr; }
   .process-context { grid-template-columns: 1fr 1fr; }
   .flow { grid-template-columns: repeat(6,100px); }
@@ -1524,7 +1530,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .tutor-readiness-summary { grid-column: auto; }
   .implementation-counts { grid-template-columns: repeat(2,1fr); }
   .kpi-grid, .impact-grid, .academy-summary, .path-grid, .enterprise-stats { grid-template-columns: 1fr; }
-  .admin-grid, .admin-content-grid, .admin-permissions, .admin-metrics { grid-template-columns: 1fr; }
+  .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-permissions, .admin-metrics { grid-template-columns: 1fr; }
   .admin-users > div { grid-template-columns: 1fr; align-items: start; }
   .process-context { grid-template-columns: 1fr; }
   .attention { align-items: flex-start; flex-wrap: wrap; }
