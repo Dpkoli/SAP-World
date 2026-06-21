@@ -70,7 +70,9 @@ authenticated learners without the admin role. It also reports mentor-provider
 configuration status and normalized ledger analytics without exposing the
 endpoint URL or API key. Capstone evidence is exposed only as aggregate counts,
 status totals, process averages, and latest submission date; raw learner
-response text remains scoped to the learner portfolio endpoint.
+response text remains scoped to the learner portfolio endpoint. Guided tutor
+evidence notes are also exposed only as aggregate learning-progress counts,
+coverage, and averages.
 
 Admins can inspect the full content release register through:
 

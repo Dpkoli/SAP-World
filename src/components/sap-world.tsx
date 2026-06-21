@@ -208,6 +208,9 @@ type AdminOperations = {
     learners: number;
     completedLessons: number;
     completedDiagnostics: number;
+    guidedEvidenceNotes: number;
+    learnersWithGuidedEvidence: number;
+    averageGuidedEvidenceNotes: number;
     latestUpdatedAt: string | null;
   };
   capstones: {
@@ -2148,6 +2151,9 @@ export function SapWorld({
                         <div><span>Learners with progress</span><strong>{adminOperations.progress.learners}</strong></div>
                         <div><span>Completed lessons</span><strong>{adminOperations.progress.completedLessons}</strong></div>
                         <div><span>Completed diagnostics</span><strong>{adminOperations.progress.completedDiagnostics}</strong></div>
+                        <div><span>Step evidence notes</span><strong>{adminOperations.progress.guidedEvidenceNotes}</strong></div>
+                        <div><span>Evidence learners</span><strong>{adminOperations.progress.learnersWithGuidedEvidence}</strong></div>
+                        <div><span>Avg notes / learner</span><strong>{adminOperations.progress.averageGuidedEvidenceNotes}</strong></div>
                       </div>
                     </article>
 

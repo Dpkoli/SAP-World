@@ -51,6 +51,20 @@ export async function getLearningProgressStats() {
   const progress = Object.entries(database.learners).map(
     ([learnerId, learner]) => normalizeLearnerProgress(learnerId, learner),
   );
+  const guidedEvidenceNotes = progress.reduce(
+    (total, learner) =>
+      total +
+      Object.values(learner.guidedEvidence).reduce(
+        (learnerTotal, notes) => learnerTotal + Object.keys(notes).length,
+        0,
+      ),
+    0,
+  );
+  const learnersWithGuidedEvidence = progress.filter((learner) =>
+    Object.values(learner.guidedEvidence).some(
+      (notes) => Object.keys(notes).length > 0,
+    ),
+  ).length;
   return {
     learners: progress.length,
     completedLessons: progress.reduce(
@@ -68,6 +82,10 @@ export async function getLearningProgressStats() {
         ).length,
       0,
     ),
+    guidedEvidenceNotes,
+    learnersWithGuidedEvidence,
+    averageGuidedEvidenceNotes:
+      progress.length > 0 ? Math.round(guidedEvidenceNotes / progress.length) : 0,
     latestUpdatedAt:
       progress
         .map((learner) => learner.updatedAt)
