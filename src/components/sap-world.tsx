@@ -365,6 +365,11 @@ type TutorPortfolio = {
     diagnosticProgress: number;
     evidenceProgress: number;
     guidedEvidenceNotes: number;
+    missingEvidenceSteps: Array<{
+      step: number;
+      title: string;
+      current: boolean;
+    }>;
     capstoneStatus: string;
     latestCapstoneScore: number | null;
     latestCapstoneStatus: string | null;
@@ -2259,13 +2264,28 @@ export function SapWorld({
                         <button
                           key={process.scenarioId}
                           onClick={() => {
+                            const missingStep = process.missingEvidenceSteps[0];
                             setActiveScenarioId(process.scenarioId);
+                            if (missingStep) {
+                              setTutorMode("guided");
+                              setScenarioProgress((current) => ({
+                                ...current,
+                                [process.scenarioId]: {
+                                  ...current[process.scenarioId],
+                                  step: missingStep.step - 1,
+                                  complete: false,
+                                },
+                              }));
+                            }
                             setView("tutor");
                           }}
                         >
                           <span>{process.processCode}</span>
                           <strong>{process.readinessScore}%</strong>
                           <small>{process.latestCapstoneScore !== null ? `Capstone ${process.latestCapstoneScore}/100` : `${process.evidenceProgress}% evidence - ${process.nextAction}`}</small>
+                          {process.missingEvidenceSteps[0] && (
+                            <em>Missing evidence: step {process.missingEvidenceSteps[0].step} - {process.missingEvidenceSteps[0].title}</em>
+                          )}
                         </button>
                       ))}
                     </div>

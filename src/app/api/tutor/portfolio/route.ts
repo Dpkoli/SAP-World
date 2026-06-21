@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { normalizeLearnerProgress } from "@/data/progress";
+import { processScenarios } from "@/data/simulation";
 import { getCurrentLearner } from "@/server/auth-session";
 import { recordObservabilityEvent } from "@/server/observability-repository";
 import { getLearnerProgress } from "@/server/progress-repository";
@@ -28,8 +29,21 @@ export async function GET() {
     const capstone = capstones.challenges.find(
       (challenge) => challenge.scenarioId === process.scenarioId,
     );
+    const scenario = processScenarios.find(
+      (item) => item.id === process.scenarioId,
+    );
+    const guidedEvidence = progress.guidedEvidence[process.scenarioId] ?? {};
+    const missingEvidenceSteps =
+      scenario?.tutorSteps
+        .map((step, index) => ({
+          step: step.number,
+          title: step.title,
+          current: index === progress.scenarios[process.scenarioId].step,
+        }))
+        .filter((_, index) => !guidedEvidence[index])
+        .slice(0, 3) ?? [];
     const guidedEvidenceNotes = Object.keys(
-      progress.guidedEvidence[process.scenarioId] ?? {},
+      guidedEvidence,
     ).length;
     return {
       scenarioId: process.scenarioId,
@@ -42,6 +56,7 @@ export async function GET() {
       diagnosticProgress: process.diagnosticProgress,
       evidenceProgress: process.evidenceProgress,
       guidedEvidenceNotes,
+      missingEvidenceSteps,
       capstoneStatus: capstone?.status ?? "Locked",
       latestCapstoneScore: capstone?.latestSubmission?.score ?? null,
       latestCapstoneStatus: capstone?.latestSubmission?.status ?? null,

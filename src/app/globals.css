@@ -374,6 +374,7 @@ button { cursor: pointer; }
 .portfolio-processes span { color: var(--blue); font-size: 9px; font-weight: 850; }
 .portfolio-processes strong { justify-self: end; font-family: var(--font-mono); font-size: 10px; }
 .portfolio-processes small { grid-column: 1 / -1; color: var(--muted); font-size: 8px; line-height: 1.4; }
+.portfolio-processes em { grid-column: 1 / -1; color: #9b6a00; font-size: 7px; font-style: normal; font-weight: 750; line-height: 1.35; }
 .portfolio-empty { margin: 0; padding: 18px; color: var(--muted); font-size: 10px; }
 .industry-preference { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin: -15px 0 30px; padding: 14px 17px; color: var(--foreground); text-align: left; }
 .industry-preference > div span, .industry-preference > div strong, .industry-preference > div small { display: block; }

@@ -142,7 +142,8 @@ coverage, note counts, and scoring rubrics. `POST /api/tutor/capstone` stores a
 learner evidence response, scores it against the rubric, and returns the updated
 portfolio trail. The portfolio
 endpoint combines readiness, guided step notes, capstone outcomes, badges,
-process evidence, and next best actions for the authenticated learner.
+process evidence, missing guided evidence steps, and next best actions for the
+authenticated learner.
 
 ## Optional AI mentor provider
 
