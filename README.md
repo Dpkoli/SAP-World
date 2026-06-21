@@ -51,6 +51,9 @@ The first release demonstrates a brewery enterprise with:
 - A guided transaction impact trail that teaches each step's upstream
   dependency, SAP integration impact, downstream process effect, and expected
   evidence
+- An evidence quality coach for guided tutor notes, checking document proof,
+  key field proof, integration impact, and audit-level detail while learners
+  practice
 - An authenticated SAP mentor grounded in process, exception, enterprise, and
   historical simulation evidence
 - A role-based learning centre across MM, SD, PP, FI, QM, PM, HCM, EWM, and TM
@@ -218,7 +221,9 @@ capstone response text. The guided tutor also shows a transaction impact trail
 for the active step, connecting upstream prerequisites, SAP module impact,
 downstream process dependency, and the evidence the learner should capture.
 Meaningful guided progress saves emit compact observability events with process,
-step, completion, and note counts only.
+step, completion, and note counts only. The tutor also scores the active note
+against practical evidence-quality checks so learners learn how to document SAP
+work in a review-ready way before capstone submission.
 
 Learners can also retrieve and submit capstone assessment evidence:
 

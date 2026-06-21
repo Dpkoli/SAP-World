@@ -689,6 +689,15 @@ button { cursor: pointer; }
 .step-evidence-panel textarea { width: 100%; min-height: 86px; padding: 11px 12px; border: 1px solid #cfdbe5; border-radius: 8px; resize: vertical; background: white; color: var(--foreground); font: inherit; font-size: 10px; line-height: 1.55; outline: 0; }
 .step-evidence-panel textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(10,110,209,.08); }
 .step-evidence-panel p { margin: 0; color: var(--muted); font-size: 8px; text-align: right; }
+.step-evidence-panel > .evidence-quality-coach, .evidence-quality-coach { display: grid; gap: 10px; align-items: stretch; justify-content: normal; margin-top: 4px; padding: 12px; border: 1px solid #e1ebf3; border-radius: 8px; background: #f8fbfe; }
+.evidence-quality-coach > div:first-child { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+.evidence-quality-coach strong { color: #123a5c; font-size: 10px; }
+.evidence-quality-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.evidence-quality-grid > div { display: grid; grid-template-columns: 16px 1fr; gap: 5px 6px; align-content: start; padding: 9px; border: 1px solid #dfe8ee; border-radius: 7px; background: white; }
+.evidence-quality-grid > div.ready { border-color: #cae8d5; background: #f4fbf7; color: var(--green); }
+.evidence-quality-grid > div.needs-work { border-color: #f0ddaf; background: #fffaf0; color: #9b6a00; }
+.evidence-quality-grid span { color: var(--foreground); font-size: 7px; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; }
+.evidence-quality-grid p { grid-column: 1 / -1; margin: 0; color: #526371; font-size: 7px; line-height: 1.4; text-align: left; }
 .lesson-actions { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
 .lesson-actions > button:first-child { padding: 9px 14px; border: 1px solid var(--line); border-radius: 7px; background: white; color: #526371; font-size: 11px; }
 .lesson-actions > button:disabled { opacity: .4; cursor: not-allowed; }
@@ -1508,6 +1517,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .tutor-readiness-summary { grid-column: 1 / -1; }
   .playbook-fields { grid-template-columns: 1fr 1fr; }
   .step-impact-grid { grid-template-columns: 1fr 1fr; }
+  .evidence-quality-grid { grid-template-columns: 1fr 1fr; }
   .tutor-mode-switch { width: 100%; }
   .tutor-mode-switch button { min-width: 0; flex: 1; }
   .troubleshooting-layout { grid-template-columns: 1fr; }
@@ -1600,6 +1610,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .field-preview { grid-template-columns: 1fr; }
   .step-impact-grid { grid-template-columns: 1fr; }
   .step-impact-heading { grid-template-columns: 1fr; }
+  .evidence-quality-grid { grid-template-columns: 1fr; }
+  .evidence-quality-coach > div:first-child { align-items: flex-start; flex-direction: column; }
   .playbook-grid, .playbook-checks, .playbook-details > div, .playbook-fields { grid-template-columns: 1fr; }
   .playbook-heading { display: block; }
   .playbook-heading code { display: inline-block; margin-top: 10px; }

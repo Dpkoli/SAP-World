@@ -378,6 +378,15 @@ const navigation = [
   { id: "tutor" as const, label: "Transaction tutor", icon: GraduationCap },
 ];
 
+function normalizeEvidenceSearch(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function evidenceIncludes(normalizedEvidence: string, value: string) {
+  const normalizedValue = normalizeEvidenceSearch(value);
+  return normalizedValue.length >= 3 && normalizedEvidence.includes(normalizedValue);
+}
+
 export function SapWorld({
   user,
   onSignOut,
@@ -1446,6 +1455,61 @@ export function SapWorld({
   };
   const activeStepEvidence =
     guidedEvidence[activeScenarioId]?.[activeProgress.step] ?? "";
+  const normalizedStepEvidence = normalizeEvidenceSearch(activeStepEvidence);
+  const activeStepReferenceValues = [
+    activeScenario.transactionCode,
+    activeDocumentStep.document,
+    ...(currentTutorStep.fields ?? []).map((field) => field.value),
+    ...currentPlaybookStage.keyFields.map((field) => field.value),
+  ].filter((value) => value && value !== "Pending");
+  const activeStepFieldValues = [
+    ...(currentTutorStep.fields ?? []).map((field) => field.value),
+    ...currentPlaybookStage.keyFields.map((field) => field.value),
+  ].filter(Boolean);
+  const activeStepModuleValues = [
+    activeDocumentStep.module,
+    downstreamDocumentStep.module,
+    activeScenario.module,
+  ].flatMap((module) => module.split("/").map((part) => part.trim()));
+  const activeEvidenceQualityChecks = [
+    {
+      label: "Transaction or document proof",
+      complete: activeStepReferenceValues.some((value) =>
+        evidenceIncludes(normalizedStepEvidence, value),
+      ),
+      guidance: `Mention ${activeStepReferenceValues[0] ?? activeScenario.transactionCode}.`,
+    },
+    {
+      label: "Key field proof",
+      complete:
+        activeStepFieldValues.length === 0 ||
+        activeStepFieldValues.some((value) =>
+          evidenceIncludes(normalizedStepEvidence, value),
+        ),
+      guidance:
+        activeStepFieldValues.length > 0
+          ? `Include a key value such as ${activeStepFieldValues[0]}.`
+          : "Confirm the SAP screen area and validation you reviewed.",
+    },
+    {
+      label: "Business and integration impact",
+      complete:
+        evidenceIncludes(normalizedStepEvidence, activeDocumentStep.label) ||
+        evidenceIncludes(normalizedStepEvidence, downstreamDocumentStep.label) ||
+        activeStepModuleValues.some((value) =>
+          evidenceIncludes(normalizedStepEvidence, value),
+        ),
+      guidance: `Connect the result to ${downstreamDocumentStep.label} or ${activeDocumentStep.module}.`,
+    },
+    {
+      label: "Enough audit detail",
+      complete: activeStepEvidence.trim().length >= 80,
+      guidance: "Write at least 80 characters with result, check, and proof.",
+    },
+  ];
+  const activeEvidenceQualityScore = activeEvidenceQualityChecks.filter(
+    (check) => check.complete,
+  ).length;
   const activeScenarioEvidenceCount = Object.keys(
     guidedEvidence[activeScenarioId] ?? {},
   ).length;
@@ -3734,6 +3798,21 @@ export function SapWorld({
                       placeholder="Example: Posted the goods receipt against PO 4500011842, confirmed movement type, inspection stock, and material document evidence..."
                     />
                     <p>{activeStepEvidence.trim().length}/700 characters - saved with learner progress</p>
+                    <div className="evidence-quality-coach">
+                      <div>
+                        <span className="section-kicker">Evidence quality coach</span>
+                        <strong>{activeEvidenceQualityScore}/{activeEvidenceQualityChecks.length} proof checks ready</strong>
+                      </div>
+                      <div className="evidence-quality-grid">
+                        {activeEvidenceQualityChecks.map((check) => (
+                          <div className={check.complete ? "ready" : "needs-work"} key={check.label}>
+                            {check.complete ? <Check size={13} /> : <TriangleAlert size={13} />}
+                            <span>{check.label}</span>
+                            <p>{check.complete ? "Captured in your note." : check.guidance}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                   <div className="playbook-panel">
                     <div className="playbook-heading">
