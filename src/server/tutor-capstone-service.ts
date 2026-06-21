@@ -15,6 +15,9 @@ export type TutorCapstoneChallenge = {
   module: string;
   status: TutorCapstoneStatus;
   readinessScore: number;
+  evidenceProgress: number;
+  capturedEvidenceNotes: number;
+  totalEvidenceNotes: number;
   prompt: string;
   requiredEvidence: string[];
   tasks: string[];
@@ -49,6 +52,7 @@ function remediationFor(input: {
   score: number;
   guidedProgress: number;
   diagnosticProgress: number;
+  evidenceProgress: number;
   nextAction: string;
 }) {
   const actions = [];
@@ -57,6 +61,9 @@ function remediationFor(input: {
   }
   if (input.diagnosticProgress < 100) {
     actions.push("Complete the troubleshooting lab and explain the root cause.");
+  }
+  if (input.evidenceProgress < 100) {
+    actions.push("Capture review-ready evidence notes for each guided SAP step before final submission.");
   }
   if (input.score < 90) {
     actions.push(input.nextAction);
@@ -85,10 +92,16 @@ export function buildTutorCapstoneReview(
       module: scenario.module,
       status,
       readinessScore: processReadiness.score,
+      evidenceProgress: processReadiness.evidenceProgress,
+      capturedEvidenceNotes: Object.keys(
+        progress.guidedEvidence[scenario.id] ?? {},
+      ).length,
+      totalEvidenceNotes: scenario.tutorSteps.length,
       prompt: `Use ${scenario.appName} (${scenario.transactionCode}) and the ${exception.id} exception to explain how ${scenario.scenario.toLowerCase()} should be processed end to end in SAP S/4HANA.`,
       requiredEvidence: [
         `Business trigger: ${playbook?.businessTrigger ?? scenario.scenario}`,
         `Primary SAP entry: ${scenario.appName} / ${scenario.transactionCode}`,
+        `Guided step evidence: ${processReadiness.evidenceProgress}% coverage`,
         `Exception evidence: ${exception.symptom}`,
         ...(playbook?.documentChain.slice(0, 4) ??
           scenario.steps.slice(0, 4).map(
@@ -131,6 +144,7 @@ export function buildTutorCapstoneReview(
         score: processReadiness.score,
         guidedProgress: processReadiness.guidedProgress,
         diagnosticProgress: processReadiness.diagnosticProgress,
+        evidenceProgress: processReadiness.evidenceProgress,
         nextAction: processReadiness.nextAction,
       }),
     };

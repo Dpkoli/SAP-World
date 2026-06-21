@@ -233,7 +233,8 @@ Learners can also retrieve and submit capstone assessment evidence:
 
 The capstone response uses saved progress to lock, open, or mark process
 challenges as ready for review. Each challenge includes the business prompt,
-required SAP evidence, assessment tasks, scoring rubric, and remediation steps.
+required SAP evidence, guided evidence coverage, assessment tasks, scoring
+rubric, and remediation steps.
 Learner submissions are scored against the rubric, retained in a portfolio
 trail, and returned with feedback for improvement.
 

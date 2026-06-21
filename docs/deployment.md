@@ -137,9 +137,10 @@ guided tutor UI pairs those notes with an impact trail for the active SAP step,
 showing upstream dependency, integration impact, downstream process effect, and
 expected evidence without adding another persistence aggregate. The
 capstone response uses the same saved progress to expose locked, open, and
-review-ready assessment challenges with required SAP evidence and scoring
-rubrics. `POST /api/tutor/capstone` stores a learner evidence response, scores
-it against the rubric, and returns the updated portfolio trail. The portfolio
+review-ready assessment challenges with required SAP evidence, guided evidence
+coverage, note counts, and scoring rubrics. `POST /api/tutor/capstone` stores a
+learner evidence response, scores it against the rubric, and returns the updated
+portfolio trail. The portfolio
 endpoint combines readiness, guided step notes, capstone outcomes, badges,
 process evidence, and next best actions for the authenticated learner.
 

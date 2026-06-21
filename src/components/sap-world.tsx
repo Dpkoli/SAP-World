@@ -311,6 +311,9 @@ type TutorCapstoneReview = {
     module: string;
     status: "Locked" | "Open" | "Ready for review";
     readinessScore: number;
+    evidenceProgress: number;
+    capturedEvidenceNotes: number;
+    totalEvidenceNotes: number;
     prompt: string;
     requiredEvidence: string[];
     tasks: string[];
@@ -1647,10 +1650,13 @@ export function SapWorld({
         "2. Document integration:",
         `- Link the upstream trigger, current SAP document, and downstream evidence. Required evidence: ${activeCapstoneChallenge.requiredEvidence.slice(0, 4).join("; ")}.`,
         "",
-        "3. Business impact:",
+        "3. Guided evidence coverage:",
+        `- Current guided evidence coverage is ${activeCapstoneChallenge.evidenceProgress}% (${activeCapstoneChallenge.capturedEvidenceNotes}/${activeCapstoneChallenge.totalEvidenceNotes} step notes). Close any missing notes before final submission.`,
+        "",
+        "4. Business impact:",
         "- Explain inventory, accounting, operational, and control impact in business language.",
         "",
-        "4. Exception recovery:",
+        "5. Exception recovery:",
         "- Diagnose the exception, name the root cause, and describe the controlled recovery action.",
         "",
         "Revision focus:",
@@ -4106,13 +4112,14 @@ export function SapWorld({
                         <div className="capstone-score">
                           <span>{activeCapstoneChallenge.status}</span>
                           <strong>{activeCapstoneChallenge.readinessScore}%</strong>
-                          <small>Readiness evidence</small>
+                          <small>{activeCapstoneChallenge.evidenceProgress}% evidence coverage</small>
                         </div>
                       </section>
                       {tutorCapstone && (
                         <div className="capstone-portfolio panel">
                           <div><span>Portfolio submissions</span><strong>{tutorCapstone.submissions.total}</strong></div>
                           <div><span>Review-ready answers</span><strong>{tutorCapstone.submissions.reviewReady}</strong></div>
+                          <div><span>Guided evidence notes</span><strong>{activeCapstoneChallenge.capturedEvidenceNotes}/{activeCapstoneChallenge.totalEvidenceNotes}</strong></div>
                           <div><span>Latest submission</span><strong>{tutorCapstone.submissions.latestSubmittedAt ? new Date(tutorCapstone.submissions.latestSubmittedAt).toLocaleDateString("en-GB") : "None"}</strong></div>
                         </div>
                       )}
