@@ -1440,6 +1440,19 @@ export function SapWorld({
       ? `How did I do on my ${activePortfolioProcess?.processCode ?? activeScenario.code} capstone?`
       : `How do I prepare my ${activeScenario.code} capstone evidence?`,
   ];
+  const activeCapstoneGaps =
+    activeCapstoneChallenge?.latestSubmission?.rubricScores
+      .filter((score) => score.awarded < score.points)
+      .map((score) => `${score.area}: ${score.feedback}`) ?? [];
+  const activeCapstoneMentorPrompt = activeCapstoneChallenge?.latestSubmission
+    ? [
+        `Help me improve my ${activeCapstoneChallenge.processCode} capstone evidence.`,
+        `Latest score: ${activeCapstoneChallenge.latestSubmission.score}/100 (${activeCapstoneChallenge.latestSubmission.status}).`,
+        activeCapstoneGaps.length
+          ? `Rubric gaps: ${activeCapstoneGaps.join(" ")}`
+          : "Rubric feedback says the evidence is ready for review.",
+      ].join(" ")
+    : `How do I prepare my ${activeScenario.code} capstone evidence?`;
   const tutorHeading =
     tutorMode === "guided"
       ? "Guided transaction"
@@ -1474,6 +1487,39 @@ export function SapWorld({
         : tutorMode === "implementation"
           ? implementationBlueprint.consultantRole
           : activeCapstoneChallenge?.status ?? "Loading";
+
+  function seedCapstoneRevisionDraft() {
+    if (!activeCapstoneChallenge) return;
+
+    const latestSubmission = activeCapstoneChallenge.latestSubmission;
+    const focusItems = [
+      ...(latestSubmission?.feedback ?? activeCapstoneChallenge.remediation),
+      ...(activeCapstoneGaps.length
+        ? activeCapstoneGaps
+        : ["Prepare the answer for mentor or manager review."]),
+    ].slice(0, 5);
+
+    setCapstoneResponse(
+      [
+        `${activeCapstoneChallenge.processCode} capstone revision draft`,
+        "",
+        "1. SAP processing sequence:",
+        `- Start from ${activeCapstoneChallenge.requiredEvidence[1] ?? activeCapstoneChallenge.processCode} and describe the key fields, checks, and completion evidence.`,
+        "",
+        "2. Document integration:",
+        `- Link the upstream trigger, current SAP document, and downstream evidence. Required evidence: ${activeCapstoneChallenge.requiredEvidence.slice(0, 4).join("; ")}.`,
+        "",
+        "3. Business impact:",
+        "- Explain inventory, accounting, operational, and control impact in business language.",
+        "",
+        "4. Exception recovery:",
+        "- Diagnose the exception, name the root cause, and describe the controlled recovery action.",
+        "",
+        "Revision focus:",
+        ...focusItems.map((item) => `- ${item}`),
+      ].join("\n"),
+    );
+  }
 
   function updateActiveProgress(update: Partial<{ step: number; complete: boolean }>) {
     setScenarioProgress((current) => ({
@@ -3814,6 +3860,19 @@ export function SapWorld({
                               {activeCapstoneChallenge.latestSubmission.rubricScores.map((score) => (
                                 <div key={score.area}><span>{score.area}</span><strong>{score.awarded}/{score.points}</strong><small>{score.feedback}</small></div>
                               ))}
+                            </div>
+                            <div className="capstone-coaching-actions">
+                              <button type="button" onClick={seedCapstoneRevisionDraft}><FileText size={14} /> Draft revision outline</button>
+                              <button
+                                type="button"
+                                disabled={mentorLoading}
+                                onClick={() => {
+                                  setMentorOpen(true);
+                                  void askMentor(activeCapstoneMentorPrompt);
+                                }}
+                              >
+                                <MessageCircleMore size={14} /> Ask mentor how to improve
+                              </button>
                             </div>
                           </div>
                         )}

@@ -713,6 +713,9 @@ button { cursor: pointer; }
 .capstone-rubric-scores span, .capstone-rubric-scores strong, .capstone-rubric-scores small { display: block; }
 .capstone-rubric-scores strong { margin-top: 4px; color: var(--foreground); font-size: 11px; }
 .capstone-rubric-scores small { margin-top: 5px; line-height: 1.35; text-transform: none; letter-spacing: 0; }
+.capstone-coaching-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.capstone-coaching-actions button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #c9d9e7; border-radius: 7px; background: white; color: #214c70; font-size: 9px; font-weight: 750; }
+.capstone-coaching-actions button:disabled { opacity: .5; cursor: wait; }
 .capstone-submission textarea { width: 100%; min-height: 150px; margin-top: 14px; padding: 12px; border: 1px solid #ccd5dc; border-radius: 8px; resize: vertical; font: inherit; font-size: 11px; line-height: 1.6; outline: 0; }
 .capstone-submission textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(10,110,209,.08); }
 .capstone-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 11px; }
