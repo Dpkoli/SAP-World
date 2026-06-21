@@ -101,6 +101,7 @@ The first release demonstrates a brewery enterprise with:
 - Authenticated tutor readiness reviews at `/api/tutor/readiness`
 - Authenticated capstone assessment plans and evidence submissions at
   `/api/tutor/capstone`
+- Authenticated learner evidence portfolios at `/api/tutor/portfolio`
 - Authenticated generated-ledger analytics at `/api/ledger/analytics`
 - Responsive desktop and mobile layouts
 
@@ -215,6 +216,14 @@ challenges as ready for review. Each challenge includes the business prompt,
 required SAP evidence, assessment tasks, scoring rubric, and remediation steps.
 Learner submissions are scored against the rubric, retained in a portfolio
 trail, and returned with feedback for improvement.
+
+Learners can retrieve a consolidated evidence transcript:
+
+`/api/tutor/portfolio`
+
+The portfolio combines readiness, guided lessons, diagnostics, capstone
+submissions, badges, process evidence, and next best actions into one
+learner-scoped view.
 
 Connected SAP documents can be queried by process, document number, or module:
 

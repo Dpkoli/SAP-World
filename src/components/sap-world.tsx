@@ -332,6 +332,35 @@ type TutorCapstoneReview = {
   }>;
 };
 
+type TutorPortfolio = {
+  generatedAt: string;
+  summary: {
+    readinessScore: number;
+    readinessLevel: "Not started" | "In progress" | "Practice ready" | "Scenario ready";
+    completedLessons: number;
+    completedDiagnostics: number;
+    capstoneSubmissions: number;
+    reviewReadyCapstones: number;
+    badges: string[];
+  };
+  nextBestActions: string[];
+  processes: Array<{
+    scenarioId: ScenarioId;
+    processCode: string;
+    title: string;
+    module: string;
+    readinessScore: number;
+    readinessLevel: string;
+    guidedProgress: number;
+    diagnosticProgress: number;
+    capstoneStatus: string;
+    latestCapstoneScore: number | null;
+    latestCapstoneStatus: string | null;
+    evidence: string[];
+    nextAction: string;
+  }>;
+};
+
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
@@ -404,6 +433,10 @@ export function SapWorld({
   const [tutorCapstone, setTutorCapstone] =
     useState<TutorCapstoneReview | null>(null);
   const [tutorCapstoneError, setTutorCapstoneError] = useState("");
+  const [tutorPortfolio, setTutorPortfolio] = useState<TutorPortfolio | null>(
+    null,
+  );
+  const [tutorPortfolioError, setTutorPortfolioError] = useState("");
   const [capstoneResponse, setCapstoneResponse] = useState("");
   const [capstoneSubmitting, setCapstoneSubmitting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -858,6 +891,46 @@ export function SapWorld({
   }, [progressLoaded, syncStatus, user.id]);
 
   useEffect(() => {
+    if (!progressLoaded || syncStatus === "saving") return;
+    let cancelled = false;
+
+    async function loadTutorPortfolio() {
+      try {
+        const response = await fetch("/api/tutor/portfolio", {
+          cache: "no-store",
+        });
+        const result = (await response.json()) as
+          | TutorPortfolio
+          | { error?: string };
+        if (!response.ok || ("error" in result && result.error)) {
+          throw new Error(
+            "error" in result && result.error
+              ? result.error
+              : "Tutor portfolio is unavailable.",
+          );
+        }
+        if (!cancelled) {
+          setTutorPortfolio(result as TutorPortfolio);
+          setTutorPortfolioError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setTutorPortfolioError(
+            error instanceof Error
+              ? error.message
+              : "Tutor portfolio is unavailable.",
+          );
+        }
+      }
+    }
+
+    void loadTutorPortfolio();
+    return () => {
+      cancelled = true;
+    };
+  }, [progressLoaded, syncStatus, user.id]);
+
+  useEffect(() => {
     function handleSearchShortcut(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -979,6 +1052,15 @@ export function SapWorld({
         throw new Error(result.error ?? "Capstone submission failed.");
       }
       setTutorCapstone(result.portfolio);
+      const portfolioResponse = await fetch("/api/tutor/portfolio", {
+        cache: "no-store",
+      });
+      const portfolioResult = (await portfolioResponse.json()) as
+        | TutorPortfolio
+        | { error?: string };
+      if (portfolioResponse.ok && !("error" in portfolioResult)) {
+        setTutorPortfolio(portfolioResult as TutorPortfolio);
+      }
       setCapstoneResponse("");
     } catch (error) {
       setTutorCapstoneError(
@@ -1860,6 +1942,45 @@ export function SapWorld({
                 <article className="panel"><span>Lessons completed</span><strong>{Object.values(scenarioProgress).filter((progress) => progress.complete).length} of {processScenarios.length}</strong><small>Available learning pathways</small></article>
                 <article className="panel"><span>Exceptions diagnosed</span><strong>{Object.values(diagnosticProgress).filter((progress) => progress.complete).length} of {processScenarios.length}</strong><small>{Object.values(diagnosticProgress).reduce((sum, progress) => sum + progress.attempts, 0)} diagnostic attempts</small></article>
               </div>
+
+              <article className="panel portfolio-transcript">
+                <div className="panel-header">
+                  <div><span className="section-kicker">SAP evidence portfolio</span><h2>Learner capability transcript</h2></div>
+                  <strong>{tutorPortfolio ? `${tutorPortfolio.summary.readinessScore}% ready` : "Loading"}</strong>
+                </div>
+                {tutorPortfolio ? (
+                  <>
+                    <div className="portfolio-summary-grid">
+                      <div><span>Readiness level</span><strong>{tutorPortfolio.summary.readinessLevel}</strong></div>
+                      <div><span>Guided lessons</span><strong>{tutorPortfolio.summary.completedLessons}/{processScenarios.length}</strong></div>
+                      <div><span>Diagnostics</span><strong>{tutorPortfolio.summary.completedDiagnostics}/{processScenarios.length}</strong></div>
+                      <div><span>Capstones</span><strong>{tutorPortfolio.summary.reviewReadyCapstones}/{tutorPortfolio.summary.capstoneSubmissions}</strong></div>
+                    </div>
+                    <div className="portfolio-badges">
+                      {(tutorPortfolio.summary.badges.length ? tutorPortfolio.summary.badges : ["Portfolio in progress"]).map((badge) => (
+                        <span key={badge}><Award size={13} />{badge}</span>
+                      ))}
+                    </div>
+                    <div className="portfolio-processes">
+                      {tutorPortfolio.processes.slice(0, 4).map((process) => (
+                        <button
+                          key={process.scenarioId}
+                          onClick={() => {
+                            setActiveScenarioId(process.scenarioId);
+                            setView("tutor");
+                          }}
+                        >
+                          <span>{process.processCode}</span>
+                          <strong>{process.readinessScore}%</strong>
+                          <small>{process.latestCapstoneScore !== null ? `Capstone ${process.latestCapstoneScore}/100` : process.nextAction}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="portfolio-empty">{tutorPortfolioError || "Preparing your evidence transcript from saved progress and capstone submissions."}</p>
+                )}
+              </article>
 
               <button className="industry-preference panel" onClick={() => setEnterpriseOpen(true)}>
                 <span className="company-icon"><Building2 size={18} /></span>
