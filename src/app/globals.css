@@ -665,6 +665,13 @@ button { cursor: pointer; }
 .explanation-box.result { background: #edf8f2; color: var(--green); }
 .explanation-box strong { font-size: 11px; }
 .explanation-box p { margin: 4px 0 0; color: #526371; font-size: 11px; line-height: 1.55; }
+.step-coach-panel { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; margin-top: 17px; padding: 14px 15px; border: 1px solid #d6e6f4; border-radius: 9px; background: linear-gradient(100deg,#f7fbff,#fff); }
+.step-coach-panel strong, .step-coach-panel p { display: block; }
+.step-coach-panel strong { margin-top: 4px; color: #123a5c; font-size: 12px; }
+.step-coach-panel p { margin: 4px 0 0; color: #536777; font-size: 10px; line-height: 1.45; }
+.step-coach-panel > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.step-coach-panel button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #c7d8e7; border-radius: 7px; background: white; color: #214c70; font-size: 9px; font-weight: 750; }
+.step-coach-panel button:disabled { opacity: .5; cursor: wait; }
 .lesson-actions { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
 .lesson-actions > button:first-child { padding: 9px 14px; border: 1px solid var(--line); border-radius: 7px; background: white; color: #526371; font-size: 11px; }
 .lesson-actions > button:disabled { opacity: .4; cursor: not-allowed; }

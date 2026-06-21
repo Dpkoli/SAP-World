@@ -1548,6 +1548,26 @@ export function SapWorld({
     );
   }
 
+  function askStepCoach(kind: "explain" | "fields" | "risk") {
+    const fieldSummary = [
+      ...(currentTutorStep.fields ?? []).map(
+        (field) => `${field.label} = ${field.value}`,
+      ),
+      ...currentPlaybookStage.keyFields.map(
+        (field) => `${field.label} = ${field.value}`,
+      ),
+    ].slice(0, 6);
+    const prompt =
+      kind === "explain"
+        ? `Explain SAP step ${currentTutorStep.number} for ${activeScenario.code}: ${currentTutorStep.title}. Why do we do it and what should the learner check before moving on?`
+        : kind === "fields"
+          ? `Coach me through the key SAP fields for ${activeScenario.code} step ${currentTutorStep.number}. Fields: ${fieldSummary.join("; ") || currentPlaybookStage.screenArea}. What values should I enter and why?`
+          : `What can go wrong in ${activeScenario.code} step ${currentTutorStep.number} (${currentTutorStep.title}) and how should I prevent or recover from it?`;
+
+    setMentorOpen(true);
+    void askMentor(prompt);
+  }
+
   function updateActiveProgress(update: Partial<{ step: number; complete: boolean }>) {
     setScenarioProgress((current) => ({
       ...current,
@@ -3605,6 +3625,18 @@ export function SapWorld({
                   )}
                   <div className="explanation-box why"><Sparkles size={20} /><div><strong>Why are we doing this?</strong><p>{currentTutorStep.why}</p></div></div>
                   <div className="explanation-box result"><Check size={20} /><div><strong>What will you achieve?</strong><p>{currentTutorStep.result}</p></div></div>
+                  <div className="step-coach-panel">
+                    <div>
+                      <span className="section-kicker">SAP step coach</span>
+                      <strong>Get live coaching for this transaction step</strong>
+                      <p>Ask the mentor to explain the step, validate field entries, or rehearse likely SAP mistakes before you continue.</p>
+                    </div>
+                    <div>
+                      <button type="button" disabled={mentorLoading} onClick={() => askStepCoach("explain")}><Sparkles size={14} /> Explain this step</button>
+                      <button type="button" disabled={mentorLoading} onClick={() => askStepCoach("fields")}><FileText size={14} /> Check fields</button>
+                      <button type="button" disabled={mentorLoading} onClick={() => askStepCoach("risk")}><TriangleAlert size={14} /> What can go wrong?</button>
+                    </div>
+                  </div>
                   <div className="playbook-panel">
                     <div className="playbook-heading">
                       <div>
