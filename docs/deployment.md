@@ -105,6 +105,18 @@ without learner notes, passwords, session tokens, or raw mentor prompts. Use
 this endpoint for release smoke checks, support triage, and operational trend
 inspection.
 
+Mentor answers are handled through:
+
+```text
+POST /api/mentor
+```
+
+The route builds a compact learner evidence snapshot from saved progress,
+readiness, and capstone summaries before calling the mentor service. This lets
+the tutor answer questions about next practice actions, readiness, weak areas,
+and capstone scores while keeping raw capstone response text out of the mentor
+prompt and telemetry.
+
 Learner tutor readiness reviews are exposed through:
 
 ```text

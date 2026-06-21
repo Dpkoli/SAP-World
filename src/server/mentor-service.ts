@@ -51,6 +51,29 @@ type MentorDocument = MentorSource & {
   scenarioId?: ScenarioId;
 };
 
+export type LearnerMentorPortfolio = {
+  readinessScore: number;
+  readinessLevel: string;
+  completedLessons: number;
+  completedDiagnostics: number;
+  capstoneSubmissions: number;
+  reviewReadyCapstones: number;
+  nextBestActions: string[];
+  processes: Array<{
+    scenarioId: ScenarioId;
+    processCode: string;
+    title: string;
+    readinessScore: number;
+    readinessLevel: string;
+    guidedProgress: number;
+    diagnosticProgress: number;
+    nextAction: string;
+    weakAreas: string[];
+    latestCapstoneScore: number | null;
+    latestCapstoneStatus: string | null;
+  }>;
+};
+
 const stopWords = new Set([
   "a", "an", "and", "are", "as", "at", "be", "by", "did", "do", "does",
   "for", "from", "how", "i", "in", "is", "it", "of", "on", "or", "the",
@@ -546,10 +569,89 @@ function source(document: MentorDocument): MentorSource {
   };
 }
 
+function isMentorDocument(sourceCandidate: MentorSource): sourceCandidate is MentorDocument {
+  return "content" in sourceCandidate;
+}
+
+const portfolioSource: MentorSource = {
+  id: "learner-evidence-portfolio",
+  type: "Tutor",
+  title: "Learner evidence portfolio",
+  reference: "Readiness, diagnostics, and capstone summary",
+};
+
+function formatPercent(value: number) {
+  return `${Math.round(value)}%`;
+}
+
+function answerPortfolioQuestion(input: {
+  normalizedQuestion: string;
+  scenarioId: ScenarioId;
+  portfolio?: LearnerMentorPortfolio;
+}) {
+  if (!input.portfolio) return null;
+  if (
+    !includesAny(input.normalizedQuestion, [
+      "portfolio", "readiness", "ready", "progress", "practice", "next",
+      "badge", "badges", "capstone", "score", "weak", "weakness", "improve",
+      "recommend", "recommendation",
+    ])
+  ) {
+    return null;
+  }
+
+  const currentProcess =
+    input.portfolio.processes.find(
+      (process) => process.scenarioId === input.scenarioId,
+    ) ?? input.portfolio.processes[0];
+  const weakestProcesses = [...input.portfolio.processes]
+    .sort((a, b) => a.readinessScore - b.readinessScore)
+    .slice(0, 3);
+
+  if (
+    includesAny(input.normalizedQuestion, [
+      "capstone", "assessment", "submission", "evidence",
+    ])
+  ) {
+    const capstoneProcess =
+      currentProcess.latestCapstoneScore !== null
+        ? currentProcess
+        : input.portfolio.processes.find(
+            (process) => process.latestCapstoneScore !== null,
+          ) ?? currentProcess;
+    const capstoneSummary =
+      capstoneProcess.latestCapstoneScore !== null
+        ? `${capstoneProcess.processCode} has a latest capstone score of ${capstoneProcess.latestCapstoneScore}/100 with status "${capstoneProcess.latestCapstoneStatus}".`
+        : `${capstoneProcess.processCode} does not have a submitted capstone yet.`;
+    return `${capstoneSummary} Across the portfolio, ${input.portfolio.capstoneSubmissions} capstone submission${input.portfolio.capstoneSubmissions === 1 ? "" : "s"} have been saved, and ${input.portfolio.reviewReadyCapstones} are review-ready or stronger. Next, ${capstoneProcess.nextAction.charAt(0).toLowerCase()}${capstoneProcess.nextAction.slice(1)}`;
+  }
+
+  if (
+    includesAny(input.normalizedQuestion, [
+      "next", "practice", "improve", "recommend", "recommendation", "weak",
+      "weakness",
+    ])
+  ) {
+    const firstAction =
+      input.portfolio.nextBestActions[0] ??
+      `${currentProcess.processCode}: ${currentProcess.nextAction}`;
+    const weakAreaText = weakestProcesses
+      .map(
+        (process) =>
+          `${process.processCode} (${formatPercent(process.readinessScore)}, ${process.readinessLevel})`,
+      )
+      .join(", ");
+    return `Practice ${firstAction} Your current weakest areas are ${weakAreaText}. For ${currentProcess.processCode}, guided progress is ${formatPercent(currentProcess.guidedProgress)} and diagnostic progress is ${formatPercent(currentProcess.diagnosticProgress)}, so the immediate learning move is: ${currentProcess.nextAction}`;
+  }
+
+  return `Your SAP evidence portfolio is ${input.portfolio.readinessLevel} at ${formatPercent(input.portfolio.readinessScore)} readiness. You have completed ${input.portfolio.completedLessons} guided lesson${input.portfolio.completedLessons === 1 ? "" : "s"} and ${input.portfolio.completedDiagnostics} troubleshooting diagnostic${input.portfolio.completedDiagnostics === 1 ? "" : "s"}. For ${currentProcess.processCode}, readiness is ${formatPercent(currentProcess.readinessScore)} (${currentProcess.readinessLevel}); ${currentProcess.nextAction}`;
+}
+
 export function answerMentorQuestion(input: {
   question: string;
   scenarioId: unknown;
   step?: unknown;
+  portfolio?: LearnerMentorPortfolio;
 }): MentorResponse {
   const scenarioId = isScenarioId(input.scenarioId) ? input.scenarioId : "p2p";
   const scenario = processScenarios.find((item) => item.id === scenarioId)!;
@@ -648,9 +750,16 @@ export function answerMentorQuestion(input: {
           scenario.tutorSteps.length - 1,
         )
       : 0;
+  const portfolioAnswer = answerPortfolioQuestion({
+    normalizedQuestion,
+    scenarioId,
+    portfolio: input.portfolio,
+  });
 
   let answer: string;
-  if (exactAnswer) {
+  if (portfolioAnswer) {
+    answer = portfolioAnswer;
+  } else if (exactAnswer) {
     answer = exactAnswer;
   } else if (referencedGeneratedSimulation) {
     answer = `${referencedGeneratedSimulation.id} simulates ${referencedGeneratedSimulation.title.toLowerCase()} at ${referencedGeneratedSimulation.enterprise}. ${referencedGeneratedSimulation.trigger} ${referencedGeneratedSimulation.rootCause} The deterministic exposure is ${referencedGeneratedSimulation.exposure}. Start by ${referencedGeneratedSimulation.steps[0].instruction.charAt(0).toLowerCase()}${referencedGeneratedSimulation.steps[0].instruction.slice(1)} The next controlled action is ${referencedGeneratedSimulation.steps[1].title.toLowerCase()}.`;
@@ -805,13 +914,18 @@ export function answerMentorQuestion(input: {
   const directReferences = mentorDocuments.filter((document) =>
     directReferenceIds.includes(document.id),
   );
-  const sources = [...directReferences, ...retrieved, ...fallbackSources]
+  const sources = [
+    ...(portfolioAnswer ? [portfolioSource] : []),
+    ...directReferences,
+    ...retrieved,
+    ...fallbackSources,
+  ]
     .filter(
       (document, index, all) =>
         all.findIndex((candidate) => candidate.id === document.id) === index,
     )
     .slice(0, 3)
-    .map(source);
+    .map((document) => (isMentorDocument(document) ? source(document) : document));
 
   return {
     answer,
