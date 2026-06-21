@@ -101,9 +101,10 @@ GET /api/admin/observability
 ```
 
 Telemetry events are capped to the latest 1,000 retained records and are stored
-without learner notes, passwords, session tokens, or raw mentor prompts. Use
-this endpoint for release smoke checks, support triage, and operational trend
-inspection.
+without learner notes, passwords, session tokens, or raw mentor prompts. Guided
+tutor progress events include only process code, active step, completion state,
+and evidence-note counts. Use this endpoint for release smoke checks, support
+triage, and operational trend inspection.
 
 Mentor answers are handled through:
 

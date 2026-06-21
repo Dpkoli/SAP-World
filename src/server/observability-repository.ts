@@ -8,6 +8,7 @@ export type ObservabilityEventType =
   | "mentor.question"
   | "simulation.generated"
   | "simulation.step.completed"
+  | "tutor.guided.progress.saved"
   | "tutor.readiness.checked"
   | "tutor.capstone.checked"
   | "tutor.capstone.submitted"

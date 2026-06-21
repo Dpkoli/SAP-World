@@ -62,7 +62,8 @@ The first release demonstrates a brewery enterprise with:
 - Admin-only production readiness gate combining storage, security, content,
   ledger integrity, mentor provider, and deployment configuration checks
 - Admin-only observability stream for compact server-side events across mentor,
-  simulations, workflow, governance, advanced transactions, and admin checks
+  simulations, guided tutor progress, workflow, governance, advanced
+  transactions, and admin checks
 - Durable PostgreSQL persistence for accounts, sessions, progress, workflow
   decisions, governance, transaction evidence, generated simulations, and events
 - Automatic local JSON-to-PostgreSQL aggregate migration with transaction
@@ -216,6 +217,8 @@ portfolio, and included in mentor portfolio context without exposing raw
 capstone response text. The guided tutor also shows a transaction impact trail
 for the active step, connecting upstream prerequisites, SAP module impact,
 downstream process dependency, and the evidence the learner should capture.
+Meaningful guided progress saves emit compact observability events with process,
+step, completion, and note counts only.
 
 Learners can also retrieve and submit capstone assessment evidence:
 
