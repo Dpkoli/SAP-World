@@ -1427,6 +1427,19 @@ export function SapWorld({
     tutorCapstone?.challenges.find(
       (challenge) => challenge.scenarioId === activeScenarioId,
     ) ?? null;
+  const activePortfolioProcess =
+    tutorPortfolio?.processes.find(
+      (process) => process.scenarioId === activeScenarioId,
+    ) ?? null;
+  const mentorPortfolioPrompts = [
+    activePortfolioProcess
+      ? `What should I practice next for ${activePortfolioProcess.processCode}?`
+      : "What should I practice next?",
+    "How ready is my SAP evidence portfolio?",
+    activePortfolioProcess?.latestCapstoneScore != null
+      ? `How did I do on my ${activePortfolioProcess?.processCode ?? activeScenario.code} capstone?`
+      : `How do I prepare my ${activeScenario.code} capstone evidence?`,
+  ];
   const tutorHeading =
     tutorMode === "guided"
       ? "Guided transaction"
@@ -3983,6 +3996,19 @@ export function SapWorld({
           </div>
           <div className="mentor-context"><Factory size={16} /> {activeEnterprise.enterprise} · {activeScenario.code}</div>
           <div className="mentor-body">
+            {tutorPortfolio && activePortfolioProcess && (
+              <div className="mentor-readiness">
+                <div>
+                  <span>Portfolio readiness</span>
+                  <strong>{tutorPortfolio.summary.readinessScore}% - {tutorPortfolio.summary.readinessLevel}</strong>
+                </div>
+                <div>
+                  <span>{activePortfolioProcess.processCode}</span>
+                  <strong>{activePortfolioProcess.readinessScore}%</strong>
+                </div>
+                <small>{activePortfolioProcess.nextAction}</small>
+              </div>
+            )}
             <div className={mentorLoading ? "mentor-message loading" : "mentor-message"}>
               {mentorLoading ? "Reviewing the connected SAP records..." : answer}
             </div>
@@ -3999,8 +4025,16 @@ export function SapWorld({
                 ))}
               </div>
             )}
+            <p>Portfolio coaching</p>
+            <div className="mentor-prompt-group">
+              {mentorPortfolioPrompts.map((prompt) => (
+                <button disabled={mentorLoading} key={prompt} onClick={() => void askMentor(prompt)}>{prompt}<ChevronRight size={14} /></button>
+              ))}
+            </div>
             <p>Suggested questions</p>
-            {mentorSuggestions[activeScenarioId].map((prompt) => <button disabled={mentorLoading} key={prompt} onClick={() => void askMentor(prompt)}>{prompt}<ChevronRight size={14} /></button>)}
+            <div className="mentor-prompt-group">
+              {mentorSuggestions[activeScenarioId].map((prompt) => <button disabled={mentorLoading} key={prompt} onClick={() => void askMentor(prompt)}>{prompt}<ChevronRight size={14} /></button>)}
+            </div>
           </div>
           <form className="mentor-input" onSubmit={(event) => { event.preventDefault(); void askMentor(question); }}>
             <input maxLength={500} disabled={mentorLoading} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about this transaction..." />

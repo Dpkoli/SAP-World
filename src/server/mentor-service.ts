@@ -610,7 +610,7 @@ function answerPortfolioQuestion(input: {
 
   if (
     includesAny(input.normalizedQuestion, [
-      "capstone", "assessment", "submission", "evidence",
+      "capstone", "assessment", "submission",
     ])
   ) {
     const capstoneProcess =
