@@ -665,6 +665,15 @@ button { cursor: pointer; }
 .explanation-box.result { background: #edf8f2; color: var(--green); }
 .explanation-box strong { font-size: 11px; }
 .explanation-box p { margin: 4px 0 0; color: #526371; font-size: 11px; line-height: 1.55; }
+.step-impact-trail { margin-top: 17px; overflow: hidden; border: 1px solid #d8e6f2; border-radius: 9px; background: #fbfdff; }
+.step-impact-heading { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 13px 15px; border-bottom: 1px solid #e6eef5; }
+.step-impact-heading .section-kicker { grid-column: 1 / -1; }
+.step-impact-heading strong { color: #123a5c; font-size: 12px; }
+.step-impact-heading code { color: var(--blue); font-size: 9px; }
+.step-impact-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: #e6eef5; }
+.step-impact-grid > div { display: grid; grid-template-columns: 18px 1fr; gap: 6px 8px; align-content: start; padding: 12px; background: white; color: var(--blue); }
+.step-impact-grid span { color: var(--foreground); font-size: 7px; font-weight: 850; text-transform: uppercase; letter-spacing: .05em; }
+.step-impact-grid p { grid-column: 1 / -1; margin: 0; color: #526371; font-size: 8px; line-height: 1.45; }
 .step-coach-panel { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; margin-top: 17px; padding: 14px 15px; border: 1px solid #d6e6f4; border-radius: 9px; background: linear-gradient(100deg,#f7fbff,#fff); }
 .step-coach-panel strong, .step-coach-panel p { display: block; }
 .step-coach-panel strong { margin-top: 4px; color: #123a5c; font-size: 12px; }
@@ -1498,6 +1507,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .tutor-readiness { grid-template-columns: 1fr 1fr; }
   .tutor-readiness-summary { grid-column: 1 / -1; }
   .playbook-fields { grid-template-columns: 1fr 1fr; }
+  .step-impact-grid { grid-template-columns: 1fr 1fr; }
   .tutor-mode-switch { width: 100%; }
   .tutor-mode-switch button { min-width: 0; flex: 1; }
   .troubleshooting-layout { grid-template-columns: 1fr; }
@@ -1588,6 +1598,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .attention { align-items: flex-start; flex-wrap: wrap; }
   .attention button { margin-left: 30px; }
   .field-preview { grid-template-columns: 1fr; }
+  .step-impact-grid { grid-template-columns: 1fr; }
+  .step-impact-heading { grid-template-columns: 1fr; }
   .playbook-grid, .playbook-checks, .playbook-details > div, .playbook-fields { grid-template-columns: 1fr; }
   .playbook-heading { display: block; }
   .playbook-heading code { display: inline-block; margin-top: 10px; }

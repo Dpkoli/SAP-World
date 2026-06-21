@@ -129,6 +129,9 @@ The readiness response is generated from saved learner progress and returns
 guided completion, diagnostic completion, weak areas, evidence, and recommended
 next actions across all eight core SAP processes. Guided step evidence notes are
 stored inside `/api/learning/progress` and counted in the learner portfolio. The
+guided tutor UI pairs those notes with an impact trail for the active SAP step,
+showing upstream dependency, integration impact, downstream process effect, and
+expected evidence without adding another persistence aggregate. The
 capstone response uses the same saved progress to expose locked, open, and
 review-ready assessment challenges with required SAP evidence and scoring
 rubrics. `POST /api/tutor/capstone` stores a learner evidence response, scores

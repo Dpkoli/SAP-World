@@ -48,6 +48,9 @@ The first release demonstrates a brewery enterprise with:
 - Structured transaction playbooks for every guided process, covering
   prerequisites, SAP entry points, key fields, validation checks, document
   chains, completion evidence, and common processing mistakes
+- A guided transaction impact trail that teaches each step's upstream
+  dependency, SAP integration impact, downstream process effect, and expected
+  evidence
 - An authenticated SAP mentor grounded in process, exception, enterprise, and
   historical simulation evidence
 - A role-based learning centre across MM, SD, PP, FI, QM, PM, HCM, EWM, and TM
@@ -210,7 +213,9 @@ eight core processes.
 Guided tutor steps also let learners capture short SAP evidence notes. These
 notes are saved with `/api/learning/progress`, counted in the learner
 portfolio, and included in mentor portfolio context without exposing raw
-capstone response text.
+capstone response text. The guided tutor also shows a transaction impact trail
+for the active step, connecting upstream prerequisites, SAP module impact,
+downstream process dependency, and the evidence the learner should capture.
 
 Learners can also retrieve and submit capstone assessment evidence:
 

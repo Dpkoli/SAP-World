@@ -1422,6 +1422,28 @@ export function SapWorld({
     activePlaybook.stages.find(
       (stage) => stage.sequence === currentTutorStep.number,
     ) ?? activePlaybook.stages[0];
+  const activeDocumentStep =
+    activeScenario.steps[Math.min(activeProgress.step, activeScenario.steps.length - 1)];
+  const upstreamDocumentStep =
+    activeScenario.steps[Math.max(activeProgress.step - 1, 0)];
+  const downstreamDocumentStep =
+    activeScenario.steps[
+      Math.min(activeProgress.step + 1, activeScenario.steps.length - 1)
+    ];
+  const activeStepImpactTrail = {
+    dependency:
+      activeProgress.step > 0
+        ? `${upstreamDocumentStep.label} ${upstreamDocumentStep.document} must be valid before this action.`
+        : activePlaybook.prerequisites[0],
+    impact:
+      activeProgress.step < activeScenario.steps.length - 1
+        ? `${downstreamDocumentStep.label} in ${downstreamDocumentStep.module} depends on this result.`
+        : activePlaybook.processingRules[0],
+    evidence:
+      currentPlaybookStage.expectedResult ??
+      activePlaybook.completionEvidence[0] ??
+      currentTutorStep.result,
+  };
   const activeStepEvidence =
     guidedEvidence[activeScenarioId]?.[activeProgress.step] ?? "";
   const activeScenarioEvidenceCount = Object.keys(
@@ -3658,6 +3680,35 @@ export function SapWorld({
                   )}
                   <div className="explanation-box why"><Sparkles size={20} /><div><strong>Why are we doing this?</strong><p>{currentTutorStep.why}</p></div></div>
                   <div className="explanation-box result"><Check size={20} /><div><strong>What will you achieve?</strong><p>{currentTutorStep.result}</p></div></div>
+                  <div className="step-impact-trail">
+                    <div className="step-impact-heading">
+                      <span className="section-kicker">Transaction impact trail</span>
+                      <strong>{activeDocumentStep.label}</strong>
+                      <code>{activeDocumentStep.document}</code>
+                    </div>
+                    <div className="step-impact-grid">
+                      <div>
+                        <ListTree size={15} />
+                        <span>Upstream dependency</span>
+                        <p>{activeStepImpactTrail.dependency}</p>
+                      </div>
+                      <div>
+                        <Repeat2 size={15} />
+                        <span>SAP integration impact</span>
+                        <p>{currentPlaybookStage.why}</p>
+                      </div>
+                      <div>
+                        <Package size={15} />
+                        <span>Downstream process</span>
+                        <p>{activeStepImpactTrail.impact}</p>
+                      </div>
+                      <div>
+                        <FileText size={15} />
+                        <span>Evidence to capture</span>
+                        <p>{activeStepImpactTrail.evidence}</p>
+                      </div>
+                    </div>
+                  </div>
                   <div className="step-coach-panel">
                     <div>
                       <span className="section-kicker">SAP step coach</span>
