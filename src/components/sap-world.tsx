@@ -1453,6 +1453,33 @@ export function SapWorld({
           : "Rubric feedback says the evidence is ready for review.",
       ].join(" ")
     : `How do I prepare my ${activeScenario.code} capstone evidence?`;
+  const dashboardActionProcess =
+    tutorPortfolio?.processes
+      .filter((process) => process.readinessScore < 90)
+      .sort((a, b) => a.readinessScore - b.readinessScore)[0] ??
+    activePortfolioProcess;
+  const dashboardActionScenario =
+    dashboardActionProcess
+      ? processScenarios.find(
+          (scenario) => scenario.id === dashboardActionProcess.scenarioId,
+        )
+      : activeScenario;
+  const dashboardNextAction =
+    tutorPortfolio?.nextBestActions[0] ??
+    (dashboardActionProcess
+      ? `${dashboardActionProcess.processCode}: ${dashboardActionProcess.nextAction}`
+      : activeProgress.complete
+        ? "Ask SAP Mentor one integration question for the completed lesson."
+        : `Continue ${activeScenario.code}: ${currentTutorStep.title}.`);
+  const dashboardActionMode =
+    dashboardActionProcess?.capstoneStatus === "Open" ||
+    dashboardActionProcess?.capstoneStatus === "Ready for review"
+      ? "capstone"
+      : dashboardActionProcess?.diagnosticProgress !== undefined &&
+          dashboardActionProcess.diagnosticProgress < 100 &&
+          dashboardActionProcess.guidedProgress >= 100
+        ? "troubleshoot"
+        : "guided";
   const tutorHeading =
     tutorMode === "guided"
       ? "Guided transaction"
@@ -1789,6 +1816,45 @@ export function SapWorld({
                     <div><strong>{kpi.value}</strong><small className={kpi.tone}>{kpi.change}</small></div>
                   </article>
                 ))}
+              </section>
+
+              <section className="learning-command panel">
+                <div className="learning-command-main">
+                  <span className="section-kicker">Today&apos;s SAP tutor mission</span>
+                  <h2>{dashboardActionScenario?.tutorTitle ?? activeScenario.tutorTitle}</h2>
+                  <p>{dashboardNextAction}</p>
+                </div>
+                <div className="learning-command-stats">
+                  <div><span>Portfolio</span><strong>{tutorPortfolio ? `${tutorPortfolio.summary.readinessScore}%` : `${lessonProgress}%`}</strong><small>{tutorPortfolio?.summary.readinessLevel ?? "Progress loading"}</small></div>
+                  <div><span>Focus process</span><strong>{dashboardActionProcess?.processCode ?? activeScenario.code}</strong><small>{dashboardActionProcess ? `${dashboardActionProcess.readinessScore}% ready` : `Step ${activeProgress.step + 1}/${activeScenario.tutorSteps.length}`}</small></div>
+                  <div><span>Evidence</span><strong>{tutorPortfolio?.summary.capstoneSubmissions ?? 0}</strong><small>Capstone submissions</small></div>
+                </div>
+                <div className="learning-command-actions">
+                  <button
+                    className="primary-button"
+                    onClick={() => {
+                      if (dashboardActionProcess) setActiveScenarioId(dashboardActionProcess.scenarioId);
+                      setTutorMode(dashboardActionMode);
+                      setView("tutor");
+                    }}
+                  >
+                    Start mission <ArrowRight size={15} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (dashboardActionProcess) setActiveScenarioId(dashboardActionProcess.scenarioId);
+                      setMentorOpen(true);
+                      void askMentor(
+                        dashboardActionProcess
+                          ? `What should I practice next for ${dashboardActionProcess.processCode}?`
+                          : "What should I practice next?",
+                      );
+                    }}
+                  >
+                    Ask mentor <MessageCircleMore size={15} />
+                  </button>
+                  <button onClick={() => setView("academy")}>View portfolio <ChevronRight size={15} /></button>
+                </div>
               </section>
 
               <section className="overview-grid">
