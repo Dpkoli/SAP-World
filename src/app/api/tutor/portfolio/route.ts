@@ -19,11 +19,18 @@ export async function GET() {
     normalizeLearnerProgress(learner.id, null);
   const readiness = buildTutorReadinessReview(progress);
   const capstones = await getTutorCapstonePortfolio(learner.id, progress);
+  const guidedEvidenceTotal = Object.values(progress.guidedEvidence).reduce(
+    (total, notes) => total + Object.keys(notes).length,
+    0,
+  );
 
   const processes = readiness.processes.map((process) => {
     const capstone = capstones.challenges.find(
       (challenge) => challenge.scenarioId === process.scenarioId,
     );
+    const guidedEvidenceNotes = Object.keys(
+      progress.guidedEvidence[process.scenarioId] ?? {},
+    ).length;
     return {
       scenarioId: process.scenarioId,
       processCode: process.processCode,
@@ -33,11 +40,13 @@ export async function GET() {
       readinessLevel: process.level,
       guidedProgress: process.guidedProgress,
       diagnosticProgress: process.diagnosticProgress,
+      guidedEvidenceNotes,
       capstoneStatus: capstone?.status ?? "Locked",
       latestCapstoneScore: capstone?.latestSubmission?.score ?? null,
       latestCapstoneStatus: capstone?.latestSubmission?.status ?? null,
       evidence: [
         ...process.evidence,
+        `${guidedEvidenceNotes} guided step evidence note${guidedEvidenceNotes === 1 ? "" : "s"} captured.`,
         capstone?.latestSubmission
           ? `Latest capstone evidence scored ${capstone.latestSubmission.score}/100 as ${capstone.latestSubmission.status}.`
           : "No capstone evidence submitted yet.",
@@ -71,6 +80,7 @@ export async function GET() {
       readinessLevel: readiness.overall.level,
       completedLessons: readiness.overall.completedLessons,
       completedDiagnostics: readiness.overall.completedDiagnostics,
+      guidedEvidenceNotes: guidedEvidenceTotal,
       capstoneSubmissions: capstones.submissions.total,
       reviewReadyCapstones: capstones.submissions.reviewReady,
       badges,

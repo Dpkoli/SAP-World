@@ -113,9 +113,11 @@ import {
 } from "@/data/simulation-ledger";
 import {
   defaultDiagnosticProgress,
+  defaultGuidedEvidenceProgress,
   defaultScenarioProgress,
   normalizeLearnerProgress,
   type DiagnosticProgress,
+  type GuidedEvidenceProgress,
   type ScenarioId,
   type ScenarioProgress,
 } from "@/data/progress";
@@ -339,6 +341,7 @@ type TutorPortfolio = {
     readinessLevel: "Not started" | "In progress" | "Practice ready" | "Scenario ready";
     completedLessons: number;
     completedDiagnostics: number;
+    guidedEvidenceNotes: number;
     capstoneSubmissions: number;
     reviewReadyCapstones: number;
     badges: string[];
@@ -353,6 +356,7 @@ type TutorPortfolio = {
     readinessLevel: string;
     guidedProgress: number;
     diagnosticProgress: number;
+    guidedEvidenceNotes: number;
     capstoneStatus: string;
     latestCapstoneScore: number | null;
     latestCapstoneStatus: string | null;
@@ -420,6 +424,9 @@ export function SapWorld({
   const [studioLedgerError, setStudioLedgerError] = useState("");
   const [scenarioProgress, setScenarioProgress] = useState<ScenarioProgress>(defaultScenarioProgress);
   const [diagnosticProgress, setDiagnosticProgress] = useState<DiagnosticProgress>(defaultDiagnosticProgress);
+  const [guidedEvidence, setGuidedEvidence] = useState<GuidedEvidenceProgress>(
+    defaultGuidedEvidenceProgress,
+  );
   const [quizAnswers, setQuizAnswers] = useState<Record<ScenarioId, number | null>>({ p2p: null, o2c: null, ptp: null, r2r: null, qm: null, pm: null, h2r: null, w2d: null });
   const [tutorMode, setTutorMode] = useState<
     "guided" | "troubleshoot" | "implementation" | "capstone"
@@ -669,6 +676,7 @@ export function SapWorld({
         if (!cancelled) {
           setScenarioProgress(normalized.scenarios);
           setDiagnosticProgress(normalized.diagnostics);
+          setGuidedEvidence(normalized.guidedEvidence);
           setActiveScenarioId(normalized.activeScenarioId);
           setPreferredIndustryId(normalized.preferredIndustryId);
           setSyncStatus(result.found ? "saved" : "saving");
@@ -678,6 +686,7 @@ export function SapWorld({
         if (!cancelled) {
           setScenarioProgress(normalized.scenarios);
           setDiagnosticProgress(normalized.diagnostics);
+          setGuidedEvidence(normalized.guidedEvidence);
           setActiveScenarioId(normalized.activeScenarioId);
           setPreferredIndustryId(normalized.preferredIndustryId);
           setSyncStatus("offline");
@@ -776,6 +785,7 @@ export function SapWorld({
       preferredIndustryId,
       scenarios: scenarioProgress,
       diagnostics: diagnosticProgress,
+      guidedEvidence,
     };
     window.localStorage.setItem(
       `sap-world-progress:${user.id}`,
@@ -804,6 +814,7 @@ export function SapWorld({
   }, [
     activeScenarioId,
     diagnosticProgress,
+    guidedEvidence,
     preferredIndustryId,
     progressLoaded,
     scenarioProgress,
@@ -1411,6 +1422,11 @@ export function SapWorld({
     activePlaybook.stages.find(
       (stage) => stage.sequence === currentTutorStep.number,
     ) ?? activePlaybook.stages[0];
+  const activeStepEvidence =
+    guidedEvidence[activeScenarioId]?.[activeProgress.step] ?? "";
+  const activeScenarioEvidenceCount = Object.keys(
+    guidedEvidence[activeScenarioId] ?? {},
+  ).length;
   const lessonProgress = activeProgress.complete
     ? 100
     : Math.round(((activeProgress.step + 1) / activeScenario.tutorSteps.length) * 100);
@@ -1566,6 +1582,22 @@ export function SapWorld({
 
     setMentorOpen(true);
     void askMentor(prompt);
+  }
+
+  function updateStepEvidence(note: string) {
+    const trimmed = note.slice(0, 700);
+    setGuidedEvidence((current) => {
+      const scenarioNotes = { ...(current[activeScenarioId] ?? {}) };
+      if (trimmed.trim()) {
+        scenarioNotes[activeProgress.step] = trimmed;
+      } else {
+        delete scenarioNotes[activeProgress.step];
+      }
+      return {
+        ...current,
+        [activeScenarioId]: scenarioNotes,
+      };
+    });
   }
 
   function updateActiveProgress(update: Partial<{ step: number; complete: boolean }>) {
@@ -1847,7 +1879,7 @@ export function SapWorld({
                 <div className="learning-command-stats">
                   <div><span>Portfolio</span><strong>{tutorPortfolio ? `${tutorPortfolio.summary.readinessScore}%` : `${lessonProgress}%`}</strong><small>{tutorPortfolio?.summary.readinessLevel ?? "Progress loading"}</small></div>
                   <div><span>Focus process</span><strong>{dashboardActionProcess?.processCode ?? activeScenario.code}</strong><small>{dashboardActionProcess ? `${dashboardActionProcess.readinessScore}% ready` : `Step ${activeProgress.step + 1}/${activeScenario.tutorSteps.length}`}</small></div>
-                  <div><span>Evidence</span><strong>{tutorPortfolio?.summary.capstoneSubmissions ?? 0}</strong><small>Capstone submissions</small></div>
+                  <div><span>Evidence</span><strong>{tutorPortfolio?.summary.guidedEvidenceNotes ?? activeScenarioEvidenceCount}</strong><small>Guided step notes</small></div>
                 </div>
                 <div className="learning-command-actions">
                   <button
@@ -2099,6 +2131,7 @@ export function SapWorld({
                       <div><span>Readiness level</span><strong>{tutorPortfolio.summary.readinessLevel}</strong></div>
                       <div><span>Guided lessons</span><strong>{tutorPortfolio.summary.completedLessons}/{processScenarios.length}</strong></div>
                       <div><span>Diagnostics</span><strong>{tutorPortfolio.summary.completedDiagnostics}/{processScenarios.length}</strong></div>
+                      <div><span>Step notes</span><strong>{tutorPortfolio.summary.guidedEvidenceNotes}</strong></div>
                       <div><span>Capstones</span><strong>{tutorPortfolio.summary.reviewReadyCapstones}/{tutorPortfolio.summary.capstoneSubmissions}</strong></div>
                     </div>
                     <div className="portfolio-badges">
@@ -2117,7 +2150,7 @@ export function SapWorld({
                         >
                           <span>{process.processCode}</span>
                           <strong>{process.readinessScore}%</strong>
-                          <small>{process.latestCapstoneScore !== null ? `Capstone ${process.latestCapstoneScore}/100` : process.nextAction}</small>
+                          <small>{process.latestCapstoneScore !== null ? `Capstone ${process.latestCapstoneScore}/100` : `${process.guidedEvidenceNotes} notes - ${process.nextAction}`}</small>
                         </button>
                       ))}
                     </div>
@@ -3636,6 +3669,20 @@ export function SapWorld({
                       <button type="button" disabled={mentorLoading} onClick={() => askStepCoach("fields")}><FileText size={14} /> Check fields</button>
                       <button type="button" disabled={mentorLoading} onClick={() => askStepCoach("risk")}><TriangleAlert size={14} /> What can go wrong?</button>
                     </div>
+                  </div>
+                  <div className="step-evidence-panel">
+                    <div>
+                      <span className="section-kicker">Evidence note</span>
+                      <strong>Capture what you proved in SAP</strong>
+                      <small>{activeScenarioEvidenceCount}/{activeScenario.tutorSteps.length} step notes saved for this process</small>
+                    </div>
+                    <textarea
+                      value={activeStepEvidence}
+                      onChange={(event) => updateStepEvidence(event.target.value)}
+                      maxLength={700}
+                      placeholder="Example: Posted the goods receipt against PO 4500011842, confirmed movement type, inspection stock, and material document evidence..."
+                    />
+                    <p>{activeStepEvidence.trim().length}/700 characters - saved with learner progress</p>
                   </div>
                   <div className="playbook-panel">
                     <div className="playbook-heading">

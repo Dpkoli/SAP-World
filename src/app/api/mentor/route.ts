@@ -37,11 +37,16 @@ export async function POST(request: Request) {
     normalizeLearnerProgress(learner.id, null);
   const readiness = buildTutorReadinessReview(progress);
   const capstones = await getTutorCapstonePortfolio(learner.id, progress);
+  const guidedEvidenceTotal = Object.values(progress.guidedEvidence).reduce(
+    (total, notes) => total + Object.keys(notes).length,
+    0,
+  );
   const portfolio = {
     readinessScore: readiness.overall.score,
     readinessLevel: readiness.overall.level,
     completedLessons: readiness.overall.completedLessons,
     completedDiagnostics: readiness.overall.completedDiagnostics,
+    guidedEvidenceNotes: guidedEvidenceTotal,
     capstoneSubmissions: capstones.submissions.total,
     reviewReadyCapstones: capstones.submissions.reviewReady,
     nextBestActions: readiness.nextBestActions,
@@ -57,6 +62,9 @@ export async function POST(request: Request) {
         readinessLevel: process.level,
         guidedProgress: process.guidedProgress,
         diagnosticProgress: process.diagnosticProgress,
+        guidedEvidenceNotes: Object.keys(
+          progress.guidedEvidence[process.scenarioId] ?? {},
+        ).length,
         nextAction:
           capstone?.latestSubmission?.status === "Strong evidence"
             ? "Use this process as a reference while practicing weaker areas."

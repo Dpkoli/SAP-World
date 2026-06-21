@@ -17,12 +17,15 @@ export type DiagnosticProgress = Record<
   { attempts: number; complete: boolean; completedAt: string | null }
 >;
 
+export type GuidedEvidenceProgress = Record<ScenarioId, Record<number, string>>;
+
 export type LearnerProgress = {
   learnerId: string;
   activeScenarioId: ScenarioId;
   preferredIndustryId: IndustryId;
   scenarios: ScenarioProgress;
   diagnostics: DiagnosticProgress;
+  guidedEvidence: GuidedEvidenceProgress;
   updatedAt: string;
 };
 
@@ -44,6 +47,14 @@ export const defaultDiagnosticProgress = processScenarios.reduce(
     return result;
   },
   {} as DiagnosticProgress,
+);
+
+export const defaultGuidedEvidenceProgress = processScenarios.reduce(
+  (result, scenario) => {
+    result[scenario.id] = {};
+    return result;
+  },
+  {} as GuidedEvidenceProgress,
 );
 
 export function isScenarioId(value: unknown): value is ScenarioId {
@@ -98,6 +109,7 @@ export function normalizeLearnerProgress(
           preferredIndustryId?: unknown;
           scenarios?: unknown;
           diagnostics?: unknown;
+          guidedEvidence?: unknown;
           lessonStep?: number;
           lessonComplete?: boolean;
           updatedAt?: unknown;
@@ -117,11 +129,40 @@ export function normalizeLearnerProgress(
       lessonComplete: input.lessonComplete,
     }),
     diagnostics: normalizeDiagnosticProgress(input.diagnostics),
+    guidedEvidence: normalizeGuidedEvidenceProgress(input.guidedEvidence),
     updatedAt:
       typeof input.updatedAt === "string"
         ? input.updatedAt
         : new Date().toISOString(),
   };
+}
+
+export function normalizeGuidedEvidenceProgress(
+  value: unknown,
+): GuidedEvidenceProgress {
+  const saved =
+    typeof value === "object" && value !== null
+      ? (value as Partial<Record<ScenarioId, unknown>>)
+      : undefined;
+
+  return processScenarios.reduce((result, scenario) => {
+    const candidate =
+      typeof saved?.[scenario.id] === "object" && saved?.[scenario.id] !== null
+        ? (saved[scenario.id] as Record<string, unknown>)
+        : {};
+    result[scenario.id] = scenario.tutorSteps.reduce(
+      (notes, step, index) => {
+        const raw = candidate[String(index)] ?? candidate[String(step.number)];
+        if (typeof raw === "string") {
+          const trimmed = raw.trim().slice(0, 700);
+          if (trimmed) notes[index] = trimmed;
+        }
+        return notes;
+      },
+      {} as Record<number, string>,
+    );
+    return result;
+  }, {} as GuidedEvidenceProgress);
 }
 
 export function normalizeDiagnosticProgress(

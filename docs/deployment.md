@@ -127,13 +127,14 @@ GET /api/tutor/portfolio
 
 The readiness response is generated from saved learner progress and returns
 guided completion, diagnostic completion, weak areas, evidence, and recommended
-next actions across all eight core SAP processes. The capstone response uses
-the same saved progress to expose locked, open, and review-ready assessment
-challenges with required SAP evidence and scoring rubrics. `POST
-/api/tutor/capstone` stores a learner evidence response, scores it against the
-rubric, and returns the updated portfolio trail. The portfolio endpoint combines
-readiness, capstone outcomes, badges, process evidence, and next best actions
-for the authenticated learner.
+next actions across all eight core SAP processes. Guided step evidence notes are
+stored inside `/api/learning/progress` and counted in the learner portfolio. The
+capstone response uses the same saved progress to expose locked, open, and
+review-ready assessment challenges with required SAP evidence and scoring
+rubrics. `POST /api/tutor/capstone` stores a learner evidence response, scores
+it against the rubric, and returns the updated portfolio trail. The portfolio
+endpoint combines readiness, guided step notes, capstone outcomes, badges,
+process evidence, and next best actions for the authenticated learner.
 
 ## Optional AI mentor provider
 

@@ -207,6 +207,11 @@ The review combines guided transaction completion, troubleshooting diagnostics,
 weak areas, completion evidence, and recommended next practice actions for all
 eight core processes.
 
+Guided tutor steps also let learners capture short SAP evidence notes. These
+notes are saved with `/api/learning/progress`, counted in the learner
+portfolio, and included in mentor portfolio context without exposing raw
+capstone response text.
+
 Learners can also retrieve and submit capstone assessment evidence:
 
 `/api/tutor/capstone`
@@ -221,9 +226,9 @@ Learners can retrieve a consolidated evidence transcript:
 
 `/api/tutor/portfolio`
 
-The portfolio combines readiness, guided lessons, diagnostics, capstone
-submissions, badges, process evidence, and next best actions into one
-learner-scoped view.
+The portfolio combines readiness, guided lessons, guided step notes,
+diagnostics, capstone submissions, badges, process evidence, and next best
+actions into one learner-scoped view.
 
 Connected SAP documents can be queried by process, document number, or module:
 
