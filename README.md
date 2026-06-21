@@ -364,8 +364,9 @@ To seed platform administrators, configure a comma-separated list:
 `SAP_WORLD_ADMIN_EMAILS=admin@example.com,owner@example.com`
 
 Learner readiness is calculated from demonstrated performance rather than a
-static catalogue value: guided transaction progress contributes 60%, and a
-successfully diagnosed troubleshooting case contributes the remaining 40%.
+static catalogue value: guided transaction progress contributes 50%,
+successfully diagnosed troubleshooting contributes 30%, and guided evidence
+coverage contributes 20%.
 
 ## Quality checks
 

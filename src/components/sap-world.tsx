@@ -281,6 +281,7 @@ type TutorReadinessReview = {
     level: "Not started" | "In progress" | "Practice ready" | "Scenario ready";
     guidedProgress: number;
     diagnosticProgress: number;
+    evidenceProgress: number;
     completedStages: number;
     totalStages: number;
     nextAction: string;
@@ -359,6 +360,7 @@ type TutorPortfolio = {
     readinessLevel: string;
     guidedProgress: number;
     diagnosticProgress: number;
+    evidenceProgress: number;
     guidedEvidenceNotes: number;
     capstoneStatus: string;
     latestCapstoneScore: number | null;
@@ -1584,6 +1586,10 @@ export function SapWorld({
           dashboardActionProcess.diagnosticProgress < 100 &&
           dashboardActionProcess.guidedProgress >= 100
         ? "troubleshoot"
+        : dashboardActionProcess?.evidenceProgress !== undefined &&
+            dashboardActionProcess.evidenceProgress < 100 &&
+            dashboardActionProcess.guidedProgress >= 100
+          ? "guided"
         : "guided";
   const tutorHeading =
     tutorMode === "guided"
@@ -1730,10 +1736,21 @@ export function SapWorld({
     const guidedProgress = lesson.complete
       ? 100
       : Math.round(((lesson.step + 1) / scenario.tutorSteps.length) * 100);
-    const guidedScore = Math.round(guidedProgress * 0.6);
+    const evidenceProgress = Math.round(
+      (Math.min(
+        Object.keys(guidedEvidence[scenarioId] ?? {}).length,
+        scenario.tutorSteps.length,
+      ) /
+        scenario.tutorSteps.length) *
+        100,
+    );
     return Math.min(
       100,
-      guidedScore + (diagnosticProgress[scenarioId].complete ? 40 : 0),
+      Math.round(
+        guidedProgress * 0.5 +
+          (diagnosticProgress[scenarioId].complete ? 30 : 0) +
+          evidenceProgress * 0.2,
+      ),
     );
   }
 
@@ -2242,7 +2259,7 @@ export function SapWorld({
                         >
                           <span>{process.processCode}</span>
                           <strong>{process.readinessScore}%</strong>
-                          <small>{process.latestCapstoneScore !== null ? `Capstone ${process.latestCapstoneScore}/100` : `${process.guidedEvidenceNotes} notes - ${process.nextAction}`}</small>
+                          <small>{process.latestCapstoneScore !== null ? `Capstone ${process.latestCapstoneScore}/100` : `${process.evidenceProgress}% evidence - ${process.nextAction}`}</small>
                         </button>
                       ))}
                     </div>
@@ -3697,6 +3714,7 @@ export function SapWorld({
                       {activeReadinessProcess.completedStages}/
                       {activeReadinessProcess.totalStages} SAP stages completed
                     </p>
+                    <p>{activeReadinessProcess.evidenceProgress}% evidence coverage</p>
                     <p>{activeReadinessProcess.evidence[1]}</p>
                   </div>
                 )}
@@ -3714,13 +3732,15 @@ export function SapWorld({
                             ? "guided"
                             : process.diagnosticProgress < 100
                               ? "troubleshoot"
-                              : "capstone",
+                              : process.evidenceProgress < 100
+                                ? "guided"
+                                : "capstone",
                         );
                       }}
                     >
                       <span>{process.processCode}</span>
                       <strong>{process.score}%</strong>
-                      <small>{process.weakAreas[0] ?? process.nextAction}</small>
+                      <small>{process.weakAreas[0] ?? `${process.evidenceProgress}% evidence coverage`}</small>
                     </button>
                   ))}
                 </div>
@@ -4344,7 +4364,7 @@ export function SapWorld({
                 </div>
                 <div>
                   <span>{activePortfolioProcess.processCode}</span>
-                  <strong>{activePortfolioProcess.readinessScore}%</strong>
+                  <strong>{activePortfolioProcess.readinessScore}% / {activePortfolioProcess.evidenceProgress}% evidence</strong>
                 </div>
                 <small>{activePortfolioProcess.nextAction}</small>
               </div>

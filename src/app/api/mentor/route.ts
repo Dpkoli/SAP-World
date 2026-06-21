@@ -62,6 +62,7 @@ export async function POST(request: Request) {
         readinessLevel: process.level,
         guidedProgress: process.guidedProgress,
         diagnosticProgress: process.diagnosticProgress,
+        evidenceProgress: process.evidenceProgress,
         guidedEvidenceNotes: Object.keys(
           progress.guidedEvidence[process.scenarioId] ?? {},
         ).length,

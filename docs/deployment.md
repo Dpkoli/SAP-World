@@ -129,9 +129,10 @@ GET /api/tutor/portfolio
 ```
 
 The readiness response is generated from saved learner progress and returns
-guided completion, diagnostic completion, weak areas, evidence, and recommended
-next actions across all eight core SAP processes. Guided step evidence notes are
-stored inside `/api/learning/progress` and counted in the learner portfolio. The
+guided completion, diagnostic completion, evidence coverage, weak areas,
+evidence, and recommended next actions across all eight core SAP processes.
+Guided step evidence notes are stored inside `/api/learning/progress`, count for
+20% of process readiness, and are counted in the learner portfolio. The
 guided tutor UI pairs those notes with an impact trail for the active SAP step,
 showing upstream dependency, integration impact, downstream process effect, and
 expected evidence without adding another persistence aggregate. The

@@ -19,6 +19,7 @@ export type TutorReadinessProcess = {
   level: TutorReadinessLevel;
   guidedProgress: number;
   diagnosticProgress: number;
+  evidenceProgress: number;
   completedStages: number;
   totalStages: number;
   nextAction: string;
@@ -56,6 +57,7 @@ function nextActionFor(input: {
   title: string;
   guidedComplete: boolean;
   diagnosticComplete: boolean;
+  evidenceComplete: boolean;
   currentStage?: string;
 }) {
   if (!input.guidedComplete && input.currentStage) {
@@ -63,6 +65,9 @@ function nextActionFor(input: {
   }
   if (!input.diagnosticComplete) {
     return `Complete the troubleshooting lab for ${input.title} and explain the root cause.`;
+  }
+  if (!input.evidenceComplete) {
+    return `Capture review-ready evidence notes for each guided SAP step in ${input.title}.`;
   }
   return `Review the document chain and ask the SAP Mentor one integration question for ${input.title}.`;
 }
@@ -73,6 +78,9 @@ export function buildTutorReadinessReview(
   const processes = processScenarios.map<TutorReadinessProcess>((scenario) => {
     const guided = progress.scenarios[scenario.id];
     const diagnostic = progress.diagnostics[scenario.id];
+    const guidedEvidenceNotes = Object.keys(
+      progress.guidedEvidence[scenario.id] ?? {},
+    ).length;
     const totalStages = scenario.tutorSteps.length;
     const completedStages = guided.complete
       ? totalStages
@@ -83,13 +91,21 @@ export function buildTutorReadinessReview(
       totalStages,
     );
     const diagnosticProgress = diagnostic.complete ? 100 : 0;
-    const score = Math.round(guidedProgress * 0.6 + diagnosticProgress * 0.4);
+    const evidenceProgress = Math.round(
+      (Math.min(guidedEvidenceNotes, totalStages) / totalStages) * 100,
+    );
+    const score = Math.round(
+      guidedProgress * 0.5 +
+        diagnosticProgress * 0.3 +
+        evidenceProgress * 0.2,
+    );
     const playbook = transactionPlaybookFor(scenario.id);
     const activeStage = scenario.tutorSteps[Math.min(guided.step, totalStages - 1)];
 
     const weakAreas = [
       !guided.complete ? "Guided SAP transaction execution" : null,
       !diagnostic.complete ? "Exception diagnosis and recovery" : null,
+      evidenceProgress < 100 ? "Step evidence capture" : null,
       score < 90 ? "Cross-module impact explanation" : null,
     ].filter((item): item is string => Boolean(item));
 
@@ -102,12 +118,14 @@ export function buildTutorReadinessReview(
       level: levelFor(score),
       guidedProgress,
       diagnosticProgress,
+      evidenceProgress,
       completedStages,
       totalStages,
       nextAction: nextActionFor({
         title: scenario.tutorTitle,
         guidedComplete: guided.complete,
         diagnosticComplete: diagnostic.complete,
+        evidenceComplete: evidenceProgress === 100,
         currentStage: activeStage?.title,
       }),
       weakAreas,
@@ -116,6 +134,7 @@ export function buildTutorReadinessReview(
         diagnostic.complete
           ? `Troubleshooting lab completed at ${diagnostic.completedAt ?? "recorded time"}.`
           : `${diagnostic.attempts} troubleshooting attempt${diagnostic.attempts === 1 ? "" : "s"} recorded.`,
+        `${guidedEvidenceNotes}/${totalStages} guided SAP evidence notes captured.`,
         playbook
           ? `${playbook.documentChain.length} document-chain checkpoints available.`
           : `${scenario.steps.length} process documents available.`,

@@ -68,6 +68,7 @@ export type LearnerMentorPortfolio = {
     readinessLevel: string;
     guidedProgress: number;
     diagnosticProgress: number;
+    evidenceProgress: number;
     guidedEvidenceNotes: number;
     nextAction: string;
     weakAreas: string[];
@@ -643,10 +644,10 @@ function answerPortfolioQuestion(input: {
           `${process.processCode} (${formatPercent(process.readinessScore)}, ${process.readinessLevel})`,
       )
       .join(", ");
-    return `Practice ${firstAction} Your current weakest areas are ${weakAreaText}. For ${currentProcess.processCode}, guided progress is ${formatPercent(currentProcess.guidedProgress)}, diagnostic progress is ${formatPercent(currentProcess.diagnosticProgress)}, and ${currentProcess.guidedEvidenceNotes} guided step evidence note${currentProcess.guidedEvidenceNotes === 1 ? "" : "s"} have been captured. The immediate learning move is: ${currentProcess.nextAction}`;
+    return `Practice ${firstAction} Your current weakest areas are ${weakAreaText}. For ${currentProcess.processCode}, guided progress is ${formatPercent(currentProcess.guidedProgress)}, diagnostic progress is ${formatPercent(currentProcess.diagnosticProgress)}, evidence coverage is ${formatPercent(currentProcess.evidenceProgress)}, and ${currentProcess.guidedEvidenceNotes} guided step evidence note${currentProcess.guidedEvidenceNotes === 1 ? "" : "s"} have been captured. The immediate learning move is: ${currentProcess.nextAction}`;
   }
 
-  return `Your SAP evidence portfolio is ${input.portfolio.readinessLevel} at ${formatPercent(input.portfolio.readinessScore)} readiness. You have completed ${input.portfolio.completedLessons} guided lesson${input.portfolio.completedLessons === 1 ? "" : "s"}, ${input.portfolio.completedDiagnostics} troubleshooting diagnostic${input.portfolio.completedDiagnostics === 1 ? "" : "s"}, and ${input.portfolio.guidedEvidenceNotes} guided step evidence note${input.portfolio.guidedEvidenceNotes === 1 ? "" : "s"}. For ${currentProcess.processCode}, readiness is ${formatPercent(currentProcess.readinessScore)} (${currentProcess.readinessLevel}); ${currentProcess.nextAction}`;
+  return `Your SAP evidence portfolio is ${input.portfolio.readinessLevel} at ${formatPercent(input.portfolio.readinessScore)} readiness. You have completed ${input.portfolio.completedLessons} guided lesson${input.portfolio.completedLessons === 1 ? "" : "s"}, ${input.portfolio.completedDiagnostics} troubleshooting diagnostic${input.portfolio.completedDiagnostics === 1 ? "" : "s"}, and ${input.portfolio.guidedEvidenceNotes} guided step evidence note${input.portfolio.guidedEvidenceNotes === 1 ? "" : "s"}. For ${currentProcess.processCode}, readiness is ${formatPercent(currentProcess.readinessScore)} (${currentProcess.readinessLevel}) with ${formatPercent(currentProcess.evidenceProgress)} evidence coverage; ${currentProcess.nextAction}`;
 }
 
 export function answerMentorQuestion(input: {

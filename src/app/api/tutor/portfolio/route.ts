@@ -40,6 +40,7 @@ export async function GET() {
       readinessLevel: process.level,
       guidedProgress: process.guidedProgress,
       diagnosticProgress: process.diagnosticProgress,
+      evidenceProgress: process.evidenceProgress,
       guidedEvidenceNotes,
       capstoneStatus: capstone?.status ?? "Locked",
       latestCapstoneScore: capstone?.latestSubmission?.score ?? null,
