@@ -289,7 +289,8 @@ include the simulation records used as evidence, and the service does not
 invent facts when the local data cannot support a precise response. The mentor
 also reads the authenticated learner's compact evidence portfolio, so questions
 about readiness, next practice actions, weak areas, scores, or capstones are
-grounded in saved progress without exposing raw capstone response text. By
+grounded in saved progress and missing guided evidence steps without exposing
+raw note or capstone response text. By
 default, the mentor uses deterministic local retrieval. When
 `SAP_WORLD_AI_ENDPOINT`, `SAP_WORLD_AI_API_KEY`, and `SAP_WORLD_AI_MODEL` are
 configured, the route sends the grounded local answer and evidence list to an

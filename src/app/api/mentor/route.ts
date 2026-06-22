@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { normalizeLearnerProgress } from "@/data/progress";
+import { processScenarios } from "@/data/simulation";
 import { answerMentorQuestion } from "@/server/mentor-service";
 import { enhanceMentorResponse } from "@/server/mentor-provider";
 import { getCurrentLearner } from "@/server/auth-session";
@@ -54,6 +55,19 @@ export async function POST(request: Request) {
       const capstone = capstones.challenges.find(
         (challenge) => challenge.scenarioId === process.scenarioId,
       );
+      const scenario = processScenarios.find(
+        (item) => item.id === process.scenarioId,
+      );
+      const guidedEvidence = progress.guidedEvidence[process.scenarioId] ?? {};
+      const missingEvidenceSteps =
+        scenario?.tutorSteps
+          .map((step, index) => ({
+            step: step.number,
+            title: step.title,
+            current: index === progress.scenarios[process.scenarioId].step,
+          }))
+          .filter((_, index) => !guidedEvidence[index])
+          .slice(0, 3) ?? [];
       return {
         scenarioId: process.scenarioId,
         processCode: process.processCode,
@@ -63,9 +77,8 @@ export async function POST(request: Request) {
         guidedProgress: process.guidedProgress,
         diagnosticProgress: process.diagnosticProgress,
         evidenceProgress: process.evidenceProgress,
-        guidedEvidenceNotes: Object.keys(
-          progress.guidedEvidence[process.scenarioId] ?? {},
-        ).length,
+        guidedEvidenceNotes: Object.keys(guidedEvidence).length,
+        missingEvidenceSteps,
         nextAction:
           capstone?.latestSubmission?.status === "Strong evidence"
             ? "Use this process as a reference while practicing weaker areas."

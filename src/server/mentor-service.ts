@@ -70,6 +70,11 @@ export type LearnerMentorPortfolio = {
     diagnosticProgress: number;
     evidenceProgress: number;
     guidedEvidenceNotes: number;
+    missingEvidenceSteps: Array<{
+      step: number;
+      title: string;
+      current: boolean;
+    }>;
     nextAction: string;
     weakAreas: string[];
     latestCapstoneScore: number | null;
@@ -610,6 +615,15 @@ function answerPortfolioQuestion(input: {
   const weakestProcesses = [...input.portfolio.processes]
     .sort((a, b) => a.readinessScore - b.readinessScore)
     .slice(0, 3);
+  const missingEvidenceGuidanceFor = (
+    process: LearnerMentorPortfolio["processes"][number],
+  ) => {
+    const missingEvidence = process.missingEvidenceSteps[0];
+    return missingEvidence
+      ? ` The next evidence gap is ${process.processCode} step ${missingEvidence.step}, "${missingEvidence.title}".`
+      : "";
+  };
+  const missingEvidenceGuidance = missingEvidenceGuidanceFor(currentProcess);
 
   if (
     includesAny(input.normalizedQuestion, [
@@ -626,7 +640,7 @@ function answerPortfolioQuestion(input: {
       capstoneProcess.latestCapstoneScore !== null
         ? `${capstoneProcess.processCode} has a latest capstone score of ${capstoneProcess.latestCapstoneScore}/100 with status "${capstoneProcess.latestCapstoneStatus}".`
         : `${capstoneProcess.processCode} does not have a submitted capstone yet.`;
-    return `${capstoneSummary} Across the portfolio, ${input.portfolio.capstoneSubmissions} capstone submission${input.portfolio.capstoneSubmissions === 1 ? "" : "s"} have been saved, and ${input.portfolio.reviewReadyCapstones} are review-ready or stronger. Next, ${capstoneProcess.nextAction.charAt(0).toLowerCase()}${capstoneProcess.nextAction.slice(1)}`;
+    return `${capstoneSummary} Across the portfolio, ${input.portfolio.capstoneSubmissions} capstone submission${input.portfolio.capstoneSubmissions === 1 ? "" : "s"} have been saved, and ${input.portfolio.reviewReadyCapstones} are review-ready or stronger.${missingEvidenceGuidanceFor(capstoneProcess)} Next, ${capstoneProcess.nextAction.charAt(0).toLowerCase()}${capstoneProcess.nextAction.slice(1)}`;
   }
 
   if (
@@ -644,10 +658,10 @@ function answerPortfolioQuestion(input: {
           `${process.processCode} (${formatPercent(process.readinessScore)}, ${process.readinessLevel})`,
       )
       .join(", ");
-    return `Practice ${firstAction} Your current weakest areas are ${weakAreaText}. For ${currentProcess.processCode}, guided progress is ${formatPercent(currentProcess.guidedProgress)}, diagnostic progress is ${formatPercent(currentProcess.diagnosticProgress)}, evidence coverage is ${formatPercent(currentProcess.evidenceProgress)}, and ${currentProcess.guidedEvidenceNotes} guided step evidence note${currentProcess.guidedEvidenceNotes === 1 ? "" : "s"} have been captured. The immediate learning move is: ${currentProcess.nextAction}`;
+    return `Practice ${firstAction} Your current weakest areas are ${weakAreaText}. For ${currentProcess.processCode}, guided progress is ${formatPercent(currentProcess.guidedProgress)}, diagnostic progress is ${formatPercent(currentProcess.diagnosticProgress)}, evidence coverage is ${formatPercent(currentProcess.evidenceProgress)}, and ${currentProcess.guidedEvidenceNotes} guided step evidence note${currentProcess.guidedEvidenceNotes === 1 ? "" : "s"} have been captured.${missingEvidenceGuidance} The immediate learning move is: ${currentProcess.nextAction}`;
   }
 
-  return `Your SAP evidence portfolio is ${input.portfolio.readinessLevel} at ${formatPercent(input.portfolio.readinessScore)} readiness. You have completed ${input.portfolio.completedLessons} guided lesson${input.portfolio.completedLessons === 1 ? "" : "s"}, ${input.portfolio.completedDiagnostics} troubleshooting diagnostic${input.portfolio.completedDiagnostics === 1 ? "" : "s"}, and ${input.portfolio.guidedEvidenceNotes} guided step evidence note${input.portfolio.guidedEvidenceNotes === 1 ? "" : "s"}. For ${currentProcess.processCode}, readiness is ${formatPercent(currentProcess.readinessScore)} (${currentProcess.readinessLevel}) with ${formatPercent(currentProcess.evidenceProgress)} evidence coverage; ${currentProcess.nextAction}`;
+  return `Your SAP evidence portfolio is ${input.portfolio.readinessLevel} at ${formatPercent(input.portfolio.readinessScore)} readiness. You have completed ${input.portfolio.completedLessons} guided lesson${input.portfolio.completedLessons === 1 ? "" : "s"}, ${input.portfolio.completedDiagnostics} troubleshooting diagnostic${input.portfolio.completedDiagnostics === 1 ? "" : "s"}, and ${input.portfolio.guidedEvidenceNotes} guided step evidence note${input.portfolio.guidedEvidenceNotes === 1 ? "" : "s"}. For ${currentProcess.processCode}, readiness is ${formatPercent(currentProcess.readinessScore)} (${currentProcess.readinessLevel}) with ${formatPercent(currentProcess.evidenceProgress)} evidence coverage.${missingEvidenceGuidance} ${currentProcess.nextAction}`;
 }
 
 export function answerMentorQuestion(input: {
