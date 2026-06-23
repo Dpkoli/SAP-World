@@ -210,6 +210,9 @@ type AdminOperations = {
     completedDiagnostics: number;
     guidedEvidenceNotes: number;
     learnersWithGuidedEvidence: number;
+    reachedGuidedSteps: number;
+    reachedEvidenceGaps: number;
+    reachedEvidenceCoverage: number;
     averageGuidedEvidenceNotes: number;
     latestUpdatedAt: string | null;
   };
@@ -2181,7 +2184,9 @@ export function SapWorld({
                         <div><span>Completed diagnostics</span><strong>{adminOperations.progress.completedDiagnostics}</strong></div>
                         <div><span>Step evidence notes</span><strong>{adminOperations.progress.guidedEvidenceNotes}</strong></div>
                         <div><span>Evidence learners</span><strong>{adminOperations.progress.learnersWithGuidedEvidence}</strong></div>
-                        <div><span>Avg notes / learner</span><strong>{adminOperations.progress.averageGuidedEvidenceNotes}</strong></div>
+                        <div><span>Reached steps</span><strong>{adminOperations.progress.reachedGuidedSteps}</strong></div>
+                        <div><span>Open evidence gaps</span><strong>{adminOperations.progress.reachedEvidenceGaps}</strong></div>
+                        <div><span>Evidence coverage</span><strong>{adminOperations.progress.reachedEvidenceCoverage}%</strong></div>
                       </div>
                     </article>
 

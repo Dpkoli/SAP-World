@@ -224,8 +224,8 @@ Meaningful guided progress saves emit compact observability events with process,
 step, completion, and note counts only. The tutor also scores the active note
 against practical evidence-quality checks so learners learn how to document SAP
 work in a review-ready way before capstone submission. Admin operations report
-aggregate guided evidence-note counts and learner coverage without exposing the
-note text.
+aggregate guided evidence-note counts, reached-step coverage, and open evidence
+gaps without exposing the note text.
 
 Learners can also retrieve and submit capstone assessment evidence:
 

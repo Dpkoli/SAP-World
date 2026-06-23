@@ -4,6 +4,7 @@ import {
   normalizeLearnerProgress,
   type LearnerProgress,
 } from "@/data/progress";
+import { processScenarios } from "@/data/simulation";
 import { createDurableStore } from "@/server/durable-store";
 
 type ProgressDatabase = {
@@ -65,6 +66,38 @@ export async function getLearningProgressStats() {
       (notes) => Object.keys(notes).length > 0,
     ),
   ).length;
+  const reachedGuidedSteps = progress.reduce(
+    (total, learner) =>
+      total +
+      processScenarios.reduce((scenarioTotal, scenario) => {
+        const scenarioProgress = learner.scenarios[scenario.id];
+        return (
+          scenarioTotal +
+          (scenarioProgress.complete
+            ? scenario.tutorSteps.length
+            : Math.min(scenarioProgress.step + 1, scenario.tutorSteps.length))
+        );
+      }, 0),
+    0,
+  );
+  const reachedEvidenceGaps = progress.reduce(
+    (total, learner) =>
+      total +
+      processScenarios.reduce((scenarioTotal, scenario) => {
+        const scenarioProgress = learner.scenarios[scenario.id];
+        const reachedSteps = scenarioProgress.complete
+          ? scenario.tutorSteps.length
+          : Math.min(scenarioProgress.step + 1, scenario.tutorSteps.length);
+        const evidenceNotes = learner.guidedEvidence[scenario.id] ?? {};
+        const missingReachedSteps = Array.from({ length: reachedSteps }).filter(
+          (_, index) => !evidenceNotes[index],
+        ).length;
+        return (
+          scenarioTotal + missingReachedSteps
+        );
+      }, 0),
+    0,
+  );
   return {
     learners: progress.length,
     completedLessons: progress.reduce(
@@ -84,6 +117,15 @@ export async function getLearningProgressStats() {
     ),
     guidedEvidenceNotes,
     learnersWithGuidedEvidence,
+    reachedGuidedSteps,
+    reachedEvidenceGaps,
+    reachedEvidenceCoverage:
+      reachedGuidedSteps > 0
+        ? Math.round(
+            ((reachedGuidedSteps - reachedEvidenceGaps) / reachedGuidedSteps) *
+              100,
+          )
+        : 0,
     averageGuidedEvidenceNotes:
       progress.length > 0 ? Math.round(guidedEvidenceNotes / progress.length) : 0,
     latestUpdatedAt:
