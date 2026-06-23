@@ -368,6 +368,11 @@ To seed platform administrators, configure a comma-separated list:
 
 `SAP_WORLD_ADMIN_EMAILS=admin@example.com,owner@example.com`
 
+For local development, create or sign in with an account whose email appears in
+that list. The left navigation then shows the Admin Control Plane, where owners
+can review storage mode, build readiness, learner activity, generated
+simulations, content release coverage, capstone aggregates, and observability.
+
 Learner readiness is calculated from demonstrated performance rather than a
 static catalogue value: guided transaction progress contributes 50%,
 successfully diagnosed troubleshooting contributes 30%, and guided evidence

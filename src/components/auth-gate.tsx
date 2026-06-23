@@ -1,6 +1,6 @@
 "use client";
 
-import { Factory, GraduationCap, LockKeyhole } from "lucide-react";
+import { Factory, GraduationCap, LockKeyhole, ShieldCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import type { LearnerProfile } from "@/data/auth";
 import { SapWorld } from "@/components/sap-world";
@@ -171,6 +171,17 @@ export function AuthGate() {
           <small>
             Local development accounts are stored only on this machine.
           </small>
+          <div className="auth-admin-note">
+            <ShieldCheck size={15} />
+            <div>
+              <strong>Admin development login</strong>
+              <span>
+                Sign in with an email listed in SAP_WORLD_ADMIN_EMAILS to open
+                the Control Plane for build status, storage, learner activity,
+                content readiness, and telemetry.
+              </span>
+            </div>
+          </div>
         </form>
       </section>
     </main>
