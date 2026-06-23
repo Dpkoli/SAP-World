@@ -311,6 +311,9 @@ The endpoint returns safe platform counts, storage status, role distribution,
 content coverage, generated-ledger analytics, capstone submission aggregates,
 mentor provider status, and recent account metadata. It never returns password
 hashes, salts, session tokens, or raw capstone response text.
+The admin Control Plane also shows AI mentor model readiness, including whether
+the external endpoint, API key, and model name are configured, while keeping
+secret values out of the response.
 
 The full controlled content register is available to admins at:
 

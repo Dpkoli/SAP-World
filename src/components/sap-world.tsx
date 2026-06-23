@@ -1913,6 +1913,37 @@ export function SapWorld({
     ),
   ];
   const isAdmin = user.role === "admin";
+  const adminModelChecks = adminOperations
+    ? [
+        {
+          label: "Endpoint",
+          ready: adminOperations.mentor.endpointConfigured,
+          detail: adminOperations.mentor.endpointConfigured
+            ? "External chat-completion endpoint is configured."
+            : "Set SAP_WORLD_AI_ENDPOINT for the external mentor service.",
+        },
+        {
+          label: "API key",
+          ready: adminOperations.mentor.apiKeyConfigured,
+          detail: adminOperations.mentor.apiKeyConfigured
+            ? "API key is present and hidden from the admin response."
+            : "Set SAP_WORLD_AI_API_KEY in the hosting environment.",
+        },
+        {
+          label: "Model",
+          ready: Boolean(adminOperations.mentor.model),
+          detail: adminOperations.mentor.model
+            ? `Configured model: ${adminOperations.mentor.model}.`
+            : "Set SAP_WORLD_AI_MODEL to choose the mentor model.",
+        },
+        {
+          label: "Grounding",
+          ready: true,
+          detail:
+            "Local SAP evidence remains the source of truth before any model rewrite.",
+        },
+      ]
+    : [];
 
   return (
     <div className="app-shell">
@@ -2137,6 +2168,39 @@ export function SapWorld({
                     <article className="panel"><span>Active sessions</span><strong>{adminOperations.accounts.sessions.active}</strong><small>{adminOperations.accounts.sessions.expired} expired retained</small></article>
                     <article className="panel"><span>Generated simulations</span><strong>{adminOperations.simulations.simulations}</strong><small>{adminOperations.simulations.industries} industries represented</small></article>
                   </section>
+
+                  <article className="panel admin-model-panel">
+                    <div className="panel-header">
+                      <div>
+                        <span className="section-kicker">AI mentor model setup</span>
+                        <h2>{adminOperations.mentor.configured ? "External model is connected" : "Local mentor is active"}</h2>
+                      </div>
+                      <strong>{adminOperations.mentor.configured ? adminOperations.mentor.model : "Fallback mode"}</strong>
+                    </div>
+                    <div className="admin-model-summary">
+                      <div>
+                        <span>Current behavior</span>
+                        <p>
+                          {adminOperations.mentor.configured
+                            ? `The local SAP evidence answer can be rewritten by ${adminOperations.mentor.model} with a ${adminOperations.mentor.timeoutMs}ms timeout.`
+                            : "The mentor answers from deterministic local SAP evidence until endpoint, key, and model settings are configured."}
+                        </p>
+                      </div>
+                      <div>
+                        <span>Safety rule</span>
+                        <p>The external model never becomes the source of truth; unsupported answers fall back to local evidence.</p>
+                      </div>
+                    </div>
+                    <div className="admin-model-checks">
+                      {adminModelChecks.map((check) => (
+                        <div className={check.ready ? "ready" : "missing"} key={check.label}>
+                          {check.ready ? <Check size={14} /> : <TriangleAlert size={14} />}
+                          <span>{check.label}</span>
+                          <p>{check.detail}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
 
                   <article className="panel admin-ledger">
                     <div className="panel-header"><div><span className="section-kicker">Production operations readiness</span><h2>Deployment gate summary</h2></div><strong>/api/admin/readiness</strong></div>
