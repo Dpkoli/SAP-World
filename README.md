@@ -51,6 +51,8 @@ The first release demonstrates a brewery enterprise with:
 - A guided transaction impact trail that teaches each step's upstream
   dependency, SAP integration impact, downstream process effect, and expected
   evidence
+- A step-level SAP processing guide that shows the prerequisite, SAP app or
+  transaction, validation check, and proof to keep for the active tutor step
 - An evidence quality coach for guided tutor notes, checking document proof,
   key field proof, integration impact, and audit-level detail while learners
   practice

@@ -1469,6 +1469,31 @@ export function SapWorld({
       activePlaybook.completionEvidence[0] ??
       currentTutorStep.result,
   };
+  const activeStepProcessingGuide = [
+    {
+      label: "Before you start",
+      icon: Clock3,
+      text:
+        activeProgress.step > 0
+          ? `${upstreamDocumentStep.label} ${upstreamDocumentStep.document} is the proof you need before entering this step.`
+          : activePlaybook.prerequisites[0],
+    },
+    {
+      label: "Process in SAP",
+      icon: PlayCircle,
+      text: `Use ${currentPlaybookStage.app} (${currentPlaybookStage.transactionCode}) in ${currentPlaybookStage.screenArea}. ${currentPlaybookStage.action}`,
+    },
+    {
+      label: "Verify before save",
+      icon: ShieldCheck,
+      text: currentPlaybookStage.validations[0],
+    },
+    {
+      label: "Keep as evidence",
+      icon: FileText,
+      text: activeStepImpactTrail.evidence,
+    },
+  ];
   const activeStepEvidence =
     guidedEvidence[activeScenarioId]?.[activeProgress.step] ?? "";
   const normalizedStepEvidence = normalizeEvidenceSearch(activeStepEvidence);
@@ -3814,6 +3839,24 @@ export function SapWorld({
                   )}
                   <div className="explanation-box why"><Sparkles size={20} /><div><strong>Why are we doing this?</strong><p>{currentTutorStep.why}</p></div></div>
                   <div className="explanation-box result"><Check size={20} /><div><strong>What will you achieve?</strong><p>{currentTutorStep.result}</p></div></div>
+                  <div className="step-processing-guide">
+                    <div className="step-processing-heading">
+                      <span className="section-kicker">How to process this in SAP</span>
+                      <strong>{activeScenario.code} step {currentTutorStep.number}: from prerequisite to proof</strong>
+                    </div>
+                    <div className="step-processing-grid">
+                      {activeStepProcessingGuide.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.label}>
+                            <Icon size={15} />
+                            <span>{item.label}</span>
+                            <p>{item.text}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div className="step-impact-trail">
                     <div className="step-impact-heading">
                       <span className="section-kicker">Transaction impact trail</span>
