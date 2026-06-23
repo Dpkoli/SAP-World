@@ -246,6 +246,8 @@ The portfolio combines readiness, guided lessons, guided step notes,
 diagnostics, capstone submissions, badges, process evidence, and next best
 actions into one learner-scoped view. It also identifies missing guided evidence
 steps so learners can jump back to the exact SAP step that needs proof.
+The dashboard mission uses the same gaps to prioritize evidence capture before
+capstone submission.
 
 Connected SAP documents can be queried by process, document number, or module:
 

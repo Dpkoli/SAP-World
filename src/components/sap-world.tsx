@@ -1582,6 +1582,8 @@ export function SapWorld({
           (scenario) => scenario.id === dashboardActionProcess.scenarioId,
         )
       : activeScenario;
+  const dashboardMissingEvidenceStep =
+    dashboardActionProcess?.missingEvidenceSteps[0] ?? null;
   const dashboardNextAction =
     tutorPortfolio?.nextBestActions[0] ??
     (dashboardActionProcess
@@ -1590,18 +1592,19 @@ export function SapWorld({
         ? "Ask SAP Mentor one integration question for the completed lesson."
         : `Continue ${activeScenario.code}: ${currentTutorStep.title}.`);
   const dashboardActionMode =
-    dashboardActionProcess?.capstoneStatus === "Open" ||
-    dashboardActionProcess?.capstoneStatus === "Ready for review"
-      ? "capstone"
-      : dashboardActionProcess?.diagnosticProgress !== undefined &&
-          dashboardActionProcess.diagnosticProgress < 100 &&
-          dashboardActionProcess.guidedProgress >= 100
-        ? "troubleshoot"
-        : dashboardActionProcess?.evidenceProgress !== undefined &&
-            dashboardActionProcess.evidenceProgress < 100 &&
-            dashboardActionProcess.guidedProgress >= 100
-          ? "guided"
-        : "guided";
+    dashboardActionProcess?.diagnosticProgress !== undefined &&
+    dashboardActionProcess.diagnosticProgress < 100 &&
+    dashboardActionProcess.guidedProgress >= 100
+      ? "troubleshoot"
+      : dashboardMissingEvidenceStep
+        ? "guided"
+        : dashboardActionProcess?.capstoneStatus === "Open" ||
+            dashboardActionProcess?.capstoneStatus === "Ready for review"
+          ? "capstone"
+          : "guided";
+  const dashboardMissionText = dashboardMissingEvidenceStep
+    ? `${dashboardActionProcess?.processCode}: Capture evidence for step ${dashboardMissingEvidenceStep.step}, "${dashboardMissingEvidenceStep.title}".`
+    : dashboardNextAction;
   const tutorHeading =
     tutorMode === "guided"
       ? "Guided transaction"
@@ -1994,7 +1997,7 @@ export function SapWorld({
                 <div className="learning-command-main">
                   <span className="section-kicker">Today&apos;s SAP tutor mission</span>
                   <h2>{dashboardActionScenario?.tutorTitle ?? activeScenario.tutorTitle}</h2>
-                  <p>{dashboardNextAction}</p>
+                  <p>{dashboardMissionText}</p>
                 </div>
                 <div className="learning-command-stats">
                   <div><span>Portfolio</span><strong>{tutorPortfolio ? `${tutorPortfolio.summary.readinessScore}%` : `${lessonProgress}%`}</strong><small>{tutorPortfolio?.summary.readinessLevel ?? "Progress loading"}</small></div>
@@ -2006,6 +2009,16 @@ export function SapWorld({
                     className="primary-button"
                     onClick={() => {
                       if (dashboardActionProcess) setActiveScenarioId(dashboardActionProcess.scenarioId);
+                      if (dashboardActionProcess && dashboardMissingEvidenceStep) {
+                        setScenarioProgress((current) => ({
+                          ...current,
+                          [dashboardActionProcess.scenarioId]: {
+                            ...current[dashboardActionProcess.scenarioId],
+                            step: dashboardMissingEvidenceStep.step - 1,
+                            complete: false,
+                          },
+                        }));
+                      }
                       setTutorMode(dashboardActionMode);
                       setView("tutor");
                     }}
