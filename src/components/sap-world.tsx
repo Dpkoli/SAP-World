@@ -179,6 +179,33 @@ type AdminOperations = {
     };
     deploymentGate: string;
   };
+  development: {
+    version: string;
+    overallProgress: number;
+    status: "Complete" | "Advanced build" | "Core build" | "Foundation";
+    summary: {
+      milestones: number;
+      complete: number;
+      inProgress: number;
+      planned: number;
+    };
+    currentFocus: {
+      id: string;
+      title: string;
+      nextAction: string;
+    };
+    milestones: Array<{
+      id: string;
+      title: string;
+      status: "Complete" | "In progress" | "Planned";
+      weight: number;
+      progress: number;
+      summary: string;
+      evidence: string[];
+      nextAction: string;
+    }>;
+    estimateNote: string;
+  };
   observability: {
     retention: {
       maxEvents: number;
@@ -2151,7 +2178,7 @@ export function SapWorld({
           {view === "admin" && isAdmin && (
             <section className="admin-page">
               <div className="page-heading compact">
-                <div><p className="eyebrow">Role-based platform control</p><h1>Admin control plane</h1><p>Monitor storage, learner activity, simulation generation, and content coverage without exposing credentials or session tokens.</p></div>
+                <div><p className="eyebrow">Role-based platform control</p><h1>Admin control plane</h1><p>Track product development, deployment readiness, learner activity, simulations, and controlled content without exposing credentials or session tokens.</p></div>
                 <span className="api-badge">API /api/admin/operations</span>
               </div>
 
@@ -2161,6 +2188,7 @@ export function SapWorld({
               {adminOperations && !adminLoading && (
                 <>
                   <section className="admin-grid">
+                    <article className="panel"><span>Development</span><strong>{adminOperations.development.overallProgress}%</strong><small>{adminOperations.development.status}</small></article>
                     <article className="panel"><span>Storage backend</span><strong>{adminOperations.storage.backend}</strong><small>{adminOperations.storage.durable ? "Durable database mode" : "Local development fallback"}</small></article>
                     <article className="panel"><span>Mentor provider</span><strong>{adminOperations.mentor.mode}</strong><small>{adminOperations.mentor.configured ? `${adminOperations.mentor.model} / ${adminOperations.mentor.timeoutMs}ms` : "Deterministic local fallback"}</small></article>
                     <article className="panel"><span>Readiness gate</span><strong>{adminOperations.readiness.status}</strong><small>{adminOperations.readiness.deploymentGate}</small></article>
@@ -2168,6 +2196,51 @@ export function SapWorld({
                     <article className="panel"><span>Active sessions</span><strong>{adminOperations.accounts.sessions.active}</strong><small>{adminOperations.accounts.sessions.expired} expired retained</small></article>
                     <article className="panel"><span>Generated simulations</span><strong>{adminOperations.simulations.simulations}</strong><small>{adminOperations.simulations.industries} industries represented</small></article>
                   </section>
+
+                  <article className="panel admin-development">
+                    <div className="panel-header">
+                      <div>
+                        <span className="section-kicker">Product development roadmap</span>
+                        <h2>{adminOperations.development.version}</h2>
+                      </div>
+                      <strong>{adminOperations.development.overallProgress}% complete</strong>
+                    </div>
+                    <div className="admin-development-overview">
+                      <div className="admin-development-score">
+                        <strong>{adminOperations.development.overallProgress}%</strong>
+                        <span>{adminOperations.development.status}</span>
+                        <div><span style={{ width: `${adminOperations.development.overallProgress}%` }} /></div>
+                      </div>
+                      <div>
+                        <span>Current focus</span>
+                        <strong>{adminOperations.development.currentFocus.title}</strong>
+                        <p>{adminOperations.development.currentFocus.nextAction}</p>
+                      </div>
+                      <div className="admin-development-counts">
+                        <span><strong>{adminOperations.development.summary.complete}</strong> complete</span>
+                        <span><strong>{adminOperations.development.summary.inProgress}</strong> active</span>
+                        <span><strong>{adminOperations.development.summary.planned}</strong> planned</span>
+                      </div>
+                    </div>
+                    <div className="admin-roadmap">
+                      {adminOperations.development.milestones.map((milestone) => (
+                        <div className={milestone.status.toLowerCase().replace(" ", "-")} key={milestone.id}>
+                          <div className="admin-roadmap-heading">
+                            <span>{milestone.status}</span>
+                            <strong>{milestone.title}</strong>
+                            <small>{milestone.progress}%</small>
+                          </div>
+                          <div className="admin-roadmap-progress"><span style={{ width: `${milestone.progress}%` }} /></div>
+                          <p>{milestone.summary}</p>
+                          <ul>
+                            {milestone.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}
+                          </ul>
+                          <small>Next: {milestone.nextAction}</small>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="admin-development-note">{adminOperations.development.estimateNote}</p>
+                  </article>
 
                   <article className="panel admin-model-panel">
                     <div className="panel-header">

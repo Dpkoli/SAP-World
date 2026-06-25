@@ -82,6 +82,8 @@ The first release demonstrates a brewery enterprise with:
   versions, evidence gates, blockers, and content-domain status
 - Admin-only production readiness gate combining storage, security, content,
   ledger integrity, mentor provider, and deployment configuration checks
+- Admin development roadmap with weighted milestones, completion evidence,
+  current focus, and next priorities kept separate from deployment approval
 - Admin-only observability stream for compact server-side events across mentor,
   simulations, guided tutor progress, workflow, governance, advanced
   transactions, and admin checks

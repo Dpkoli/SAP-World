@@ -117,7 +117,7 @@ button { cursor: pointer; }
 .kpi-card small.good { color: var(--green); }
 .kpi-card small.warn { color: #c7442f; }
 .kpi-card small.neutral { color: var(--muted); }
-.admin-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 14px; margin-bottom: 15px; }
+.admin-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 14px; margin-bottom: 15px; }
 .admin-grid article { padding: 18px; }
 .admin-grid span, .admin-grid strong, .admin-grid small { display: block; }
 .admin-grid span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
@@ -152,6 +152,38 @@ button { cursor: pointer; }
 .admin-model-checks > div.missing { color: #9b6a00; background: #fffaf0; }
 .admin-model-checks span { color: var(--foreground); font-size: 8px; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; }
 .admin-model-checks p { grid-column: 1 / -1; margin: 0; color: #526371; font-size: 8px; line-height: 1.45; }
+.admin-development { margin-bottom: 15px; overflow: hidden; }
+.admin-development .panel-header > strong { color: var(--blue); font-size: 11px; }
+.admin-development-overview { display: grid; grid-template-columns: .7fr 1.6fr 1fr; gap: 1px; background: var(--line); }
+.admin-development-overview > div { padding: 17px 19px; background: #fbfcfd; }
+.admin-development-overview > div > span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.admin-development-overview > div > strong { display: block; margin-top: 6px; color: var(--blue); font-size: 13px; }
+.admin-development-overview p { margin: 6px 0 0; color: #526371; font-size: 9px; line-height: 1.45; }
+.admin-development-score > strong { display: block; color: var(--blue); font-size: 30px; }
+.admin-development-score > span { display: block; margin-top: 2px; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+.admin-development-score > div { height: 6px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: #dfe7ed; }
+.admin-development-score > div span { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.admin-development-counts { display: grid; grid-template-columns: repeat(3,1fr); align-items: center; gap: 8px; }
+.admin-development-counts span { color: var(--muted); font-size: 8px; text-align: center; text-transform: uppercase; }
+.admin-development-counts strong { display: block; margin-bottom: 4px; color: var(--blue); font-size: 20px; }
+.admin-roadmap { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; border-top: 1px solid var(--line); background: var(--line); }
+.admin-roadmap > div { padding: 15px; background: white; }
+.admin-roadmap > div.in-progress { background: #fffaf0; }
+.admin-roadmap > div.planned { background: #f8fafb; }
+.admin-roadmap-heading { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; align-items: center; }
+.admin-roadmap-heading span { color: var(--green); font-size: 7px; font-weight: 850; text-transform: uppercase; }
+.admin-roadmap > div.in-progress .admin-roadmap-heading span { color: #9b6a00; }
+.admin-roadmap > div.planned .admin-roadmap-heading span { color: var(--muted); }
+.admin-roadmap-heading strong { grid-column: 1 / -1; min-height: 28px; font-size: 10px; line-height: 1.35; }
+.admin-roadmap-heading small { grid-column: 2; grid-row: 1; color: var(--blue); font-family: var(--font-mono); font-size: 8px; }
+.admin-roadmap-progress { height: 4px; margin: 10px 0; overflow: hidden; border-radius: 999px; background: #e4eaee; }
+.admin-roadmap-progress span { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.admin-roadmap > div.in-progress .admin-roadmap-progress span { background: var(--amber); }
+.admin-roadmap > div.planned .admin-roadmap-progress span { background: #8b99a4; }
+.admin-roadmap p { min-height: 42px; margin: 0; color: #526371; font-size: 8px; line-height: 1.45; }
+.admin-roadmap ul { min-height: 75px; margin: 10px 0; padding-left: 14px; color: #526371; font-size: 7px; line-height: 1.55; }
+.admin-roadmap > div > small { display: block; padding-top: 9px; border-top: 1px solid #edf0f2; color: var(--blue); font-size: 7px; line-height: 1.45; }
+.admin-development-note { margin: 0; padding: 11px 18px; border-top: 1px solid var(--line); background: #f7f9fa; color: var(--muted); font-size: 8px; }
 .admin-content-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--line); }
 .admin-content-grid > div { padding: 13px 15px; background: #fbfcfd; }
 .admin-content-grid span, .admin-content-grid strong { display: block; }
@@ -1526,8 +1558,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .content { padding: 24px 16px 90px; }
   .page-heading { align-items: flex-start; flex-direction: column; }
   .kpi-grid, .impact-grid, .academy-summary, .portfolio-summary-grid, .portfolio-processes, .enterprise-stats { grid-template-columns: 1fr 1fr; }
-  .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-model-checks { grid-template-columns: 1fr 1fr; }
-  .admin-model-summary { grid-template-columns: 1fr; }
+  .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-model-checks, .admin-roadmap { grid-template-columns: 1fr 1fr; }
+  .admin-model-summary, .admin-development-overview { grid-template-columns: 1fr; }
   .admin-layout { grid-template-columns: 1fr; }
   .process-context { grid-template-columns: 1fr 1fr; }
   .flow { grid-template-columns: repeat(6,100px); }
@@ -1626,7 +1658,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .tutor-readiness-summary { grid-column: auto; }
   .implementation-counts { grid-template-columns: repeat(2,1fr); }
   .kpi-grid, .impact-grid, .academy-summary, .portfolio-summary-grid, .portfolio-processes, .path-grid, .enterprise-stats { grid-template-columns: 1fr; }
-  .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-permissions, .admin-metrics { grid-template-columns: 1fr; }
+  .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-permissions, .admin-metrics, .admin-roadmap, .admin-development-counts { grid-template-columns: 1fr; }
   .admin-users > div { grid-template-columns: 1fr; align-items: start; }
   .process-context { grid-template-columns: 1fr; }
   .attention { align-items: flex-start; flex-wrap: wrap; }
