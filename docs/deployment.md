@@ -5,6 +5,26 @@ SAP World supports two persistence modes:
 - Local development uses ignored JSON files in `.data/`.
 - Hosted environments use PostgreSQL when `DATABASE_URL` is configured.
 
+## Environment setup
+
+`.env.example` is the authoritative list of settings supported by the
+application. It contains placeholders only and is safe to keep in Git.
+
+For local development:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Edit `.env.local` with the administrator email you will register. Leave
+`DATABASE_URL` and the `SAP_WORLD_AI_*` values empty to use local JSON storage
+and the built-in grounded mentor. `.env.local` is ignored by Git and must hold
+all real secrets.
+
+For hosted environments, add the required values through the hosting
+platform's environment-variable controls. Do not upload or commit a populated
+`.env.local` file.
+
 ## PostgreSQL
 
 Provision a Neon PostgreSQL database through the Vercel Marketplace or provide

@@ -3,6 +3,22 @@
 SAP World is an enterprise simulation and tutoring platform for learning SAP
 S/4HANA through realistic, connected business operations.
 
+## Configuration
+
+The repository includes `.env.example` as a safe list of supported settings.
+For local development, copy it to `.env.local`, replace the admin email with
+the account you will use, and keep optional database and model settings empty
+until they are needed:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Real `.env` files remain excluded from Git, so passwords, API keys, and database
+connection strings are not published. The app uses local JSON storage and its
+grounded built-in mentor when the optional hosted settings are empty. See
+`docs/deployment.md` for production setup.
+
 ## Current MVP
 
 The first release demonstrates a brewery enterprise with:
