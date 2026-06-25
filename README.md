@@ -84,6 +84,8 @@ The first release demonstrates a brewery enterprise with:
   ledger integrity, mentor provider, and deployment configuration checks
 - Actionable admin readiness checklist showing the evidence and corrective
   action for every production gate
+- Persistent owner release decisions tied to the exact readiness snapshot,
+  including warning acceptance, rejection, sign-off notes, and approval history
 - Admin development roadmap with weighted milestones, completion evidence,
   current focus, and next priorities kept separate from deployment approval
 - Admin-only observability stream for compact server-side events across mentor,
@@ -374,7 +376,8 @@ are stored separately in
 `.data/simulation-executions.json`, preserving generated templates as immutable
 inputs. Tutor capstone submissions are stored in
 `.data/tutor-capstone-submissions.json`, and operational telemetry is stored in
-`.data/observability-events.json`.
+`.data/observability-events.json`. Administrator release decisions are stored
+in `.data/release-governance.json`.
 Passwords use salted `scrypt`
 hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress

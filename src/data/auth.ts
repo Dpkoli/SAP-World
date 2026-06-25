@@ -27,6 +27,7 @@ export const rolePermissions: Record<UserRole, string[]> = {
     "admin:view-operations",
     "admin:view-learners",
     "admin:view-storage",
+    "admin:approve-release",
   ],
 };
 

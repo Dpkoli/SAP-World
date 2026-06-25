@@ -187,6 +187,12 @@ type AdminOperations = {
     }>;
     deploymentGate: string;
   };
+  releaseGovernance: {
+    readinessFingerprint: string;
+    currentDecision: ReleaseDecision | null;
+    history: ReleaseDecision[];
+    totalDecisions: number;
+  };
   development: {
     version: string;
     overallProgress: number;
@@ -298,6 +304,26 @@ type AdminOperations = {
   };
   content: Record<string, number>;
   controls: string[];
+};
+
+type ReleaseDecision = {
+  id: string;
+  readinessFingerprint: string;
+  readinessStatus: "Ready" | "Ready with warnings" | "Blocked";
+  decision: "Approved" | "Warnings accepted" | "Rejected";
+  note: string;
+  decidedAt: string;
+  decidedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  summary: {
+    checks: number;
+    passed: number;
+    warnings: number;
+    failed: number;
+  };
 };
 
 type TutorReadinessReview = {
@@ -558,6 +584,9 @@ export function SapWorld({
     useState<AdminOperations | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
+  const [releaseNote, setReleaseNote] = useState("");
+  const [releaseSubmitting, setReleaseSubmitting] = useState(false);
+  const [releaseMessage, setReleaseMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -1057,6 +1086,50 @@ export function SapWorld({
       cancelled = true;
     };
   }, [user.role, view]);
+
+  async function submitReleaseDecision(
+    decision: ReleaseDecision["decision"],
+  ) {
+    if (releaseSubmitting || releaseNote.trim().length < 20) return;
+    setReleaseSubmitting(true);
+    setReleaseMessage("");
+    try {
+      const response = await fetch("/api/admin/release-decisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, note: releaseNote }),
+      });
+      const result = (await response.json()) as
+        | AdminOperations["releaseGovernance"]
+        | { error?: string };
+      if (!response.ok || ("error" in result && result.error)) {
+        throw new Error(
+          "error" in result && result.error
+            ? result.error
+            : "Unable to record the release decision.",
+        );
+      }
+      setAdminOperations((current) =>
+        current
+          ? {
+              ...current,
+              releaseGovernance:
+                result as AdminOperations["releaseGovernance"],
+            }
+          : current,
+      );
+      setReleaseNote("");
+      setReleaseMessage(`${decision} recorded for the current readiness gate.`);
+    } catch (error) {
+      setReleaseMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to record the release decision.",
+      );
+    } finally {
+      setReleaseSubmitting(false);
+    }
+  }
 
   async function askMentor(prompt: string) {
     const cleanPrompt = prompt.trim();
@@ -2316,6 +2389,127 @@ export function SapWorld({
                       <span>{adminOperations.readiness.deploymentGate}</span>
                       <small>Checked {new Date(adminOperations.readiness.generatedAt).toLocaleString("en-GB")}</small>
                     </p>
+                  </article>
+
+                  <article className="panel admin-release-governance">
+                    <div className="panel-header">
+                      <div>
+                        <span className="section-kicker">Release governance</span>
+                        <h2>Owner sign-off and decision history</h2>
+                      </div>
+                      <strong>
+                        {adminOperations.releaseGovernance.currentDecision?.decision ??
+                          "Decision required"}
+                      </strong>
+                    </div>
+                    <div className="admin-release-summary">
+                      <div>
+                        <span>Current gate</span>
+                        <strong>{adminOperations.readiness.status}</strong>
+                        <small>
+                          Snapshot {adminOperations.releaseGovernance.readinessFingerprint}
+                        </small>
+                      </div>
+                      <div>
+                        <span>Current decision</span>
+                        <strong>
+                          {adminOperations.releaseGovernance.currentDecision?.decision ??
+                            "No sign-off for this snapshot"}
+                        </strong>
+                        <small>
+                          {adminOperations.releaseGovernance.currentDecision
+                            ? `${adminOperations.releaseGovernance.currentDecision.decidedBy.name} / ${new Date(adminOperations.releaseGovernance.currentDecision.decidedAt).toLocaleString("en-GB")}`
+                            : "A changed readiness snapshot always requires a new decision."}
+                        </small>
+                      </div>
+                      <div>
+                        <span>Audit history</span>
+                        <strong>{adminOperations.releaseGovernance.totalDecisions}</strong>
+                        <small>Retained owner decisions</small>
+                      </div>
+                    </div>
+                    <div className="admin-release-form">
+                      <label>
+                        Owner decision note
+                        <textarea
+                          value={releaseNote}
+                          onChange={(event) => setReleaseNote(event.target.value)}
+                          minLength={20}
+                          maxLength={1000}
+                          placeholder="Document the release rationale, accepted risk, corrective action, or reason for rejection."
+                        />
+                      </label>
+                      <div className="admin-release-actions">
+                        <button
+                          className="primary-button"
+                          disabled={
+                            releaseSubmitting ||
+                            releaseNote.trim().length < 20 ||
+                            adminOperations.readiness.status !== "Ready"
+                          }
+                          onClick={() => void submitReleaseDecision("Approved")}
+                        >
+                          <ShieldCheck size={15} /> Approve release
+                        </button>
+                        <button
+                          disabled={
+                            releaseSubmitting ||
+                            releaseNote.trim().length < 20 ||
+                            adminOperations.readiness.status !==
+                              "Ready with warnings"
+                          }
+                          onClick={() =>
+                            void submitReleaseDecision("Warnings accepted")
+                          }
+                        >
+                          <TriangleAlert size={15} /> Accept warnings
+                        </button>
+                        <button
+                          className="release-reject"
+                          disabled={
+                            releaseSubmitting || releaseNote.trim().length < 20
+                          }
+                          onClick={() => void submitReleaseDecision("Rejected")}
+                        >
+                          <X size={15} /> Reject release
+                        </button>
+                        <small>{releaseNote.trim().length}/1000 characters</small>
+                      </div>
+                      {releaseMessage && (
+                        <p className="admin-release-message" role="status">
+                          {releaseMessage}
+                        </p>
+                      )}
+                    </div>
+                    <div className="admin-release-history">
+                      {adminOperations.releaseGovernance.history.length === 0 ? (
+                        <p>No release decisions have been recorded yet.</p>
+                      ) : (
+                        adminOperations.releaseGovernance.history
+                          .slice(0, 6)
+                          .map((decision) => (
+                            <div key={decision.id}>
+                              <span
+                                className={decision.decision
+                                  .toLowerCase()
+                                  .replace(" ", "-")}
+                              >
+                                {decision.decision}
+                              </span>
+                              <div>
+                                <strong>{decision.decidedBy.name}</strong>
+                                <p>{decision.note}</p>
+                              </div>
+                              <small>
+                                {decision.readinessStatus} /{" "}
+                                {new Date(decision.decidedAt).toLocaleString(
+                                  "en-GB",
+                                )}
+                              </small>
+                            </div>
+                          ))
+                      )}
+                    </div>
                   </article>
 
                   <article className="panel admin-ledger">

@@ -12,6 +12,7 @@ import { getMentorProviderStatus } from "@/server/mentor-provider";
 import { getObservabilitySnapshot } from "@/server/observability-repository";
 import { getOperationsReadiness } from "@/server/operations-readiness-service";
 import { getLearningProgressStats } from "@/server/progress-repository";
+import { getReleaseGovernance } from "@/server/release-governance-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
 import { getTutorCapstoneAdministrationStats } from "@/server/tutor-capstone-repository";
 
@@ -58,6 +59,7 @@ export async function GET() {
     mentor,
     readiness,
   });
+  const releaseGovernance = await getReleaseGovernance(readiness);
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
@@ -69,6 +71,7 @@ export async function GET() {
     storage,
     mentor,
     readiness,
+    releaseGovernance,
     development,
     observability,
     accounts,

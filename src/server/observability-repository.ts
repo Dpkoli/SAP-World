@@ -17,6 +17,7 @@ export type ObservabilityEventType =
   | "workflow.decision"
   | "governance.decision"
   | "admin.readiness.checked"
+  | "admin.release.decision"
   | "admin.content.checked"
   | "admin.observability.checked";
 

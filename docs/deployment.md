@@ -55,6 +55,7 @@ The persisted aggregates are:
 - `generated-simulations`
 - `simulation-executions`
 - `tutor-capstone-submissions`
+- `release-governance`
 - `observability-events`
 
 Generated ledger analytics are currently projected from these saved simulation
@@ -115,6 +116,19 @@ allow-list, cookie security, content release, ledger integrity, and mentor
 provider configuration. A `Blocked` status should stop deployment until failed
 checks are resolved. `Ready with warnings` can be released only when the owner
 has accepted the documented warnings.
+
+Release owners can persist an approval, warning acceptance, or rejection
+against the exact current readiness snapshot through:
+
+```text
+GET /api/admin/release-decisions
+POST /api/admin/release-decisions
+```
+
+Each decision stores the owner, timestamp, note, readiness summary, and a
+fingerprint of the gate evidence. A later configuration or readiness change
+produces a new fingerprint, so an older sign-off cannot approve a changed
+release state.
 
 Admins can inspect compact server-side telemetry through:
 
