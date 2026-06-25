@@ -141,6 +141,22 @@ button { cursor: pointer; }
 .admin-metrics span, .admin-metrics strong { display: block; }
 .admin-metrics span { color: var(--muted); font-size: 8px; text-transform: uppercase; }
 .admin-metrics strong { margin-top: 8px; color: var(--blue); font-size: 22px; }
+.admin-readiness-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border-top: 1px solid var(--line); background: var(--line); }
+.admin-readiness-checks > div { display: grid; grid-template-columns: 75px minmax(0,1fr) minmax(0,1fr); gap: 14px; align-items: start; padding: 15px 17px; background: white; }
+.admin-readiness-checks > div.warning { background: #fffaf0; }
+.admin-readiness-checks > div.fail { background: #fff5f3; }
+.admin-readiness-status { display: flex; align-items: center; gap: 6px; color: var(--green); }
+.admin-readiness-checks > div.warning .admin-readiness-status { color: #9b6a00; }
+.admin-readiness-checks > div.fail .admin-readiness-status { color: #b33c29; }
+.admin-readiness-status span, .admin-readiness-action span { font-size: 7px; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; }
+.admin-readiness-checks strong { display: block; color: var(--foreground); font-size: 9px; }
+.admin-readiness-checks p { margin: 5px 0 0; color: #526371; font-size: 8px; line-height: 1.45; }
+.admin-readiness-action { padding-left: 14px; border-left: 1px solid #e5eaee; }
+.admin-readiness-action span { color: var(--muted); }
+.admin-readiness-gate { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin: 0; padding: 12px 17px; border-top: 1px solid var(--line); background: #f7f9fa; }
+.admin-readiness-gate strong { color: var(--blue); font-size: 9px; }
+.admin-readiness-gate span { color: #526371; font-size: 8px; }
+.admin-readiness-gate small { color: var(--muted); font-family: var(--font-mono); font-size: 7px; }
 .admin-model-panel { margin-bottom: 15px; overflow: hidden; }
 .admin-model-panel .panel-header > strong { color: var(--blue); font-size: 10px; }
 .admin-model-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
@@ -1560,6 +1576,7 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .kpi-grid, .impact-grid, .academy-summary, .portfolio-summary-grid, .portfolio-processes, .enterprise-stats { grid-template-columns: 1fr 1fr; }
   .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-model-checks, .admin-roadmap { grid-template-columns: 1fr 1fr; }
   .admin-model-summary, .admin-development-overview { grid-template-columns: 1fr; }
+  .admin-readiness-checks { grid-template-columns: 1fr; }
   .admin-layout { grid-template-columns: 1fr; }
   .process-context { grid-template-columns: 1fr 1fr; }
   .flow { grid-template-columns: repeat(6,100px); }
@@ -1659,6 +1676,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .implementation-counts { grid-template-columns: repeat(2,1fr); }
   .kpi-grid, .impact-grid, .academy-summary, .portfolio-summary-grid, .portfolio-processes, .path-grid, .enterprise-stats { grid-template-columns: 1fr; }
   .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-permissions, .admin-metrics, .admin-roadmap, .admin-development-counts { grid-template-columns: 1fr; }
+  .admin-readiness-checks > div, .admin-readiness-gate { grid-template-columns: 1fr; }
+  .admin-readiness-action { padding: 9px 0 0; border-top: 1px solid #e5eaee; border-left: 0; }
   .admin-users > div { grid-template-columns: 1fr; align-items: start; }
   .process-context { grid-template-columns: 1fr; }
   .attention { align-items: flex-start; flex-wrap: wrap; }

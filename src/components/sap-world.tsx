@@ -170,6 +170,7 @@ type AdminOperations = {
     timeoutMs: number;
   };
   readiness: {
+    generatedAt: string;
     status: "Ready" | "Ready with warnings" | "Blocked";
     summary: {
       checks: number;
@@ -177,6 +178,13 @@ type AdminOperations = {
       warnings: number;
       failed: number;
     };
+    checks: Array<{
+      id: string;
+      area: string;
+      status: "Pass" | "Warning" | "Fail";
+      evidence: string;
+      action: string;
+    }>;
     deploymentGate: string;
   };
   development: {
@@ -2285,6 +2293,29 @@ export function SapWorld({
                       <div><span>Status</span><strong>{adminOperations.readiness.status}</strong></div>
                       <div><span>Gate</span><strong>{adminOperations.readiness.summary.failed === 0 ? "Review" : "Fix"}</strong></div>
                     </div>
+                    <div className="admin-readiness-checks">
+                      {adminOperations.readiness.checks.map((check) => (
+                        <div className={check.status.toLowerCase()} key={check.id}>
+                          <div className="admin-readiness-status">
+                            {check.status === "Pass" ? <Check size={15} /> : <TriangleAlert size={15} />}
+                            <span>{check.status}</span>
+                          </div>
+                          <div>
+                            <strong>{check.area}</strong>
+                            <p>{check.evidence}</p>
+                          </div>
+                          <div className="admin-readiness-action">
+                            <span>{check.status === "Pass" ? "Owner review" : "Required action"}</span>
+                            <p>{check.action}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="admin-readiness-gate">
+                      <strong>Deployment decision</strong>
+                      <span>{adminOperations.readiness.deploymentGate}</span>
+                      <small>Checked {new Date(adminOperations.readiness.generatedAt).toLocaleString("en-GB")}</small>
+                    </p>
                   </article>
 
                   <article className="panel admin-ledger">
