@@ -57,12 +57,15 @@ The persisted aggregates are:
 - `tutor-capstone-submissions`
 - `release-governance`
 - `observability-events`
+- `ledger-analytics-read-model`
 
-Generated ledger analytics are currently projected from these saved simulation
-aggregates at request time. The projection is exposed to learners through
-`GET /api/ledger/analytics` and to admins through `GET /api/admin/operations`;
-it reports document volume, process-chain coverage, journal-bearing documents,
-exceptions, and link-integrity checks without storing a second mutable copy.
+Generated ledger analytics are stored as a persisted read-model aggregate keyed
+by learner and admin scope. The read model fingerprints saved simulations,
+reuses the stored snapshot while the source simulations are unchanged, and
+refreshes automatically when new simulation signatures are saved. The snapshot
+is exposed to learners through `GET /api/ledger/analytics` and to admins
+through `GET /api/admin/operations`; it reports document volume, process-chain
+coverage, journal-bearing documents, exceptions, and link-integrity checks.
 
 ## Health check
 

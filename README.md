@@ -38,6 +38,8 @@ The first release demonstrates a brewery enterprise with:
 - A normalized ledger analytics projection across saved generated simulations,
   including year, process, module, industry, journal, exception, and link
   integrity summaries
+- A persisted ledger analytics read model keyed by learner and admin scope,
+  refreshed when saved simulation fingerprints change
 - Complete P2P, O2C, Plan-to-Produce, Record-to-Report,
   Warehouse-to-Dispatch, Quality, Maintenance, and Hire-to-Retire coverage
 - Upstream/downstream document references, quantities, statuses, inventory
@@ -422,8 +424,8 @@ plus a high-severity production dependency audit.
 
 Planned phases include:
 
-1. Persist the normalized ledger analytics projection into dedicated
-   PostgreSQL read-model tables for high-volume analytical workloads
+1. Promote persisted ledger analytics snapshots into dedicated PostgreSQL
+   read-model tables for high-volume analytical workloads
 2. Managed identity integration and role-based authorization
 3. Expand generated industry ledgers from representative connected histories
    to configurable full-volume enterprise scale

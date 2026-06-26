@@ -280,6 +280,12 @@ type AdminOperations = {
     latestGeneratedAt: string | null;
   };
   ledgerAnalytics: {
+    readModel: {
+      key: string;
+      persisted: boolean;
+      refreshedAt: string;
+      fingerprint: string;
+    };
     totals: {
       documents: number;
       processChains: number;
@@ -2595,6 +2601,9 @@ export function SapWorld({
                       <div><span>Exceptions</span><strong>{adminOperations.ledgerAnalytics.totals.exceptions.toLocaleString("en-GB")}</strong></div>
                       <div><span>Broken links</span><strong>{adminOperations.ledgerAnalytics.integrity.brokenLinks}</strong></div>
                       <div><span>Unique documents</span><strong>{adminOperations.ledgerAnalytics.integrity.uniqueDocumentNumbers.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Read model</span><strong>{adminOperations.ledgerAnalytics.readModel.persisted ? "Persisted" : "Live"}</strong></div>
+                      <div><span>Snapshot key</span><strong>{adminOperations.ledgerAnalytics.readModel.key}</strong></div>
+                      <div><span>Refreshed</span><strong>{new Date(adminOperations.ledgerAnalytics.readModel.refreshedAt).toLocaleString("en-GB")}</strong></div>
                     </div>
                   </article>
 

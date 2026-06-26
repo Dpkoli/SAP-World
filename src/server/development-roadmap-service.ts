@@ -134,16 +134,17 @@ export function getDevelopmentRoadmap(input: {
       title: "Enterprise-scale data and identity",
       status: "Planned",
       weight: 8,
-      progress: 25,
+      progress: 35,
       summary:
         "Scale analytical read models, generated transaction volume, and managed enterprise identity.",
       evidence: [
         "PostgreSQL aggregate persistence is available",
+        "Ledger analytics snapshots are persisted and fingerprinted by learner/admin scope",
         "Role-based authorization is established",
-        "High-volume read models and managed identity remain planned",
+        "Dedicated warehouse-style read tables and managed identity remain planned",
       ],
       nextAction:
-        "Persist analytics read models, add configurable data volume, and integrate managed identity.",
+        "Promote analytics snapshots to dedicated read tables, add configurable data volume, and integrate managed identity.",
     }),
     milestone({
       id: "managed-operations",

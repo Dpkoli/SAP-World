@@ -12,12 +12,26 @@ import {
   getAllGeneratedSimulations,
   getGeneratedSimulations,
 } from "@/server/generated-simulation-repository";
+import { createDurableStore } from "@/server/durable-store";
 
 type LedgerScope = "learner" | "admin";
 
 type SavedSimulation = Awaited<
   ReturnType<typeof getAllGeneratedSimulations>
 >[number];
+
+type LedgerAnalyticsBaseSnapshot = ReturnType<typeof summarizeRecords>;
+
+type PersistedLedgerAnalyticsEntry = {
+  fingerprint: string;
+  refreshedAt: string;
+  snapshot: LedgerAnalyticsBaseSnapshot;
+};
+
+type LedgerAnalyticsReadModel = {
+  version: 1;
+  entries: Record<string, PersistedLedgerAnalyticsEntry>;
+};
 
 function emptyBreakdown<T extends string>(keys: readonly T[]) {
   return Object.fromEntries(
@@ -186,18 +200,112 @@ function summarizeRecords(records: SavedSimulation[], scope: LedgerScope) {
   };
 }
 
-export type LedgerAnalyticsSnapshot = ReturnType<typeof summarizeRecords>;
+export type LedgerAnalyticsSnapshot = LedgerAnalyticsBaseSnapshot & {
+  readModel: {
+    key: string;
+    persisted: boolean;
+    refreshedAt: string;
+    fingerprint: string;
+  };
+};
+
+function emptyReadModel(): LedgerAnalyticsReadModel {
+  return { version: 1, entries: {} };
+}
+
+function isReadModel(value: unknown): value is LedgerAnalyticsReadModel {
+  const candidate = value as Partial<LedgerAnalyticsReadModel> | null;
+  return Boolean(
+    candidate?.version === 1 &&
+      candidate.entries &&
+      typeof candidate.entries === "object",
+  );
+}
+
+const analyticsStore = createDurableStore<LedgerAnalyticsReadModel>({
+  key: "ledger-analytics-read-model",
+  fileName: "ledger-analytics-read-model.json",
+  empty: emptyReadModel,
+  validate: isReadModel,
+});
+
+function analyticsKey(scope: LedgerScope, learnerId?: string) {
+  return scope === "admin" ? "admin:platform" : `learner:${learnerId}`;
+}
+
+function fingerprintRecords(records: SavedSimulation[], scope: LedgerScope) {
+  return [
+    scope,
+    records.length,
+    ...records
+      .map(
+        ({ learnerId, simulation }) =>
+          `${learnerId}:${simulation.signature}:${simulation.generatedAt}`,
+      )
+      .sort(),
+  ].join("|");
+}
+
+function withReadModel(
+  snapshot: LedgerAnalyticsBaseSnapshot,
+  input: LedgerAnalyticsSnapshot["readModel"],
+): LedgerAnalyticsSnapshot {
+  return {
+    ...snapshot,
+    readModel: input,
+  };
+}
+
+async function getLedgerAnalyticsFromReadModel(
+  records: SavedSimulation[],
+  scope: LedgerScope,
+  key: string,
+) {
+  const fingerprint = fingerprintRecords(records, scope);
+  const current = await analyticsStore.read();
+  const cached = current.entries[key];
+  if (cached?.fingerprint === fingerprint) {
+    return withReadModel(cached.snapshot, {
+      key,
+      persisted: true,
+      refreshedAt: cached.refreshedAt,
+      fingerprint,
+    });
+  }
+
+  const snapshot = summarizeRecords(records, scope);
+  const refreshedAt = new Date().toISOString();
+  return analyticsStore.update((database) => {
+    database.entries[key] = {
+      fingerprint,
+      refreshedAt,
+      snapshot,
+    };
+    return withReadModel(snapshot, {
+      key,
+      persisted: true,
+      refreshedAt,
+      fingerprint,
+    });
+  });
+}
 
 export async function getLearnerLedgerAnalytics(learnerId: string) {
   const simulations = await getGeneratedSimulations(learnerId);
-  return summarizeRecords(
-    simulations.map((simulation) => ({ learnerId, simulation })),
+  const records = simulations.map((simulation) => ({ learnerId, simulation }));
+  return getLedgerAnalyticsFromReadModel(
+    records,
     "learner",
+    analyticsKey("learner", learnerId),
   );
 }
 
 export async function getPlatformLedgerAnalytics() {
-  return summarizeRecords(await getAllGeneratedSimulations(), "admin");
+  return getLedgerAnalyticsFromReadModel(
+    await getAllGeneratedSimulations(),
+    "admin",
+    analyticsKey("admin"),
+  );
 }
 
 export function isSimulationLedgerProcess(
