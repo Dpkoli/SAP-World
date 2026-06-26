@@ -4,8 +4,10 @@ import { createHash } from "node:crypto";
 
 import {
   simulationFiscalYears,
+  simulationVolumeProfileFor,
   type GeneratedSimulation,
   type SimulationFiscalYear,
+  type SimulationVolumeTier,
 } from "@/data/generated-simulations";
 import { industryBlueprintById } from "@/data/industry-blueprints";
 import {
@@ -131,6 +133,7 @@ export function generateIndustrySimulation(input: {
   industryId: IndustryId;
   fiscalYear: SimulationFiscalYear;
   eventIndex: number;
+  volumeTier?: SimulationVolumeTier;
   generatedAt?: string;
 }): GeneratedSimulation {
   const industry = industryById(input.industryId);
@@ -144,6 +147,7 @@ export function generateIndustrySimulation(input: {
     throw new Error("Select a valid fiscal year.");
   }
 
+  const volumeProfile = simulationVolumeProfileFor(input.volumeTier);
   const signature = createHash("sha256")
     .update(
       [
@@ -152,19 +156,29 @@ export function generateIndustrySimulation(input: {
         input.fiscalYear,
         input.eventIndex,
         event.issue,
+        ...(volumeProfile.tier === "representative" ? [] : [volumeProfile.tier]),
       ].join("|"),
     )
     .digest("hex");
   const code = industryCodes[input.industryId];
   const yearCode = input.fiscalYear.replaceAll("-", "").slice(4);
-  const scenarioId = `SIM-${code}-${yearCode}-${String(input.eventIndex + 1).padStart(2, "0")}`;
+  const scenarioId = [
+    `SIM-${code}-${yearCode}-${String(input.eventIndex + 1).padStart(2, "0")}`,
+    volumeProfile.tier === "representative"
+      ? null
+      : volumeProfile.tier.toUpperCase(),
+  ]
+    .filter(Boolean)
+    .join("-");
   const profile = impactProfiles[input.industryId];
   const yearMultiplier =
     simulationFiscalYears.indexOf(input.fiscalYear) + 1;
-  const exposure =
+  const exposure = Math.round(
     profile.baseExposure *
-    yearMultiplier *
-    (input.eventIndex + 1);
+      yearMultiplier *
+      (input.eventIndex + 1) *
+      volumeProfile.exposureMultiplier,
+  );
   const season =
     blueprint.seasonality[
       input.eventIndex % blueprint.seasonality.length
@@ -195,12 +209,14 @@ export function generateIndustrySimulation(input: {
     enterprise: industry.enterprise,
     fiscalYear: input.fiscalYear,
     eventIndex: input.eventIndex,
+    volumeTier: volumeProfile.tier,
+    volumeProfile,
     title: event.issue,
     status: "Generated",
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     operatingModel: industry.operatingModel,
     customerPromise: blueprint.customerPromise,
-    businessContext: `${industry.enterprise} is operating its ${industry.operatingModel.toLowerCase()} model during ${input.fiscalYear}. ${season.behavior}`,
+    businessContext: `${industry.enterprise} is operating its ${industry.operatingModel.toLowerCase()} model during ${input.fiscalYear}. ${season.behavior} The package uses the ${volumeProfile.label.toLowerCase()} volume profile with ${volumeProfile.processRunsPerYear} connected process run${volumeProfile.processRunsPerYear === 1 ? "" : "s"} per year.`,
     trigger: event.signal,
     rootCause: `${dependency.from} is no longer supporting ${dependency.to.toLowerCase()} as designed. ${dependency.logic}`,
     seasonality: season.period,
@@ -217,7 +233,7 @@ export function generateIndustrySimulation(input: {
     ],
     operationalImpact: `${event.signal}. The affected ${profile.operationalObject} must be controlled before normal execution resumes.`,
     inventoryImpact: profile.inventoryImpact,
-    financialImpact: `${formatGbp(exposure)} of deterministic scenario exposure combines recovery work, service risk, and potential provision. It is a learning assumption derived from the industry profile, fiscal-year maturity, and selected event severity.`,
+    financialImpact: `${formatGbp(exposure)} of deterministic scenario exposure combines recovery work, service risk, and potential provision. It is a learning assumption derived from the industry profile, fiscal-year maturity, selected event severity, and ${volumeProfile.label.toLowerCase()} transaction scale.`,
     exposure: formatGbp(exposure),
     accountingEntries: [
       {
@@ -332,6 +348,7 @@ export function generateIndustrySimulation(input: {
       `Protect the customer promise: ${blueprint.customerPromise}`,
       `Preserve the dependency chain ${dependency.from} -> ${dependency.to}.`,
       `Reconcile all six generated documents to signature ${signature.slice(0, 12)}.`,
+      `Use the ${volumeProfile.label.toLowerCase()} volume profile to review ${volumeProfile.processRunsPerYear} process run${volumeProfile.processRunsPerYear === 1 ? "" : "s"} per year without randomizing transaction logic.`,
       `Review compliance evidence for ${blueprint.compliance.slice(0, 2).join(" and ")}.`,
       "Do not post the illustrative financial entry until operational evidence supports it.",
     ],

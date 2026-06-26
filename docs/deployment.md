@@ -66,6 +66,9 @@ refreshes automatically when new simulation signatures are saved. The snapshot
 is exposed to learners through `GET /api/ledger/analytics` and to admins
 through `GET /api/admin/operations`; it reports document volume, process-chain
 coverage, journal-bearing documents, exceptions, and link-integrity checks.
+Simulation Studio supports representative, growth, and enterprise volume
+profiles; larger profiles generate more deterministic process chains per fiscal
+year, so hosted environments should use PostgreSQL before broad learner rollout.
 
 ## Health check
 

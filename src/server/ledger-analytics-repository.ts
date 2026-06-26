@@ -113,6 +113,7 @@ function summarizeRecords(records: SavedSimulation[], scope: LedgerScope) {
       exceptions: number;
     }
   >();
+  const processChainIds = new Map<SimulationLedgerProcess, Set<string>>();
 
   for (const { simulation, document } of documents) {
     const year = yearBreakdown[document.fiscalYear];
@@ -124,6 +125,9 @@ function summarizeRecords(records: SavedSimulation[], scope: LedgerScope) {
     process.documents += 1;
     process.transactionValue += document.amount;
     process.exceptions += document.exception ? 1 : 0;
+    const chains = processChainIds.get(document.process) ?? new Set<string>();
+    chains.add(document.chainId);
+    processChainIds.set(document.process, chains);
 
     const moduleStats = moduleBreakdown.get(document.module) ?? {
       documents: 0,
@@ -158,9 +162,11 @@ function summarizeRecords(records: SavedSimulation[], scope: LedgerScope) {
     for (const process of ledger.summary.processCoverage) {
       processBreakdown[process].simulations += 1;
     }
-    for (const process of simulationLedgerProcesses) {
-      processBreakdown[process].processChains += 3;
-    }
+  }
+
+  for (const process of simulationLedgerProcesses) {
+    processBreakdown[process].processChains =
+      processChainIds.get(process)?.size ?? 0;
   }
 
   return {

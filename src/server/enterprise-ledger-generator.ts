@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 
 import {
   simulationFiscalYears,
+  simulationVolumeProfileFor,
   type GeneratedSimulation,
   type SimulationFiscalYear,
 } from "@/data/generated-simulations";
@@ -156,13 +157,14 @@ function postingDate(
   fiscalYear: SimulationFiscalYear,
   processIndex: number,
   documentIndex: number,
+  runIndex: number,
 ) {
   const startYear = Number(fiscalYear.slice(0, 4));
   const monthOffset = processIndex;
   const month = 3 + monthOffset;
   const year = startYear + Math.floor(month / 12);
   const normalizedMonth = month % 12;
-  const day = 4 + documentIndex * 3;
+  const day = 4 + documentIndex * 3 + runIndex;
   return new Date(Date.UTC(year, normalizedMonth, day, 9 + documentIndex, 0, 0)).toISOString();
 }
 
@@ -172,9 +174,10 @@ function documentNumber(
   yearIndex: number,
   chainIndex: number,
   documentIndex: number,
+  runIndex: number,
 ) {
   const numeric = deterministicNumber(
-    `${signature}|${code}|${yearIndex}|${chainIndex}|${documentIndex}`,
+    `${signature}|${code}|${yearIndex}|${chainIndex}|${runIndex}|${documentIndex}`,
     10_000_000_000,
   );
   return `${code}-${String(numeric).padStart(10, "0")}`;
@@ -253,120 +256,143 @@ export function generateEnterpriseLedger(
   simulation: GeneratedSimulation,
 ): SimulationLedger {
   const blueprint = industryBlueprintById(simulation.industryId);
+  const volumeProfile = simulationVolumeProfileFor(simulation.volumeTier);
   const documents: SimulationLedgerDocument[] = [];
 
   simulationFiscalYears.forEach((fiscalYear, yearIndex) => {
     const maturityMultiplier = 1 + yearIndex * 0.14;
     simulationLedgerProcesses.forEach((process, processIndex) => {
       const template = processTemplates[process];
-      const chainId = `${simulation.id}-${fiscalYear}-${template.code}`;
-      const quantity =
-        template.baseQuantity === 0
-          ? null
-          : Math.round(
-              template.baseQuantity *
-                maturityMultiplier *
-                (0.92 +
-                  deterministicNumber(
-                    `${simulation.signature}|${chainId}|quantity`,
-                    17,
-                  ) /
-                    100),
-            );
-      const amount = Math.round(
-        template.baseAmount *
-          maturityMultiplier *
-          (0.9 +
+      Array.from({ length: volumeProfile.processRunsPerYear }).forEach(
+        (_, runIndex) => {
+          const baseChainId = `${simulation.id}-${fiscalYear}-${template.code}`;
+          const chainId =
+            volumeProfile.processRunsPerYear === 1
+              ? baseChainId
+              : `${baseChainId}-RUN${String(runIndex + 1).padStart(2, "0")}`;
+          const runMultiplier =
+            0.84 +
+            runIndex * 0.07 +
             deterministicNumber(
-              `${simulation.signature}|${chainId}|amount`,
-              23,
+              `${simulation.signature}|${chainId}|run`,
+              9,
             ) /
-              100),
-      );
-      const numbers = template.documents.map((_, documentIndex) =>
-        documentNumber(
-          simulation.signature,
-          template.code,
-          yearIndex,
-          processIndex,
-          documentIndex,
-        ),
-      );
-      const hasException =
-        (processIndex + yearIndex + simulation.eventIndex) % 3 === 0;
-      const exceptionDocumentIndex = 2 + (simulation.eventIndex % 2);
-      const selectedProblem =
-        blueprint.commonProblems[
-          (simulation.eventIndex + processIndex + yearIndex) %
-            blueprint.commonProblems.length
-        ];
-
-      template.documents.forEach((document, documentIndex) => {
-        const carriesException =
-          hasException && documentIndex === exceptionDocumentIndex;
-        const postingAmount =
-          document.debit && document.credit
-            ? Math.round(amount * (0.78 + documentIndex * 0.04))
-            : 0;
-        documents.push({
-          id: `${chainId}-${documentIndex + 1}`,
-          chainId,
-          simulationId: simulation.id,
-          signature: simulation.signature,
-          fiscalYear,
-          postingDate: postingDate(
-            fiscalYear,
-            processIndex,
-            documentIndex,
-          ),
-          process,
-          sequence: documentIndex + 1,
-          type: document.type,
-          number: numbers[documentIndex],
-          module: document.module,
-          status: carriesException
-            ? "Exception resolved"
-            : documentIndex === 1
-              ? "Approved"
-              : documentIndex === template.documents.length - 1
-                ? "Completed"
-                : "Posted",
-          businessPurpose: document.purpose,
-          quantity,
-          unit: quantity === null ? null : template.unit,
-          amount,
-          currency: "GBP",
-          upstreamDocument:
-            documentIndex === 0 ? null : numbers[documentIndex - 1],
-          downstreamDocument:
-            documentIndex === numbers.length - 1
+              100;
+          const quantity =
+            template.baseQuantity === 0
               ? null
-              : numbers[documentIndex + 1],
-          inventoryImpact: document.inventoryImpact,
-          accountingImpact:
-            document.debit && document.credit
-              ? `Posts GBP ${postingAmount.toLocaleString("en-GB")} from ${document.credit} to ${document.debit}.`
-              : "No FI journal is posted by this document; it controls a later operational or accounting event.",
-          journalEntries:
-            document.debit && document.credit
-              ? [
-                  {
-                    debit: document.debit,
-                    credit: document.credit,
-                    amount: postingAmount,
-                    currency: "GBP",
-                  },
-                ]
-              : [],
-          exception: carriesException
-            ? {
-                issue: selectedProblem.issue,
-                signal: selectedProblem.signal,
-                resolution: selectedProblem.sapResponse,
-              }
-            : null,
+              : Math.round(
+                  template.baseQuantity *
+                    maturityMultiplier *
+                    runMultiplier *
+                    (0.92 +
+                      deterministicNumber(
+                        `${simulation.signature}|${chainId}|quantity`,
+                        17,
+                      ) /
+                        100),
+                );
+          const amount = Math.round(
+            template.baseAmount *
+              maturityMultiplier *
+              runMultiplier *
+              (0.9 +
+                deterministicNumber(
+                  `${simulation.signature}|${chainId}|amount`,
+                  23,
+                ) /
+                  100),
+          );
+          const numbers = template.documents.map((_, documentIndex) =>
+            documentNumber(
+              simulation.signature,
+              template.code,
+              yearIndex,
+              processIndex,
+              documentIndex,
+              runIndex,
+            ),
+          );
+          const hasException =
+            (processIndex + yearIndex + runIndex + simulation.eventIndex) % 3 === 0;
+          const exceptionDocumentIndex = 2 + ((simulation.eventIndex + runIndex) % 2);
+          const selectedProblem =
+            blueprint.commonProblems[
+              (simulation.eventIndex + processIndex + yearIndex + runIndex) %
+                blueprint.commonProblems.length
+            ];
+
+          template.documents.forEach((document, documentIndex) => {
+            const carriesException =
+              hasException && documentIndex === exceptionDocumentIndex;
+            const postingAmount =
+              document.debit && document.credit
+                ? Math.round(amount * (0.78 + documentIndex * 0.04))
+                : 0;
+            documents.push({
+              id: `${chainId}-${documentIndex + 1}`,
+              chainId,
+              simulationId: simulation.id,
+              signature: simulation.signature,
+              fiscalYear,
+              postingDate: postingDate(
+                fiscalYear,
+                processIndex,
+                documentIndex,
+                runIndex,
+              ),
+              process,
+              sequence: documentIndex + 1,
+              type: document.type,
+              number: numbers[documentIndex],
+              module: document.module,
+              status: carriesException
+                ? "Exception resolved"
+                : documentIndex === 1
+                  ? "Approved"
+                  : documentIndex === template.documents.length - 1
+                    ? "Completed"
+                    : "Posted",
+              businessPurpose:
+                volumeProfile.processRunsPerYear === 1
+                  ? document.purpose
+                  : `${document.purpose} Operating run ${runIndex + 1} represents a separate controlled business cycle in the ${volumeProfile.label.toLowerCase()} profile.`,
+              quantity,
+              unit: quantity === null ? null : template.unit,
+              amount,
+              currency: "GBP",
+              upstreamDocument:
+                documentIndex === 0 ? null : numbers[documentIndex - 1],
+              downstreamDocument:
+                documentIndex === numbers.length - 1
+                  ? null
+                  : numbers[documentIndex + 1],
+              inventoryImpact: document.inventoryImpact,
+              accountingImpact:
+                document.debit && document.credit
+                  ? `Posts GBP ${postingAmount.toLocaleString("en-GB")} from ${document.credit} to ${document.debit}.`
+                  : "No FI journal is posted by this document; it controls a later operational or accounting event.",
+              journalEntries:
+                document.debit && document.credit
+                  ? [
+                      {
+                        debit: document.debit,
+                        credit: document.credit,
+                        amount: postingAmount,
+                        currency: "GBP",
+                      },
+                    ]
+                  : [],
+              exception: carriesException
+                ? {
+                    issue: selectedProblem.issue,
+                    signal: selectedProblem.signal,
+                    resolution: selectedProblem.sapResponse,
+                  }
+                : null,
+            });
+          });
         });
-      });
     });
   });
 

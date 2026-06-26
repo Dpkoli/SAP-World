@@ -5,6 +5,19 @@ export type SimulationFiscalYear =
   | "2024-2025"
   | "2025-2026";
 
+export type SimulationVolumeTier =
+  | "representative"
+  | "growth"
+  | "enterprise";
+
+export type SimulationVolumeProfile = {
+  tier: SimulationVolumeTier;
+  label: string;
+  processRunsPerYear: number;
+  exposureMultiplier: number;
+  description: string;
+};
+
 export type GeneratedSimulationDocument = {
   sequence: number;
   type: string;
@@ -59,6 +72,8 @@ export type GeneratedSimulation = {
   enterprise: string;
   fiscalYear: SimulationFiscalYear;
   eventIndex: number;
+  volumeTier: SimulationVolumeTier;
+  volumeProfile: SimulationVolumeProfile;
   title: string;
   status: "Generated";
   generatedAt: string;
@@ -103,3 +118,52 @@ export const simulationFiscalYears: SimulationFiscalYear[] = [
   "2024-2025",
   "2025-2026",
 ];
+
+export const simulationVolumeProfiles: Record<
+  SimulationVolumeTier,
+  SimulationVolumeProfile
+> = {
+  representative: {
+    tier: "representative",
+    label: "Representative",
+    processRunsPerYear: 1,
+    exposureMultiplier: 1,
+    description:
+      "One connected run per process and year for focused tutor walkthroughs.",
+  },
+  growth: {
+    tier: "growth",
+    label: "Growth company",
+    processRunsPerYear: 3,
+    exposureMultiplier: 2.4,
+    description:
+      "Three operating runs per process and year to show repeatable seasonal growth.",
+  },
+  enterprise: {
+    tier: "enterprise",
+    label: "Enterprise scale",
+    processRunsPerYear: 5,
+    exposureMultiplier: 4.8,
+    description:
+      "Five operating runs per process and year for larger multi-site transaction history.",
+  },
+};
+
+export const simulationVolumeTiers = Object.keys(
+  simulationVolumeProfiles,
+) as SimulationVolumeTier[];
+
+export function isSimulationVolumeTier(
+  value: unknown,
+): value is SimulationVolumeTier {
+  return (
+    typeof value === "string" &&
+    simulationVolumeTiers.includes(value as SimulationVolumeTier)
+  );
+}
+
+export function simulationVolumeProfileFor(
+  value: SimulationVolumeTier | undefined,
+) {
+  return simulationVolumeProfiles[value ?? "representative"];
+}

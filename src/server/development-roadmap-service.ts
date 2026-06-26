@@ -80,9 +80,10 @@ export function getDevelopmentRoadmap(input: {
           ? `${input.ledgerAnalytics.totals.documents.toLocaleString("en-GB")} saved ledger documents across ${input.ledgerAnalytics.totals.processChains.toLocaleString("en-GB")} process chains`
           : "Ledger generation is implemented; no simulation has been saved for this admin account yet",
         "Connected document, journal, exception, and execution-event models",
+        "Configurable representative, growth, and enterprise volume profiles",
         `Current saved-ledger integrity: ${input.ledgerAnalytics.integrity.status}`,
       ],
-      nextAction: "Extend representative histories to configurable enterprise volume.",
+      nextAction: "Extend configurable histories to high-volume operational persistence.",
     }),
     milestone({
       id: "learner-evidence",
@@ -134,17 +135,18 @@ export function getDevelopmentRoadmap(input: {
       title: "Enterprise-scale data and identity",
       status: "Planned",
       weight: 8,
-      progress: 35,
+      progress: 45,
       summary:
         "Scale analytical read models, generated transaction volume, and managed enterprise identity.",
       evidence: [
         "PostgreSQL aggregate persistence is available",
         "Ledger analytics snapshots are persisted and fingerprinted by learner/admin scope",
+        "Generated ledgers support configurable transaction volume profiles",
         "Role-based authorization is established",
         "Dedicated warehouse-style read tables and managed identity remain planned",
       ],
       nextAction:
-        "Promote analytics snapshots to dedicated read tables, add configurable data volume, and integrate managed identity.",
+        "Promote analytics snapshots to dedicated read tables, persist high-volume operational records, and integrate managed identity.",
     }),
     milestone({
       id: "managed-operations",

@@ -28,13 +28,15 @@ The first release demonstrates a brewery enterprise with:
 - Detailed implementation blueprints for all ten industries covering value
   chains, lifecycles, organization, master data, KPIs, compliance, reporting,
   dependencies, operational failures, and seasonality
-- A deterministic Simulation Studio that converts industry, fiscal-year, and
-  curated event templates into account-backed SAP scenario packages
+- A deterministic Simulation Studio that converts industry, fiscal-year,
+  curated event, and volume-profile templates into account-backed SAP scenario
+  packages
 - Stable scenario signatures, three-year chronology, organizational and
   master-data dependencies, six-document flows, tutor steps, controls, and
   operational, inventory, and financial impacts
 - A deterministic three-year enterprise ledger for every generated simulation,
-  with 144 chronological SAP documents across 24 connected process chains
+  scaling from 144 to 720 chronological SAP documents across connected process
+  chains based on the selected volume profile
 - A normalized ledger analytics projection across saved generated simulations,
   including year, process, module, industry, journal, exception, and link
   integrity summaries
@@ -173,9 +175,11 @@ packages through:
 
 `POST /api/simulation-studio`
 
-The same industry, fiscal year, and curated event always produce the same
-scenario signature and business content. Repeated generation returns the
-learner's existing saved package rather than creating a duplicate.
+The same industry, fiscal year, curated event, and volume profile always
+produce the same scenario signature and business content. Repeated generation
+returns the learner's existing saved package rather than creating a duplicate.
+Representative packages create one connected run per process and year, growth
+packages create three, and enterprise-scale packages create five.
 
 Each generated scenario exposes an authenticated execution endpoint:
 
@@ -427,8 +431,8 @@ Planned phases include:
 1. Promote persisted ledger analytics snapshots into dedicated PostgreSQL
    read-model tables for high-volume analytical workloads
 2. Managed identity integration and role-based authorization
-3. Expand generated industry ledgers from representative connected histories
-   to configurable full-volume enterprise scale
+3. Expand generated industry ledgers from configurable enterprise-scale
+   histories to high-volume operational-table persistence
 4. External observability integrations and managed release promotion
 
 The source product vision is retained in `Prompt_v2.txt`.

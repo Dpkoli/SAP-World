@@ -102,8 +102,12 @@ import {
 } from "@/data/industry-blueprints";
 import {
   simulationFiscalYears,
+  simulationVolumeProfileFor,
+  simulationVolumeProfiles,
+  simulationVolumeTiers,
   type GeneratedSimulation,
   type SimulationFiscalYear,
+  type SimulationVolumeTier,
 } from "@/data/generated-simulations";
 import {
   simulationLedgerProcesses,
@@ -513,6 +517,8 @@ export function SapWorld({
   const [studioFiscalYear, setStudioFiscalYear] =
     useState<SimulationFiscalYear>("2025-2026");
   const [studioEventIndex, setStudioEventIndex] = useState(0);
+  const [studioVolumeTier, setStudioVolumeTier] =
+    useState<SimulationVolumeTier>("representative");
   const [generatedSimulations, setGeneratedSimulations] = useState<
     GeneratedSimulation[]
   >([]);
@@ -1418,6 +1424,7 @@ export function SapWorld({
           industryId: studioIndustryId,
           fiscalYear: studioFiscalYear,
           eventIndex: studioEventIndex,
+          volumeTier: studioVolumeTier,
         }),
       });
       const result = (await response.json()) as {
@@ -1533,6 +1540,9 @@ export function SapWorld({
     generatedSimulations.find(
       (simulation) => simulation.id === selectedSimulationId,
     ) ?? generatedSimulations[0];
+  const selectedGeneratedVolumeProfile = simulationVolumeProfileFor(
+    selectedGeneratedSimulation?.volumeTier,
+  );
   const selectedLedgerDocument =
     studioLedgerDocuments.find(
       (document) => document.id === selectedLedgerDocumentId,
@@ -3102,6 +3112,16 @@ export function SapWorld({
                       {studioBlueprint.commonProblems.map((problem, index) => <option value={index} key={problem.issue}>{problem.issue}</option>)}
                     </select>
                   </label>
+                  <label>
+                    <span>Transaction volume</span>
+                    <select value={studioVolumeTier} onChange={(event) => setStudioVolumeTier(event.target.value as SimulationVolumeTier)}>
+                      {simulationVolumeTiers.map((tier) => (
+                        <option value={tier} key={tier}>
+                          {simulationVolumeProfiles[tier].label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <button className="primary-button" disabled={studioLoading} onClick={() => void generateStudioSimulation()}>
                     <Sparkles size={16} /> {studioLoading ? "Generating..." : "Generate package"}
                   </button>
@@ -3110,6 +3130,7 @@ export function SapWorld({
                   <div><span>Enterprise</span><strong>{studioIndustry.enterprise}</strong></div>
                   <div><span>Trigger signal</span><strong>{studioBlueprint.commonProblems[studioEventIndex].signal}</strong></div>
                   <div><span>Controlled SAP response</span><strong>{studioBlueprint.commonProblems[studioEventIndex].sapResponse}</strong></div>
+                  <div><span>Volume profile</span><strong>{simulationVolumeProfiles[studioVolumeTier].processRunsPerYear} process run{simulationVolumeProfiles[studioVolumeTier].processRunsPerYear === 1 ? "" : "s"} per year</strong></div>
                 </div>
               </article>
 
@@ -3127,7 +3148,7 @@ export function SapWorld({
                         <span>{simulation.industry} / {simulation.fiscalYear}</span>
                         <strong>{simulation.title}</strong>
                         <code>{simulation.id}</code>
-                        <small>{simulation.exposure}</small>
+                        <small>{simulation.exposure} / {simulationVolumeProfileFor(simulation.volumeTier).label}</small>
                       </button>
                     ))}
                     {!studioLoading && !generatedSimulations.length && <div className="workflow-empty">Generate your first scenario package.</div>}
@@ -3145,6 +3166,7 @@ export function SapWorld({
                         <div><span>Trigger</span><strong>{selectedGeneratedSimulation.trigger}</strong></div>
                         <div><span>Root-cause dependency</span><strong>{selectedGeneratedSimulation.rootCause}</strong></div>
                         <div><span>Seasonality</span><strong>{selectedGeneratedSimulation.seasonality}</strong></div>
+                        <div><span>Volume profile</span><strong>{selectedGeneratedVolumeProfile.label} / {selectedGeneratedVolumeProfile.processRunsPerYear} runs per year</strong></div>
                       </div>
                       <div className="industry-module-strip">{selectedGeneratedSimulation.modules.map((module) => <span key={module}>{module}</span>)}</div>
                     </article>
@@ -3177,7 +3199,7 @@ export function SapWorld({
                       {studioLedgerSummary && !studioLedgerLoading && (
                         <div className="studio-ledger-summary">
                           <div><span>Documents</span><strong>{studioLedgerSummary.documentCount}</strong><small>{studioLedgerDocuments.length} shown</small></div>
-                          <div><span>Process chains</span><strong>{studioLedgerSummary.processChainCount}</strong><small>{studioLedgerSummary.processCoverage.length} end-to-end processes</small></div>
+                          <div><span>Process chains</span><strong>{studioLedgerSummary.processChainCount}</strong><small>{selectedGeneratedVolumeProfile.label} scale</small></div>
                           <div><span>Transaction value</span><strong>GBP {studioLedgerSummary.transactionValue.toLocaleString("en-GB")}</strong><small>Unique chain value</small></div>
                           <div><span>Controlled exceptions</span><strong>{studioLedgerSummary.exceptionCount}</strong><small>Resolved with SAP evidence</small></div>
                           <div className={studioLedgerSummary.integrity.status === "Passed" ? "passed" : "failed"}><span>Relational integrity</span><strong>{studioLedgerSummary.integrity.status}</strong><small>{studioLedgerSummary.integrity.brokenLinks} broken links / {studioLedgerSummary.integrity.orphanDocuments} orphans</small></div>

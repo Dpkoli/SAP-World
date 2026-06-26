@@ -3,7 +3,9 @@ import "server-only";
 import type {
   GeneratedSimulation,
   SimulationFiscalYear,
+  SimulationVolumeTier,
 } from "@/data/generated-simulations";
+import { simulationVolumeProfileFor } from "@/data/generated-simulations";
 import type { IndustryId } from "@/data/industries";
 import { createDurableStore } from "@/server/durable-store";
 import { generateIndustrySimulation } from "@/server/industry-simulation-generator";
@@ -29,15 +31,28 @@ const simulationStore = createDurableStore<SimulationDatabase>({
   validate: isSimulationDatabase,
 });
 
+function hydrateSimulation(simulation: GeneratedSimulation) {
+  const volumeTier = simulation.volumeTier ?? "representative";
+  return {
+    ...simulation,
+    volumeTier,
+    volumeProfile:
+      simulation.volumeProfile ?? simulationVolumeProfileFor(volumeTier),
+  };
+}
+
 export async function getGeneratedSimulations(learnerId: string) {
   const database = await simulationStore.read();
-  return database.learners[learnerId] ?? [];
+  return (database.learners[learnerId] ?? []).map(hydrateSimulation);
 }
 
 export async function getAllGeneratedSimulations() {
   const database = await simulationStore.read();
   return Object.entries(database.learners).flatMap(([learnerId, simulations]) =>
-    simulations.map((simulation) => ({ learnerId, simulation })),
+    simulations.map((simulation) => ({
+      learnerId,
+      simulation: hydrateSimulation(simulation),
+    })),
   );
 }
 
@@ -55,6 +70,7 @@ export async function saveGeneratedSimulation(
     industryId: IndustryId;
     fiscalYear: SimulationFiscalYear;
     eventIndex: number;
+    volumeTier?: SimulationVolumeTier;
   },
 ) {
   const generated = generateIndustrySimulation(input);
@@ -64,7 +80,7 @@ export async function saveGeneratedSimulation(
       (simulation) => simulation.signature === generated.signature,
     );
     if (existing) {
-      return existing;
+      return hydrateSimulation(existing);
     }
 
     database.learners[learnerId] = [generated, ...simulations].slice(0, 25);

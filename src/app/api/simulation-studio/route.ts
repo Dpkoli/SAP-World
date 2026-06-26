@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
+  isSimulationVolumeTier,
   simulationFiscalYears,
+  simulationVolumeProfileFor,
   type SimulationFiscalYear,
 } from "@/data/generated-simulations";
 import { isIndustryId } from "@/data/industries";
@@ -60,6 +62,7 @@ export async function POST(request: Request) {
     industryId?: unknown;
     fiscalYear?: unknown;
     eventIndex?: unknown;
+    volumeTier?: unknown;
   };
   try {
     input = await request.json();
@@ -73,16 +76,20 @@ export async function POST(request: Request) {
   if (
     !isIndustryId(input.industryId) ||
     !simulationFiscalYears.includes(input.fiscalYear as SimulationFiscalYear) ||
-    !Number.isInteger(input.eventIndex)
+    !Number.isInteger(input.eventIndex) ||
+    (input.volumeTier !== undefined && !isSimulationVolumeTier(input.volumeTier))
   ) {
     return NextResponse.json(
-      { error: "Industry, fiscal year, and event template are required." },
+      { error: "Industry, fiscal year, event template, and a valid volume tier are required." },
       { status: 400 },
     );
   }
 
   const blueprint = industryBlueprintById(input.industryId);
   const eventIndex = input.eventIndex as number;
+  const volumeTier = isSimulationVolumeTier(input.volumeTier)
+    ? input.volumeTier
+    : "representative";
   if (eventIndex < 0 || eventIndex >= blueprint.commonProblems.length) {
     return NextResponse.json(
       { error: "Select a valid event template for this industry." },
@@ -94,6 +101,7 @@ export async function POST(request: Request) {
     industryId: input.industryId,
     fiscalYear: input.fiscalYear as SimulationFiscalYear,
     eventIndex,
+    volumeTier,
   });
   const execution = await getSimulationExecution(learner.id, simulation.id);
   await recordObservabilityEvent({
@@ -106,6 +114,9 @@ export async function POST(request: Request) {
       industryId: simulation.industryId,
       fiscalYear: simulation.fiscalYear,
       eventIndex: simulation.eventIndex,
+      volumeTier: simulation.volumeTier,
+      processRunsPerYear: simulationVolumeProfileFor(simulation.volumeTier)
+        .processRunsPerYear,
       signature: simulation.signature.slice(0, 12),
     },
   });
