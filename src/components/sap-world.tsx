@@ -306,6 +306,26 @@ type AdminOperations = {
   controls: string[];
 };
 
+type ContentControlRegister = {
+  generatedAt: string;
+  summary: AdminOperations["contentControl"];
+  register: Array<{
+    id: string;
+    domain: string;
+    owner: string;
+    version: string;
+    status: "Released" | "Review required" | "Blocked";
+    records: number;
+    readiness: number;
+    gates: Array<{
+      label: string;
+      status: "Pass" | "Warning" | "Fail";
+      evidence: string;
+    }>;
+    releaseNotes: string[];
+  }>;
+};
+
 type ReleaseDecision = {
   id: string;
   readinessFingerprint: string;
@@ -582,6 +602,12 @@ export function SapWorld({
   const [mentorError, setMentorError] = useState("");
   const [adminOperations, setAdminOperations] =
     useState<AdminOperations | null>(null);
+  const [contentControlRegister, setContentControlRegister] =
+    useState<ContentControlRegister | null>(null);
+  const [contentControlFilter, setContentControlFilter] = useState<
+    "All" | ContentControlRegister["register"][number]["status"]
+  >("All");
+  const [selectedContentDomainId, setSelectedContentDomainId] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
   const [releaseNote, setReleaseNote] = useState("");
@@ -1052,21 +1078,45 @@ export function SapWorld({
       setAdminLoading(true);
       setAdminError("");
       try {
-        const response = await fetch("/api/admin/operations", {
-          cache: "no-store",
-        });
-        const result = (await response.json()) as
+        const [operationsResponse, contentResponse] = await Promise.all([
+          fetch("/api/admin/operations", { cache: "no-store" }),
+          fetch("/api/admin/content-control", { cache: "no-store" }),
+        ]);
+        const operationsResult = (await operationsResponse.json()) as
           | AdminOperations
           | { error?: string };
-        if (!response.ok || ("error" in result && result.error)) {
+        const contentResult = (await contentResponse.json()) as
+          | ContentControlRegister
+          | { error?: string };
+        if (
+          !operationsResponse.ok ||
+          ("error" in operationsResult && operationsResult.error)
+        ) {
           throw new Error(
-            "error" in result && result.error
-              ? result.error
+            "error" in operationsResult && operationsResult.error
+              ? operationsResult.error
               : "Admin operations are unavailable.",
           );
         }
+        if (
+          !contentResponse.ok ||
+          ("error" in contentResult && contentResult.error)
+        ) {
+          throw new Error(
+            "error" in contentResult && contentResult.error
+              ? contentResult.error
+              : "Controlled content register is unavailable.",
+          );
+        }
         if (!cancelled) {
-          setAdminOperations(result as AdminOperations);
+          const register = contentResult as ContentControlRegister;
+          setAdminOperations(operationsResult as AdminOperations);
+          setContentControlRegister(register);
+          setSelectedContentDomainId((current) =>
+            register.register.some((entry) => entry.id === current)
+              ? current
+              : register.register[0]?.id ?? "",
+          );
         }
       } catch (error) {
         if (!cancelled) {
@@ -2021,6 +2071,18 @@ export function SapWorld({
     ),
   ];
   const isAdmin = user.role === "admin";
+  const visibleContentDomains =
+    contentControlRegister?.register.filter(
+      (entry) =>
+        contentControlFilter === "All" ||
+        entry.status === contentControlFilter,
+    ) ?? [];
+  const selectedContentDomain =
+    visibleContentDomains.find(
+      (entry) => entry.id === selectedContentDomainId,
+    ) ??
+    visibleContentDomains[0] ??
+    null;
   const adminModelChecks = adminOperations
     ? [
         {
@@ -2546,6 +2608,91 @@ export function SapWorld({
                       <div><span>Controlled records</span><strong>{adminOperations.contentControl.records.toLocaleString("en-GB")}</strong></div>
                       <div><span>Register API</span><strong>/api/admin/content-control</strong></div>
                     </div>
+                    {contentControlRegister && (
+                      <>
+                        <div className="admin-content-toolbar">
+                          <div>
+                            <span>Controlled release evidence</span>
+                            <strong>
+                              Inspect owners, versions, gates, and release notes
+                            </strong>
+                          </div>
+                          <div className="filter-tabs">
+                            {(["All", "Released", "Review required", "Blocked"] as const).map((status) => (
+                              <button
+                                className={contentControlFilter === status ? "active" : ""}
+                                key={status}
+                                onClick={() => {
+                                  setContentControlFilter(status);
+                                  const next = contentControlRegister.register.find(
+                                    (entry) => status === "All" || entry.status === status,
+                                  );
+                                  setSelectedContentDomainId(next?.id ?? "");
+                                }}
+                              >
+                                {status}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {selectedContentDomain ? (
+                          <div className="admin-content-register">
+                            <div className="admin-content-domains">
+                              {visibleContentDomains.map((entry) => (
+                                <button
+                                  className={selectedContentDomain.id === entry.id ? "active" : ""}
+                                  key={entry.id}
+                                  onClick={() => setSelectedContentDomainId(entry.id)}
+                                >
+                                  <span className={entry.status.toLowerCase().replace(" ", "-")}>
+                                    {entry.status}
+                                  </span>
+                                  <strong>{entry.domain}</strong>
+                                  <small>{entry.owner}</small>
+                                  <div><span style={{ width: `${entry.readiness}%` }} /></div>
+                                  <code>{entry.readiness}% / {entry.records} records</code>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="admin-content-detail">
+                              <div className="admin-content-detail-heading">
+                                <div>
+                                  <span>{selectedContentDomain.owner}</span>
+                                  <h3>{selectedContentDomain.domain}</h3>
+                                  <code>{selectedContentDomain.version}</code>
+                                </div>
+                                <strong>{selectedContentDomain.readiness}%</strong>
+                              </div>
+                              <div className="admin-content-gates">
+                                {selectedContentDomain.gates.map((gate) => (
+                                  <div className={gate.status.toLowerCase()} key={gate.label}>
+                                    {gate.status === "Pass" ? <Check size={14} /> : <TriangleAlert size={14} />}
+                                    <div>
+                                      <strong>{gate.label}</strong>
+                                      <p>{gate.evidence}</p>
+                                    </div>
+                                    <span>{gate.status}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="admin-content-notes">
+                                <span>Release notes</span>
+                                {selectedContentDomain.releaseNotes.map((note) => (
+                                  <p key={note}><ShieldCheck size={14} />{note}</p>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="admin-content-empty">
+                            No content domains match this status.
+                          </p>
+                        )}
+                        <p className="admin-content-generated">
+                          Register generated {new Date(contentControlRegister.generatedAt).toLocaleString("en-GB")}
+                        </p>
+                      </>
+                    )}
                   </article>
 
                   <div className="admin-layout">

@@ -232,6 +232,42 @@ button { cursor: pointer; }
 .admin-content-grid span, .admin-content-grid strong { display: block; }
 .admin-content-grid span { color: var(--muted); font-size: 7px; text-transform: uppercase; }
 .admin-content-grid strong { margin-top: 5px; color: var(--blue); font-size: 16px; }
+.admin-content-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 17px; border-top: 1px solid var(--line); background: #f8fafb; }
+.admin-content-toolbar > div:first-child span, .admin-content-toolbar > div:first-child strong { display: block; }
+.admin-content-toolbar > div:first-child span { color: var(--muted); font-size: 7px; font-weight: 800; text-transform: uppercase; }
+.admin-content-toolbar > div:first-child strong { margin-top: 4px; font-size: 10px; }
+.admin-content-register { display: grid; grid-template-columns: minmax(250px,.8fr) minmax(0,1.7fr); border-top: 1px solid var(--line); }
+.admin-content-domains { max-height: 590px; overflow-y: auto; border-right: 1px solid var(--line); background: #f7f9fa; }
+.admin-content-domains button { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 13px 15px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; }
+.admin-content-domains button:hover, .admin-content-domains button.active { background: white; }
+.admin-content-domains button.active { box-shadow: inset 3px 0 0 var(--blue); }
+.admin-content-domains button > span { width: fit-content; padding: 3px 6px; border-radius: 999px; background: #e9f6ee; color: var(--green); font-size: 6px; font-weight: 850; text-transform: uppercase; }
+.admin-content-domains button > span.review-required { background: #fff3d6; color: #8b6100; }
+.admin-content-domains button > span.blocked { background: #fde9e5; color: #a73825; }
+.admin-content-domains button strong { grid-column: 1 / -1; font-size: 9px; }
+.admin-content-domains button small { color: var(--muted); font-size: 7px; }
+.admin-content-domains button > div { grid-column: 1 / -1; height: 4px; margin-top: 5px; overflow: hidden; border-radius: 999px; background: #dfe7ec; }
+.admin-content-domains button > div span { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.admin-content-domains button code { grid-column: 1 / -1; color: var(--blue); font-size: 7px; }
+.admin-content-detail { min-width: 0; background: white; }
+.admin-content-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.admin-content-detail-heading span { color: var(--muted); font-size: 7px; font-weight: 800; text-transform: uppercase; }
+.admin-content-detail-heading h3 { margin: 4px 0; font-size: 15px; }
+.admin-content-detail-heading code { color: var(--blue); font-size: 7px; }
+.admin-content-detail-heading > strong { color: var(--blue); font-size: 28px; }
+.admin-content-gates { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--line); }
+.admin-content-gates > div { display: grid; grid-template-columns: 18px 1fr; gap: 7px; align-content: start; padding: 15px; background: white; color: var(--green); }
+.admin-content-gates > div.warning { background: #fffaf0; color: #9b6a00; }
+.admin-content-gates > div.fail { background: #fff5f3; color: #b33c29; }
+.admin-content-gates strong { color: var(--foreground); font-size: 8px; }
+.admin-content-gates p { margin: 5px 0 0; color: #526371; font-size: 8px; line-height: 1.45; }
+.admin-content-gates span { grid-column: 1 / -1; color: currentColor; font-size: 7px; font-weight: 850; text-transform: uppercase; }
+.admin-content-notes { padding: 16px 20px; border-top: 1px solid var(--line); }
+.admin-content-notes > span { color: var(--muted); font-size: 7px; font-weight: 850; text-transform: uppercase; }
+.admin-content-notes p { display: flex; gap: 7px; margin: 9px 0 0; color: #526371; font-size: 8px; line-height: 1.45; }
+.admin-content-notes svg { flex: 0 0 auto; color: var(--green); }
+.admin-content-empty, .admin-content-generated { margin: 0; padding: 14px 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 8px; }
+.admin-content-generated { background: #f8fafb; font-family: var(--font-mono); text-align: right; }
 .admin-capstone-list { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; border-top: 1px solid var(--line); background: var(--line); }
 .admin-capstone-list > div { padding: 12px 14px; background: white; }
 .admin-capstone-list span, .admin-capstone-list strong, .admin-capstone-list small { display: block; }
@@ -1603,6 +1639,9 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .kpi-grid, .impact-grid, .academy-summary, .portfolio-summary-grid, .portfolio-processes, .enterprise-stats { grid-template-columns: 1fr 1fr; }
   .admin-grid, .admin-content-grid, .admin-capstone-list, .admin-model-checks, .admin-roadmap { grid-template-columns: 1fr 1fr; }
   .admin-model-summary, .admin-development-overview, .admin-release-summary { grid-template-columns: 1fr; }
+  .admin-content-toolbar { align-items: flex-start; flex-direction: column; }
+  .admin-content-register { grid-template-columns: 1fr; }
+  .admin-content-domains { max-height: 320px; border-right: 0; border-bottom: 1px solid var(--line); }
   .admin-readiness-checks { grid-template-columns: 1fr; }
   .admin-layout { grid-template-columns: 1fr; }
   .process-context { grid-template-columns: 1fr 1fr; }
@@ -1709,6 +1748,9 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .admin-release-actions small { margin-left: 0; }
   .admin-release-history > div { grid-template-columns: 1fr; }
   .admin-release-history small { white-space: normal; }
+  .admin-content-toolbar .filter-tabs { width: 100%; overflow-x: auto; }
+  .admin-content-toolbar .filter-tabs button { flex: 1 0 auto; }
+  .admin-content-gates { grid-template-columns: 1fr; }
   .admin-users > div { grid-template-columns: 1fr; align-items: start; }
   .process-context { grid-template-columns: 1fr; }
   .attention { align-items: flex-start; flex-wrap: wrap; }

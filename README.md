@@ -80,6 +80,8 @@ The first release demonstrates a brewery enterprise with:
   APIs, and environment-seeded platform administrators
 - Admin-only controlled content register covering release readiness, owners,
   versions, evidence gates, blockers, and content-domain status
+- Filterable Admin Control Plane content inspector with domain ownership,
+  versions, gate evidence, record coverage, and release notes
 - Admin-only production readiness gate combining storage, security, content,
   ledger integrity, mentor provider, and deployment configuration checks
 - Actionable admin readiness checklist showing the evidence and corrective
