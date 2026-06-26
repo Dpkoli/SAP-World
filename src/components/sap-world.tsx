@@ -283,6 +283,12 @@ type AdminOperations = {
     industries: number;
     latestGeneratedAt: string | null;
   };
+  ledgerPersistence: {
+    ledgers: number;
+    documents: number;
+    processChains: number;
+    latestPersistedAt: string | null;
+  };
   ledgerAnalytics: {
     readModel: {
       key: string;
@@ -2612,8 +2618,11 @@ export function SapWorld({
                       <div><span>Broken links</span><strong>{adminOperations.ledgerAnalytics.integrity.brokenLinks}</strong></div>
                       <div><span>Unique documents</span><strong>{adminOperations.ledgerAnalytics.integrity.uniqueDocumentNumbers.toLocaleString("en-GB")}</strong></div>
                       <div><span>Read model</span><strong>{adminOperations.ledgerAnalytics.readModel.persisted ? "Persisted" : "Live"}</strong></div>
+                      <div><span>Persisted ledgers</span><strong>{adminOperations.ledgerPersistence.ledgers.toLocaleString("en-GB")}</strong></div>
+                      <div><span>Persisted docs</span><strong>{adminOperations.ledgerPersistence.documents.toLocaleString("en-GB")}</strong></div>
                       <div><span>Snapshot key</span><strong>{adminOperations.ledgerAnalytics.readModel.key}</strong></div>
                       <div><span>Refreshed</span><strong>{new Date(adminOperations.ledgerAnalytics.readModel.refreshedAt).toLocaleString("en-GB")}</strong></div>
+                      <div><span>Ledger persisted</span><strong>{adminOperations.ledgerPersistence.latestPersistedAt ? new Date(adminOperations.ledgerPersistence.latestPersistedAt).toLocaleString("en-GB") : "Not yet"}</strong></div>
                     </div>
                   </article>
 

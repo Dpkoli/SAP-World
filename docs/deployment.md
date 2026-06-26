@@ -53,6 +53,7 @@ The persisted aggregates are:
 - `governance-decisions`
 - `advanced-transaction-progress`
 - `generated-simulations`
+- `simulation-ledgers`
 - `simulation-executions`
 - `tutor-capstone-submissions`
 - `release-governance`
@@ -69,6 +70,9 @@ coverage, journal-bearing documents, exceptions, and link-integrity checks.
 Simulation Studio supports representative, growth, and enterprise volume
 profiles; larger profiles generate more deterministic process chains per fiscal
 year, so hosted environments should use PostgreSQL before broad learner rollout.
+The generated enterprise ledger is persisted by simulation signature the first
+time a learner or admin reads it, then reused by analytics while the simulation
+fingerprint is unchanged.
 
 ## Health check
 

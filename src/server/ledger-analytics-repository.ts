@@ -7,12 +7,12 @@ import {
   simulationLedgerProcesses,
   type SimulationLedgerProcess,
 } from "@/data/simulation-ledger";
-import { generateEnterpriseLedger } from "@/server/enterprise-ledger-generator";
 import {
   getAllGeneratedSimulations,
   getGeneratedSimulations,
 } from "@/server/generated-simulation-repository";
 import { createDurableStore } from "@/server/durable-store";
+import { getPersistedEnterpriseLedger } from "@/server/simulation-ledger-repository";
 
 type LedgerScope = "learner" | "admin";
 
@@ -20,7 +20,7 @@ type SavedSimulation = Awaited<
   ReturnType<typeof getAllGeneratedSimulations>
 >[number];
 
-type LedgerAnalyticsBaseSnapshot = ReturnType<typeof summarizeRecords>;
+type LedgerAnalyticsBaseSnapshot = Awaited<ReturnType<typeof summarizeRecords>>;
 
 type PersistedLedgerAnalyticsEntry = {
   fingerprint: string;
@@ -57,15 +57,21 @@ function emptyBreakdown<T extends string>(keys: readonly T[]) {
   >;
 }
 
-function summarizeRecords(records: SavedSimulation[], scope: LedgerScope) {
-  const documents = records.flatMap(({ learnerId, simulation }) => {
-    const ledger = generateEnterpriseLedger(simulation);
-    return ledger.documents.map((document) => ({
+async function summarizeRecords(records: SavedSimulation[], scope: LedgerScope) {
+  const ledgers = await Promise.all(
+    records.map(async ({ learnerId, simulation }) => ({
+      learnerId,
+      simulation,
+      ledger: await getPersistedEnterpriseLedger(simulation),
+    })),
+  );
+  const documents = ledgers.flatMap(({ learnerId, simulation, ledger }) =>
+    ledger.documents.map((document) => ({
       learnerId,
       simulation,
       document,
-    }));
-  });
+    })),
+  );
   const simulationIds = new Set(records.map(({ simulation }) => simulation.id));
   const learnerIds = new Set(records.map(({ learnerId }) => learnerId));
   const chainIds = new Set(documents.map(({ document }) => document.chainId));
@@ -151,10 +157,9 @@ function summarizeRecords(records: SavedSimulation[], scope: LedgerScope) {
     industryBreakdown.set(simulation.industry, industry);
   }
 
-  for (const { simulation } of records) {
+  for (const { simulation, ledger } of ledgers) {
     const industry = industryBreakdown.get(simulation.industry);
     if (industry) industry.simulations += 1;
-    const ledger = generateEnterpriseLedger(simulation);
     for (const year of ledger.summary.fiscalYears) {
       yearBreakdown[year.fiscalYear].simulations += 1;
       yearBreakdown[year.fiscalYear].processChains += year.processChains;
@@ -279,7 +284,7 @@ async function getLedgerAnalyticsFromReadModel(
     });
   }
 
-  const snapshot = summarizeRecords(records, scope);
+  const snapshot = await summarizeRecords(records, scope);
   const refreshedAt = new Date().toISOString();
   return analyticsStore.update((database) => {
     database.entries[key] = {

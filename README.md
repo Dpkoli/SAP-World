@@ -42,6 +42,8 @@ The first release demonstrates a brewery enterprise with:
   integrity summaries
 - A persisted ledger analytics read model keyed by learner and admin scope,
   refreshed when saved simulation fingerprints change
+- Persisted generated ledger records keyed by simulation signature, so scaled
+  operational histories are reused by ledger APIs and analytics
 - Complete P2P, O2C, Plan-to-Produce, Record-to-Report,
   Warehouse-to-Dispatch, Quality, Maintenance, and Hire-to-Retire coverage
 - Upstream/downstream document references, quantities, statuses, inventory
@@ -200,10 +202,11 @@ The ledger can be filtered by fiscal year and end-to-end process:
 `GET /api/simulation-studio/{simulationId}/ledger?year=2024-2025&process=Plan-to-Produce`
 
 Each ledger contains three fiscal years, eight process chains per year, and six
-documents per chain. The response reports broken links and orphan records so
-relational integrity is visible rather than assumed. Ledger history is derived
-from the immutable scenario signature, so replay does not require another AI
-generation call and always returns the same document numbers and values.
+documents per chain at representative scale, with additional deterministic runs
+for growth and enterprise-scale profiles. The response reports broken links and
+orphan records so relational integrity is visible rather than assumed. Ledger
+history is derived from the immutable scenario signature, persisted on first
+read, and reused by analytics while the simulation fingerprint is unchanged.
 
 Authenticated learners can query a normalized analytics projection across their
 saved generated ledgers:
@@ -431,8 +434,8 @@ Planned phases include:
 1. Promote persisted ledger analytics snapshots into dedicated PostgreSQL
    read-model tables for high-volume analytical workloads
 2. Managed identity integration and role-based authorization
-3. Expand generated industry ledgers from configurable enterprise-scale
-   histories to high-volume operational-table persistence
+3. Promote persisted generated ledgers from durable aggregates to dedicated
+   high-volume operational tables
 4. External observability integrations and managed release promotion
 
 The source product vision is retained in `Prompt_v2.txt`.

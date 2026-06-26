@@ -9,8 +9,8 @@ import {
   type SimulationLedgerProcess,
 } from "@/data/simulation-ledger";
 import { getCurrentLearner } from "@/server/auth-session";
-import { generateEnterpriseLedger } from "@/server/enterprise-ledger-generator";
 import { getGeneratedSimulation } from "@/server/generated-simulation-repository";
+import { getPersistedEnterpriseLedger } from "@/server/simulation-ledger-repository";
 
 export const runtime = "nodejs";
 
@@ -48,7 +48,7 @@ export async function GET(
     );
   }
 
-  const ledger = generateEnterpriseLedger(simulation);
+  const ledger = await getPersistedEnterpriseLedger(simulation);
   const documents = ledger.documents.filter(
     (document) =>
       (!year || document.fiscalYear === year) &&
@@ -62,6 +62,7 @@ export async function GET(
       year: year ?? "All",
       process: process ?? "All",
     },
+    persistence: ledger.persistence,
     documents,
   });
 }

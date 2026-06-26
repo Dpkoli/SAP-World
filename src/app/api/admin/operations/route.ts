@@ -13,6 +13,7 @@ import { getObservabilitySnapshot } from "@/server/observability-repository";
 import { getOperationsReadiness } from "@/server/operations-readiness-service";
 import { getLearningProgressStats } from "@/server/progress-repository";
 import { getReleaseGovernance } from "@/server/release-governance-repository";
+import { getSimulationLedgerPersistenceStats } from "@/server/simulation-ledger-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
 import { getTutorCapstoneAdministrationStats } from "@/server/tutor-capstone-repository";
 
@@ -32,6 +33,7 @@ export async function GET() {
     accounts,
     progress,
     simulations,
+    ledgerPersistence,
     ledgerAnalytics,
     observability,
     capstones,
@@ -40,6 +42,7 @@ export async function GET() {
     getAuthAdministrationSnapshot(),
     getLearningProgressStats(),
     getGeneratedSimulationStats(),
+    getSimulationLedgerPersistenceStats(),
     getPlatformLedgerAnalytics(),
     getObservabilitySnapshot(),
     getTutorCapstoneAdministrationStats(),
@@ -78,6 +81,7 @@ export async function GET() {
     progress,
     capstones,
     simulations,
+    ledgerPersistence,
     ledgerAnalytics,
     contentControl: contentControl.summary,
     content: {
@@ -95,6 +99,7 @@ export async function GET() {
       "Learner mutations remain scoped to the authenticated learner id.",
       "Storage health is verified server-side before this response is returned.",
       "Ledger analytics are projected from deterministic simulation documents with link-integrity checks.",
+      "Generated enterprise ledgers are persisted by simulation signature before analytics reuse them.",
       "Content release readiness is calculated from controlled owner, version, evidence, and validation gates.",
       "Operations readiness combines deployment, security, content, ledger, storage, and mentor checks.",
       "Development completion is a weighted roadmap estimate and remains separate from deployment approval.",
