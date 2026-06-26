@@ -98,8 +98,9 @@ export function getDevelopmentRoadmap(input: {
         "Guided step notes and evidence-gap tracking",
         "Assessed diagnostics and capstone submissions",
         "Learner capability portfolio with next actions",
+        "Certification-style evidence export with privacy-safe verification notes",
       ],
-      nextAction: "Add richer assessor workflows and certification exports.",
+      nextAction: "Add richer assessor workflows and external certification handoff.",
     }),
     milestone({
       id: "admin-controls",

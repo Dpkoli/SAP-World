@@ -170,6 +170,7 @@ Learner tutor readiness reviews are exposed through:
 GET /api/tutor/readiness
 GET /api/tutor/capstone
 GET /api/tutor/portfolio
+GET /api/tutor/certification
 ```
 
 The readiness response is generated from saved learner progress and returns
@@ -188,6 +189,9 @@ portfolio trail. The portfolio
 endpoint combines readiness, guided step notes, capstone outcomes, badges,
 process evidence, missing guided evidence steps, and next best actions for the
 authenticated learner.
+The certification endpoint returns a learner-scoped evidence export with a
+stable certificate id, readiness status, process evidence summary, badges, and
+verification notes. It excludes raw guided notes and raw capstone response text.
 
 ## Optional AI mentor provider
 

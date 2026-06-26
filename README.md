@@ -141,6 +141,8 @@ The first release demonstrates a brewery enterprise with:
 - Authenticated capstone assessment plans and evidence submissions at
   `/api/tutor/capstone`
 - Authenticated learner evidence portfolios at `/api/tutor/portfolio`
+- Authenticated learner certification evidence exports at
+  `/api/tutor/certification`
 - Authenticated generated-ledger analytics at `/api/ledger/analytics`
 - Responsive desktop and mobile layouts
 
@@ -277,10 +279,17 @@ Learners can retrieve a consolidated evidence transcript:
 
 `/api/tutor/portfolio`
 
+Learners can also generate a certification-style evidence export:
+
+`/api/tutor/certification`
+
 The portfolio combines readiness, guided lessons, guided step notes,
 diagnostics, capstone submissions, badges, process evidence, and next best
-actions into one learner-scoped view. It also identifies missing guided evidence
-steps so learners can jump back to the exact SAP step that needs proof.
+actions into one learner-scoped view. The certification export adds a stable
+certificate id, evidence status, process evidence summary, badges, and
+verification notes while excluding raw learner notes and capstone response
+text. It also identifies missing guided evidence steps so learners can jump
+back to the exact SAP step that needs proof.
 The dashboard mission uses the same gaps to prioritize evidence capture before
 capstone submission.
 

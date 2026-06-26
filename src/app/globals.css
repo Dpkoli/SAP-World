@@ -493,6 +493,12 @@ button { cursor: pointer; }
 .portfolio-summary-grid span, .portfolio-summary-grid strong { display: block; }
 .portfolio-summary-grid span { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .07em; }
 .portfolio-summary-grid strong { margin-top: 5px; color: var(--blue); font-size: 14px; }
+.portfolio-certificate { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 14px 16px; border-top: 1px solid var(--line); background: #f7fbff; }
+.portfolio-certificate span, .portfolio-certificate strong, .portfolio-certificate small { display: block; }
+.portfolio-certificate span { color: var(--blue); font-size: 8px; font-weight: 850; text-transform: uppercase; letter-spacing: .07em; }
+.portfolio-certificate strong { margin-top: 5px; font-size: 12px; }
+.portfolio-certificate small { margin-top: 4px; color: var(--muted); font-size: 8px; line-height: 1.45; }
+.portfolio-certificate code { padding: 7px 9px; border-radius: 6px; background: white; color: var(--blue); font-size: 8px; white-space: nowrap; }
 .portfolio-badges { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; border-top: 1px solid var(--line); }
 .portfolio-badges span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 999px; background: #eaf7f0; color: var(--green); font-size: 9px; font-weight: 800; }
 .portfolio-processes { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; border-top: 1px solid var(--line); background: var(--line); }

@@ -478,6 +478,26 @@ type TutorPortfolio = {
   }>;
 };
 
+type TutorCertificationExport = {
+  certificateId: string;
+  generatedAt: string;
+  status: "In progress" | "Evidence ready" | "Scenario certified";
+  summary: {
+    readinessScore: number;
+    readinessLevel: string;
+    completedLessons: number;
+    completedDiagnostics: number;
+    guidedEvidenceNotes: number;
+    reviewReadyCapstones: number;
+    strongEvidenceCapstones: number;
+  };
+  badges: string[];
+  verification: {
+    method: string;
+    privacy: string;
+  };
+};
+
 const navigation = [
   { id: "overview" as const, label: "Enterprise overview", icon: LayoutDashboard },
   { id: "academy" as const, label: "Learning centre", icon: BookOpenCheck },
@@ -568,6 +588,9 @@ export function SapWorld({
     null,
   );
   const [tutorPortfolioError, setTutorPortfolioError] = useState("");
+  const [tutorCertification, setTutorCertification] =
+    useState<TutorCertificationExport | null>(null);
+  const [tutorCertificationError, setTutorCertificationError] = useState("");
   const [capstoneResponse, setCapstoneResponse] = useState("");
   const [capstoneSubmitting, setCapstoneSubmitting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -1040,22 +1063,45 @@ export function SapWorld({
 
     async function loadTutorPortfolio() {
       try {
-        const response = await fetch("/api/tutor/portfolio", {
-          cache: "no-store",
-        });
-        const result = (await response.json()) as
+        const [portfolioResponse, certificationResponse] = await Promise.all([
+          fetch("/api/tutor/portfolio", { cache: "no-store" }),
+          fetch("/api/tutor/certification", { cache: "no-store" }),
+        ]);
+        const portfolioResult = (await portfolioResponse.json()) as
           | TutorPortfolio
           | { error?: string };
-        if (!response.ok || ("error" in result && result.error)) {
+        const certificationResult = (await certificationResponse.json()) as
+          | TutorCertificationExport
+          | { error?: string };
+        if (
+          !portfolioResponse.ok ||
+          ("error" in portfolioResult && portfolioResult.error)
+        ) {
           throw new Error(
-            "error" in result && result.error
-              ? result.error
+            "error" in portfolioResult && portfolioResult.error
+              ? portfolioResult.error
               : "Tutor portfolio is unavailable.",
           );
         }
         if (!cancelled) {
-          setTutorPortfolio(result as TutorPortfolio);
+          setTutorPortfolio(portfolioResult as TutorPortfolio);
           setTutorPortfolioError("");
+          if (
+            certificationResponse.ok &&
+            !("error" in certificationResult && certificationResult.error)
+          ) {
+            setTutorCertification(
+              certificationResult as TutorCertificationExport,
+            );
+            setTutorCertificationError("");
+          } else {
+            setTutorCertification(null);
+            setTutorCertificationError(
+              "error" in certificationResult && certificationResult.error
+                ? certificationResult.error
+                : "Certification export is unavailable.",
+            );
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -1064,6 +1110,7 @@ export function SapWorld({
               ? error.message
               : "Tutor portfolio is unavailable.",
           );
+          setTutorCertification(null);
         }
       }
     }
@@ -2833,7 +2880,21 @@ export function SapWorld({
                       <div><span>Diagnostics</span><strong>{tutorPortfolio.summary.completedDiagnostics}/{processScenarios.length}</strong></div>
                       <div><span>Step notes</span><strong>{tutorPortfolio.summary.guidedEvidenceNotes}</strong></div>
                       <div><span>Capstones</span><strong>{tutorPortfolio.summary.reviewReadyCapstones}/{tutorPortfolio.summary.capstoneSubmissions}</strong></div>
+                      <div><span>Certification</span><strong>{tutorCertification?.status ?? "Preparing"}</strong></div>
                     </div>
+                    {tutorCertification && (
+                      <div className="portfolio-certificate">
+                        <div>
+                          <span>Evidence export</span>
+                          <strong>{tutorCertification.certificateId}</strong>
+                          <small>{tutorCertification.verification.privacy}</small>
+                        </div>
+                        <code>{new Date(tutorCertification.generatedAt).toLocaleString("en-GB")}</code>
+                      </div>
+                    )}
+                    {!tutorCertification && tutorCertificationError && (
+                      <p className="portfolio-empty">{tutorCertificationError}</p>
+                    )}
                     <div className="portfolio-badges">
                       {(tutorPortfolio.summary.badges.length ? tutorPortfolio.summary.badges : ["Portfolio in progress"]).map((badge) => (
                         <span key={badge}><Award size={13} />{badge}</span>

@@ -13,6 +13,7 @@ export type ObservabilityEventType =
   | "tutor.capstone.checked"
   | "tutor.capstone.submitted"
   | "tutor.portfolio.checked"
+  | "tutor.certification.exported"
   | "advanced.step.completed"
   | "workflow.decision"
   | "governance.decision"
