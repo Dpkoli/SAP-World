@@ -16,6 +16,7 @@ import { getReleaseGovernance } from "@/server/release-governance-repository";
 import { getSimulationLedgerPersistenceStats } from "@/server/simulation-ledger-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
 import { getTutorCapstoneAdministrationStats } from "@/server/tutor-capstone-repository";
+import { getTutorCertificationAdministrationStats } from "@/server/tutor-certification-service";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,10 @@ export async function GET() {
     readiness,
   });
   const releaseGovernance = await getReleaseGovernance(readiness);
+  const certifications = getTutorCertificationAdministrationStats({
+    progress,
+    capstones,
+  });
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
@@ -80,6 +85,7 @@ export async function GET() {
     accounts,
     progress,
     capstones,
+    certifications,
     simulations,
     ledgerPersistence,
     ledgerAnalytics,
@@ -104,6 +110,7 @@ export async function GET() {
       "Operations readiness combines deployment, security, content, ledger, storage, and mentor checks.",
       "Development completion is a weighted roadmap estimate and remains separate from deployment approval.",
       "Observability records compact server-side events without storing learner notes, passwords, or session tokens.",
+      "Certification review metrics exclude raw learner notes and capstone response text.",
       "External mentor configuration is reported without exposing endpoint or API key values.",
       "This endpoint never returns password hashes, salts, or session tokens.",
     ],

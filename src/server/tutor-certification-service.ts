@@ -47,6 +47,23 @@ export type TutorCertificationExport = {
   };
 };
 
+export type TutorCertificationAdministrationStats = {
+  learnersWithEvidence: number;
+  evidenceReady: number;
+  scenarioCertified: number;
+  evidenceCoverage: number;
+  openEvidenceGaps: number;
+  averageGuidedEvidenceNotes: number;
+  latestEvidenceAt: string | null;
+  processReviewQueue: Array<{
+    processCode: string;
+    title: string;
+    submissions: number;
+    evidenceReady: number;
+    averageScore: number;
+  }>;
+};
+
 function certificateStatus(input: {
   readinessScore: number;
   reviewReadyCapstones: number;
@@ -169,5 +186,48 @@ export async function buildTutorCertificationExport(
       privacy:
         "Raw learner notes and capstone response text are excluded from this export.",
     },
+  };
+}
+
+export function getTutorCertificationAdministrationStats(input: {
+  progress: {
+    learnersWithGuidedEvidence: number;
+    reachedEvidenceCoverage: number;
+    reachedEvidenceGaps: number;
+    averageGuidedEvidenceNotes: number;
+    latestUpdatedAt: string | null;
+  };
+  capstones: {
+    reviewReady: number;
+    strongEvidence: number;
+    latestSubmittedAt: string | null;
+    processBreakdown: Array<{
+      processCode: string;
+      title: string;
+      submissions: number;
+      reviewReady: number;
+      averageScore: number;
+    }>;
+  };
+}): TutorCertificationAdministrationStats {
+  return {
+    learnersWithEvidence: input.progress.learnersWithGuidedEvidence,
+    evidenceReady: input.capstones.reviewReady + input.capstones.strongEvidence,
+    scenarioCertified: input.capstones.strongEvidence,
+    evidenceCoverage: input.progress.reachedEvidenceCoverage,
+    openEvidenceGaps: input.progress.reachedEvidenceGaps,
+    averageGuidedEvidenceNotes: input.progress.averageGuidedEvidenceNotes,
+    latestEvidenceAt:
+      [input.progress.latestUpdatedAt, input.capstones.latestSubmittedAt]
+        .filter((value): value is string => Boolean(value))
+        .sort()
+        .at(-1) ?? null,
+    processReviewQueue: input.capstones.processBreakdown.map((process) => ({
+      processCode: process.processCode,
+      title: process.title,
+      submissions: process.submissions,
+      evidenceReady: process.reviewReady,
+      averageScore: process.averageScore,
+    })),
   };
 }

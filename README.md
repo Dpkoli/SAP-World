@@ -99,6 +99,8 @@ The first release demonstrates a brewery enterprise with:
 - Admin-only observability stream for compact server-side events across mentor,
   simulations, guided tutor progress, workflow, governance, advanced
   transactions, and admin checks
+- Admin certification review metrics covering evidence-ready exports, scenario
+  certifications, evidence coverage, open evidence gaps, and process queues
 - Durable PostgreSQL persistence for accounts, sessions, progress, workflow
   decisions, governance, transaction evidence, generated simulations, and events
 - Automatic local JSON-to-PostgreSQL aggregate migration with transaction
@@ -351,8 +353,9 @@ Admin operations are available only to users whose normalized email appears in
 
 The endpoint returns safe platform counts, storage status, role distribution,
 content coverage, generated-ledger analytics, capstone submission aggregates,
-mentor provider status, and recent account metadata. It never returns password
-hashes, salts, session tokens, or raw capstone response text.
+certification review metrics, mentor provider status, and recent account
+metadata. It never returns password hashes, salts, session tokens, raw learner
+notes, or raw capstone response text.
 The admin Control Plane also shows AI mentor model readiness, including whether
 the external endpoint, API key, and model name are configured, while keeping
 secret values out of the response.

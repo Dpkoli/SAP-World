@@ -277,6 +277,22 @@ type AdminOperations = {
       averageScore: number;
     }>;
   };
+  certifications: {
+    learnersWithEvidence: number;
+    evidenceReady: number;
+    scenarioCertified: number;
+    evidenceCoverage: number;
+    openEvidenceGaps: number;
+    averageGuidedEvidenceNotes: number;
+    latestEvidenceAt: string | null;
+    processReviewQueue: Array<{
+      processCode: string;
+      title: string;
+      submissions: number;
+      evidenceReady: number;
+      averageScore: number;
+    }>;
+  };
   simulations: {
     learners: number;
     simulations: number;
@@ -2836,6 +2852,27 @@ export function SapWorld({
                           <span>{process.processCode}</span>
                           <strong>{process.title}</strong>
                           <small>{process.submissions} submissions / {process.reviewReady} ready / {process.averageScore}% avg</small>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="panel admin-ledger">
+                    <div className="panel-header"><div><span className="section-kicker">Certification administration</span><h2>Evidence export review</h2></div><strong>{adminOperations.certifications.evidenceReady} ready</strong></div>
+                    <div className="admin-metrics">
+                      <div><span>Evidence learners</span><strong>{adminOperations.certifications.learnersWithEvidence}</strong></div>
+                      <div><span>Scenario certified</span><strong>{adminOperations.certifications.scenarioCertified}</strong></div>
+                      <div><span>Evidence coverage</span><strong>{adminOperations.certifications.evidenceCoverage}%</strong></div>
+                      <div><span>Open gaps</span><strong>{adminOperations.certifications.openEvidenceGaps}</strong></div>
+                      <div><span>Avg notes</span><strong>{adminOperations.certifications.averageGuidedEvidenceNotes}</strong></div>
+                      <div><span>Latest evidence</span><strong>{adminOperations.certifications.latestEvidenceAt ? new Date(adminOperations.certifications.latestEvidenceAt).toLocaleDateString("en-GB") : "None"}</strong></div>
+                    </div>
+                    <div className="admin-capstone-list">
+                      {adminOperations.certifications.processReviewQueue.map((process) => (
+                        <div key={process.processCode}>
+                          <span>{process.processCode}</span>
+                          <strong>{process.title}</strong>
+                          <small>{process.evidenceReady} ready / {process.submissions} submissions / {process.averageScore}% avg</small>
                         </div>
                       ))}
                     </div>
