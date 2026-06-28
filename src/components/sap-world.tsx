@@ -358,6 +358,62 @@ type ContentControlRegister = {
   }>;
 };
 
+type CertificationDecision = {
+  id: string;
+  certificateId: string;
+  learnerId: string;
+  processCode: string;
+  processTitle: string;
+  submissionCapturedAt: string;
+  decision: "Approved" | "Rejected" | "Revision requested";
+  note: string;
+  decidedAt: string;
+  decidedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+};
+
+type CertificationReview = {
+  generatedAt: string;
+  summary: {
+    submissions: number;
+    learners: number;
+    processes: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    revisionRequested: number;
+    decisions: number;
+  };
+  submissions: Array<{
+    certificateId: string;
+    learner: { id: string; name: string; email: string };
+    submittedAt: string;
+    latestExportedAt: string;
+    evidenceStatus: "In progress" | "Evidence ready" | "Scenario certified";
+    summary: TutorCertificationExport["summary"];
+    badges: string[];
+    processes: Array<{
+      processCode: string;
+      title: string;
+      module: string;
+      readinessScore: number;
+      readinessLevel: string;
+      guidedProgress: number;
+      diagnosticProgress: number;
+      evidenceProgress: number;
+      capstoneStatus: string;
+      latestCapstoneScore: number | null;
+      latestCapstoneStatus: string | null;
+      evidence: string[];
+      currentDecision: CertificationDecision | null;
+      history: CertificationDecision[];
+    }>;
+  }>;
+};
+
 type ReleaseDecision = {
   id: string;
   readinessFingerprint: string;
@@ -665,6 +721,17 @@ export function SapWorld({
     "All" | ContentControlRegister["register"][number]["status"]
   >("All");
   const [selectedContentDomainId, setSelectedContentDomainId] = useState("");
+  const [certificationReview, setCertificationReview] =
+    useState<CertificationReview | null>(null);
+  const [selectedCertificationId, setSelectedCertificationId] = useState("");
+  const [selectedCertificationProcessCode, setSelectedCertificationProcessCode] =
+    useState("");
+  const [certificationDecisionNote, setCertificationDecisionNote] =
+    useState("");
+  const [certificationDecisionMessage, setCertificationDecisionMessage] =
+    useState("");
+  const [certificationDecisionSubmitting, setCertificationDecisionSubmitting] =
+    useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
   const [releaseNote, setReleaseNote] = useState("");
@@ -1159,15 +1226,20 @@ export function SapWorld({
       setAdminLoading(true);
       setAdminError("");
       try {
-        const [operationsResponse, contentResponse] = await Promise.all([
+        const [operationsResponse, contentResponse, certificationResponse] =
+          await Promise.all([
           fetch("/api/admin/operations", { cache: "no-store" }),
           fetch("/api/admin/content-control", { cache: "no-store" }),
-        ]);
+            fetch("/api/admin/certification-decisions", { cache: "no-store" }),
+          ]);
         const operationsResult = (await operationsResponse.json()) as
           | AdminOperations
           | { error?: string };
         const contentResult = (await contentResponse.json()) as
           | ContentControlRegister
+          | { error?: string };
+        const certificationResult = (await certificationResponse.json()) as
+          | CertificationReview
           | { error?: string };
         if (
           !operationsResponse.ok ||
@@ -1189,10 +1261,22 @@ export function SapWorld({
               : "Controlled content register is unavailable.",
           );
         }
+        if (
+          !certificationResponse.ok ||
+          ("error" in certificationResult && certificationResult.error)
+        ) {
+          throw new Error(
+            "error" in certificationResult && certificationResult.error
+              ? certificationResult.error
+              : "Certification review is unavailable.",
+          );
+        }
         if (!cancelled) {
           const register = contentResult as ContentControlRegister;
+          const review = certificationResult as CertificationReview;
           setAdminOperations(operationsResult as AdminOperations);
           setContentControlRegister(register);
+          setCertificationReview(review);
           setSelectedContentDomainId((current) =>
             register.register.some((entry) => entry.id === current)
               ? current
@@ -1259,6 +1343,63 @@ export function SapWorld({
       );
     } finally {
       setReleaseSubmitting(false);
+    }
+  }
+
+  async function submitCertificationDecision(
+    decision: CertificationDecision["decision"],
+  ) {
+    const submission =
+      certificationReview?.submissions.find(
+        (item) => item.certificateId === selectedCertificationId,
+      ) ?? certificationReview?.submissions[0];
+    const process =
+      submission?.processes.find(
+        (item) => item.processCode === selectedCertificationProcessCode,
+      ) ?? submission?.processes[0];
+    if (
+      certificationDecisionSubmitting ||
+      !submission ||
+      !process
+    ) {
+      return;
+    }
+    setCertificationDecisionSubmitting(true);
+    setCertificationDecisionMessage("");
+    try {
+      const response = await fetch("/api/admin/certification-decisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          certificateId: submission.certificateId,
+          processCode: process.processCode,
+          decision,
+          note: certificationDecisionNote,
+        }),
+      });
+      const result = (await response.json()) as
+        | CertificationReview
+        | { error?: string };
+      if (!response.ok || ("error" in result && result.error)) {
+        throw new Error(
+          "error" in result && result.error
+            ? result.error
+            : "Unable to record the certification decision.",
+        );
+      }
+      setCertificationReview(result as CertificationReview);
+      setCertificationDecisionNote("");
+      setCertificationDecisionMessage(
+        `${decision} recorded for ${process.processCode}.`,
+      );
+    } catch (error) {
+      setCertificationDecisionMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to record the certification decision.",
+      );
+    } finally {
+      setCertificationDecisionSubmitting(false);
     }
   }
 
@@ -2168,6 +2309,18 @@ export function SapWorld({
     ) ??
     visibleContentDomains[0] ??
     null;
+  const selectedCertificationSubmission =
+    certificationReview?.submissions.find(
+      (submission) => submission.certificateId === selectedCertificationId,
+    ) ??
+    certificationReview?.submissions[0] ??
+    null;
+  const selectedCertificationProcess =
+    selectedCertificationSubmission?.processes.find(
+      (process) => process.processCode === selectedCertificationProcessCode,
+    ) ??
+    selectedCertificationSubmission?.processes[0] ??
+    null;
   const adminModelChecks = adminOperations
     ? [
         {
@@ -2858,7 +3011,7 @@ export function SapWorld({
                   </article>
 
                   <article className="panel admin-ledger">
-                    <div className="panel-header"><div><span className="section-kicker">Certification administration</span><h2>Evidence export review</h2></div><strong>{adminOperations.certifications.evidenceReady} ready</strong></div>
+                    <div className="panel-header"><div><span className="section-kicker">Certification administration</span><h2>Assessor decision workspace</h2></div><strong>{certificationReview?.summary.pending ?? 0} pending</strong></div>
                     <div className="admin-metrics">
                       <div><span>Evidence learners</span><strong>{adminOperations.certifications.learnersWithEvidence}</strong></div>
                       <div><span>Scenario certified</span><strong>{adminOperations.certifications.scenarioCertified}</strong></div>
@@ -2867,15 +3020,111 @@ export function SapWorld({
                       <div><span>Avg notes</span><strong>{adminOperations.certifications.averageGuidedEvidenceNotes}</strong></div>
                       <div><span>Latest evidence</span><strong>{adminOperations.certifications.latestEvidenceAt ? new Date(adminOperations.certifications.latestEvidenceAt).toLocaleDateString("en-GB") : "None"}</strong></div>
                     </div>
-                    <div className="admin-capstone-list">
-                      {adminOperations.certifications.processReviewQueue.map((process) => (
-                        <div key={process.processCode}>
-                          <span>{process.processCode}</span>
-                          <strong>{process.title}</strong>
-                          <small>{process.evidenceReady} ready / {process.submissions} submissions / {process.averageScore}% avg</small>
-                        </div>
-                      ))}
+                    <div className="admin-metrics">
+                      <div><span>Submissions</span><strong>{certificationReview?.summary.submissions ?? 0}</strong></div>
+                      <div><span>Learners</span><strong>{certificationReview?.summary.learners ?? 0}</strong></div>
+                      <div><span>Approved</span><strong>{certificationReview?.summary.approved ?? 0}</strong></div>
+                      <div><span>Revision requested</span><strong>{certificationReview?.summary.revisionRequested ?? 0}</strong></div>
+                      <div><span>Rejected</span><strong>{certificationReview?.summary.rejected ?? 0}</strong></div>
+                      <div><span>Decision history</span><strong>{certificationReview?.summary.decisions ?? 0}</strong></div>
                     </div>
+                    {selectedCertificationSubmission && selectedCertificationProcess ? (
+                      <div className="admin-certification-workspace">
+                        <aside className="admin-certification-submissions">
+                          {certificationReview?.submissions.map((submission) => (
+                            <button
+                              className={submission.certificateId === selectedCertificationSubmission.certificateId ? "active" : ""}
+                              key={submission.certificateId}
+                              onClick={() => {
+                                setSelectedCertificationId(submission.certificateId);
+                                setSelectedCertificationProcessCode(submission.processes[0]?.processCode ?? "");
+                                setCertificationDecisionMessage("");
+                              }}
+                            >
+                              <span>{submission.evidenceStatus}</span>
+                              <strong>{submission.learner.name}</strong>
+                              <small>{submission.learner.email}</small>
+                              <code>{submission.certificateId}</code>
+                            </button>
+                          ))}
+                        </aside>
+                        <section className="admin-certification-detail">
+                          <div className="admin-certification-heading">
+                            <div>
+                              <span className="section-kicker">{selectedCertificationSubmission.learner.name}</span>
+                              <h3>{selectedCertificationProcess.title}</h3>
+                              <code>{selectedCertificationSubmission.certificateId} / {selectedCertificationProcess.processCode}</code>
+                            </div>
+                            <strong>{selectedCertificationProcess.readinessScore}% ready</strong>
+                          </div>
+                          <div className="admin-certification-processes">
+                            {selectedCertificationSubmission.processes.map((process) => (
+                              <button
+                                className={process.processCode === selectedCertificationProcess.processCode ? "active" : ""}
+                                key={process.processCode}
+                                onClick={() => {
+                                  setSelectedCertificationProcessCode(process.processCode);
+                                  setCertificationDecisionMessage("");
+                                }}
+                              >
+                                <span>{process.processCode}</span>
+                                <strong>{process.readinessScore}%</strong>
+                                <small>{process.currentDecision?.decision ?? "Pending"}</small>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="admin-certification-evidence">
+                            <div><span>Guided</span><strong>{selectedCertificationProcess.guidedProgress}%</strong></div>
+                            <div><span>Diagnostic</span><strong>{selectedCertificationProcess.diagnosticProgress}%</strong></div>
+                            <div><span>Evidence</span><strong>{selectedCertificationProcess.evidenceProgress}%</strong></div>
+                            <div><span>Capstone</span><strong>{selectedCertificationProcess.latestCapstoneScore !== null ? `${selectedCertificationProcess.latestCapstoneScore}/100` : "Not submitted"}</strong></div>
+                          </div>
+                          <label className="admin-certification-note">
+                            <span>Optional assessor note</span>
+                            <textarea
+                              value={certificationDecisionNote}
+                              maxLength={1000}
+                              onChange={(event) => setCertificationDecisionNote(event.target.value)}
+                              placeholder="Record evidence reviewed, decision rationale, or revision required."
+                            />
+                            <small>{certificationDecisionNote.length}/1,000 characters</small>
+                          </label>
+                          <div className="admin-certification-actions">
+                            <button
+                              className="primary-button"
+                              disabled={
+                                certificationDecisionSubmitting ||
+                                selectedCertificationProcess.readinessScore < 70 ||
+                                !selectedCertificationProcess.latestCapstoneStatus ||
+                                selectedCertificationProcess.latestCapstoneStatus === "Needs practice"
+                              }
+                              onClick={() => void submitCertificationDecision("Approved")}
+                            >
+                              Approve
+                            </button>
+                            <button disabled={certificationDecisionSubmitting} onClick={() => void submitCertificationDecision("Revision requested")}>Request revision</button>
+                            <button disabled={certificationDecisionSubmitting} onClick={() => void submitCertificationDecision("Rejected")}>Reject</button>
+                          </div>
+                          {certificationDecisionMessage && <p className="admin-certification-message" role="status">{certificationDecisionMessage}</p>}
+                          <div className="admin-certification-history">
+                            <div><span className="section-kicker">Approval history</span><strong>{selectedCertificationProcess.history.length} decisions</strong></div>
+                            {selectedCertificationProcess.history.map((decision) => (
+                              <article key={decision.id}>
+                                <span>{decision.decision}</span>
+                                <strong>{decision.decidedBy.name}</strong>
+                                <code>{new Date(decision.decidedAt).toLocaleString("en-GB")}</code>
+                                <p>{decision.note || "No assessor note."}</p>
+                              </article>
+                            ))}
+                            {!selectedCertificationProcess.history.length && <p>No assessor decision has been recorded for this process.</p>}
+                          </div>
+                        </section>
+                      </div>
+                    ) : (
+                      <div className="workflow-empty">
+                        No certification export has been submitted yet. A learner export will appear here automatically.
+                      </div>
+                    )}
                   </article>
 
                   <article className="panel">

@@ -56,6 +56,7 @@ The persisted aggregates are:
 - `simulation-ledgers`
 - `simulation-executions`
 - `tutor-capstone-submissions`
+- `certification-reviews`
 - `release-governance`
 - `observability-events`
 - `ledger-analytics-read-model`
@@ -107,6 +108,20 @@ certification counts, process queues, evidence coverage, and open evidence
 gaps. Guided tutor evidence notes are exposed only as aggregate
 learning-progress counts, reached-step coverage, open evidence gaps, and
 averages.
+
+Certification exports are registered as durable learner submissions. Admins
+can inspect submissions and record approval, rejection, or revision requests
+through:
+
+```text
+GET /api/admin/certification-decisions
+POST /api/admin/certification-decisions
+```
+
+The route is admin protected. Decisions are stored against a stable certificate
+and process evidence fingerprint with assessor identity, timestamp, and an
+optional note. The complete history remains available after server restarts and
+uses PostgreSQL automatically when `DATABASE_URL` is configured.
 
 Admins can inspect the full content release register through:
 

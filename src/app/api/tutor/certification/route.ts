@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { normalizeLearnerProgress } from "@/data/progress";
 import { getCurrentLearner } from "@/server/auth-session";
+import { recordCertificationSubmission } from "@/server/certification-review-repository";
 import { recordObservabilityEvent } from "@/server/observability-repository";
 import { getLearnerProgress } from "@/server/progress-repository";
 import { buildTutorCertificationExport } from "@/server/tutor-certification-service";
@@ -18,6 +19,7 @@ export async function GET() {
     (await getLearnerProgress(learner.id)) ??
     normalizeLearnerProgress(learner.id, null);
   const certification = await buildTutorCertificationExport(learner, progress);
+  await recordCertificationSubmission(certification);
 
   await recordObservabilityEvent({
     type: "tutor.certification.exported",

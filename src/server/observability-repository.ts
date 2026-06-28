@@ -19,6 +19,7 @@ export type ObservabilityEventType =
   | "governance.decision"
   | "admin.readiness.checked"
   | "admin.release.decision"
+  | "admin.certification.decision"
   | "admin.content.checked"
   | "admin.observability.checked";
 

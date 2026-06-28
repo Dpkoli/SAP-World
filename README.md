@@ -101,6 +101,8 @@ The first release demonstrates a brewery enterprise with:
   transactions, and admin checks
 - Admin certification review metrics covering evidence-ready exports, scenario
   certifications, evidence coverage, open evidence gaps, and process queues
+- Persistent certification assessor decisions per learner and process, with
+  approval, rejection, revision requests, assessor identity, notes, and history
 - Durable PostgreSQL persistence for accounts, sessions, progress, workflow
   decisions, governance, transaction evidence, generated simulations, and events
 - Automatic local JSON-to-PostgreSQL aggregate migration with transaction
@@ -295,6 +297,16 @@ back to the exact SAP step that needs proof.
 The dashboard mission uses the same gaps to prioritize evidence capture before
 capstone submission.
 
+Generating a certification export also registers an evidence submission for
+admin review. Admins can retrieve submissions or record an assessor decision at:
+
+`GET /api/admin/certification-decisions`
+
+`POST /api/admin/certification-decisions`
+
+Decisions are retained against the exact certificate and process evidence
+snapshot, including assessor identity, timestamp, and optional rationale.
+
 Connected SAP documents can be queried by process, document number, or module:
 
 `/api/simulation/documents?process=p2p`
@@ -400,7 +412,8 @@ are stored separately in
 inputs. Tutor capstone submissions are stored in
 `.data/tutor-capstone-submissions.json`, and operational telemetry is stored in
 `.data/observability-events.json`. Administrator release decisions are stored
-in `.data/release-governance.json`.
+in `.data/release-governance.json`, and certification submissions and assessor
+history are stored in `.data/certification-reviews.json`.
 Passwords use salted `scrypt`
 hashes and browser sessions use opaque, HTTP-only cookies. The browser keeps a
 learner-specific progress backup so lessons remain usable if the progress
@@ -443,11 +456,12 @@ plus a high-severity production dependency audit.
 
 Planned phases include:
 
-1. Promote persisted ledger analytics snapshots into dedicated PostgreSQL
-   read-model tables for high-volume analytical workloads
-2. Managed identity integration and role-based authorization
-3. Promote persisted generated ledgers from durable aggregates to dedicated
-   high-volume operational tables
-4. External observability integrations and managed release promotion
+1. Managed identity, account lifecycle controls, and SSO integration
+2. Dedicated PostgreSQL tables for high-volume ledgers and analytical read models
+3. Hosted observability plus managed release promotion and rollback
+4. Persistent external AI mentor sessions, controls, and quality monitoring
+5. Production database provisioning, deployment, and hosted smoke testing
+6. Deeper specialist transactions and additional industry enterprises
+7. Cross-browser, accessibility, performance, and security acceptance testing
 
 The source product vision is retained in `Prompt_v2.txt`.

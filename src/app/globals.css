@@ -273,6 +273,50 @@ button { cursor: pointer; }
 .admin-capstone-list span, .admin-capstone-list strong, .admin-capstone-list small { display: block; }
 .admin-capstone-list span { color: var(--blue); font-size: 8px; font-weight: 850; }
 .admin-capstone-list strong { margin-top: 4px; font-size: 9px; }
+.admin-certification-workspace { display: grid; grid-template-columns: minmax(240px,.7fr) minmax(0,1.8fr); border-top: 1px solid var(--line); }
+.admin-certification-submissions { max-height: 680px; overflow-y: auto; border-right: 1px solid var(--line); background: #f7f9fa; }
+.admin-certification-submissions button { width: 100%; display: grid; gap: 4px; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--foreground); text-align: left; }
+.admin-certification-submissions button:hover, .admin-certification-submissions button.active { background: white; }
+.admin-certification-submissions button.active { box-shadow: inset 3px 0 var(--blue); }
+.admin-certification-submissions span { width: fit-content; padding: 3px 6px; border-radius: 999px; background: #fff3d6; color: #8b6100; font-size: 6px; font-weight: 850; text-transform: uppercase; }
+.admin-certification-submissions strong { font-size: 10px; }
+.admin-certification-submissions small { color: var(--muted); font-size: 7px; }
+.admin-certification-submissions code { color: var(--blue); font-size: 7px; }
+.admin-certification-detail { min-width: 0; background: white; }
+.admin-certification-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
+.admin-certification-heading h3 { margin: 4px 0; font-size: 15px; }
+.admin-certification-heading code { color: var(--blue); font-size: 7px; }
+.admin-certification-heading > strong { color: var(--blue); font-size: 22px; white-space: nowrap; }
+.admin-certification-processes { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; border-block: 1px solid var(--line); background: var(--line); }
+.admin-certification-processes button { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 10px 12px; border: 0; background: #f8fafb; color: var(--foreground); text-align: left; }
+.admin-certification-processes button:hover, .admin-certification-processes button.active { background: white; }
+.admin-certification-processes button.active { box-shadow: inset 0 -3px var(--blue); }
+.admin-certification-processes span { color: var(--blue); font-size: 8px; font-weight: 850; }
+.admin-certification-processes strong { justify-self: end; font-size: 8px; }
+.admin-certification-processes small { grid-column: 1 / -1; color: var(--muted); font-size: 7px; }
+.admin-certification-evidence { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--line); }
+.admin-certification-evidence > div { padding: 13px 15px; background: white; }
+.admin-certification-evidence span, .admin-certification-evidence strong { display: block; }
+.admin-certification-evidence span { color: var(--muted); font-size: 7px; text-transform: uppercase; }
+.admin-certification-evidence strong { margin-top: 5px; color: var(--blue); font-size: 12px; }
+.admin-certification-note { display: grid; gap: 7px; padding: 15px 20px; border-top: 1px solid var(--line); }
+.admin-certification-note span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.admin-certification-note textarea { min-height: 76px; resize: vertical; padding: 10px 12px; border: 1px solid #b8c8d4; border-radius: 7px; background: white; color: var(--foreground); font: inherit; font-size: 9px; line-height: 1.5; }
+.admin-certification-note small { color: var(--muted); font-size: 7px; text-align: right; }
+.admin-certification-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px 15px; }
+.admin-certification-actions button { padding: 9px 12px; border: 1px solid #b8c8d4; border-radius: 7px; background: white; color: var(--foreground); font-size: 8px; font-weight: 800; }
+.admin-certification-actions button:disabled { opacity: .42; cursor: not-allowed; }
+.admin-certification-actions button:last-child { border-color: #e5b7ae; color: #a73825; }
+.admin-certification-message { margin: 0; padding: 0 20px 14px; color: var(--blue); font-size: 8px; }
+.admin-certification-history { border-top: 1px solid var(--line); }
+.admin-certification-history > div { display: flex; justify-content: space-between; gap: 12px; padding: 13px 20px; background: #f8fafb; }
+.admin-certification-history > div > strong { color: var(--blue); font-size: 8px; }
+.admin-certification-history article { display: grid; grid-template-columns: 120px minmax(0,1fr) auto; gap: 5px 12px; padding: 12px 20px; border-top: 1px solid var(--line); }
+.admin-certification-history article > span { color: var(--blue); font-size: 7px; font-weight: 850; text-transform: uppercase; }
+.admin-certification-history article > strong { font-size: 8px; }
+.admin-certification-history article > code { color: var(--muted); font-size: 7px; }
+.admin-certification-history article > p { grid-column: 1 / -1; margin: 0; color: #526371; font-size: 8px; line-height: 1.45; }
+.admin-certification-history > p { margin: 0; padding: 14px 20px; color: var(--muted); font-size: 8px; }
 .admin-capstone-list small { margin-top: 5px; color: var(--muted); font-size: 8px; line-height: 1.4; }
 .overview-grid { display: grid; grid-template-columns: minmax(0,1.65fr) minmax(310px,.75fr); gap: 18px; }
 .panel-header { min-height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #edf0f2; }
@@ -1648,6 +1692,8 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .admin-content-toolbar { align-items: flex-start; flex-direction: column; }
   .admin-content-register { grid-template-columns: 1fr; }
   .admin-content-domains { max-height: 320px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .admin-certification-workspace { grid-template-columns: 1fr; }
+  .admin-certification-submissions { max-height: 280px; border-right: 0; border-bottom: 1px solid var(--line); }
   .admin-readiness-checks { grid-template-columns: 1fr; }
   .admin-layout { grid-template-columns: 1fr; }
   .process-context { grid-template-columns: 1fr 1fr; }
@@ -1757,6 +1803,11 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
   .admin-content-toolbar .filter-tabs { width: 100%; overflow-x: auto; }
   .admin-content-toolbar .filter-tabs button { flex: 1 0 auto; }
   .admin-content-gates { grid-template-columns: 1fr; }
+  .admin-certification-heading { align-items: flex-start; flex-direction: column; }
+  .admin-certification-processes, .admin-certification-evidence { grid-template-columns: 1fr 1fr; }
+  .admin-certification-actions { align-items: stretch; flex-direction: column; }
+  .admin-certification-history article { grid-template-columns: 1fr; }
+  .admin-certification-history article > p { grid-column: 1; }
   .admin-users > div { grid-template-columns: 1fr; align-items: start; }
   .process-context { grid-template-columns: 1fr; }
   .attention { align-items: flex-start; flex-wrap: wrap; }

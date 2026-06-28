@@ -100,8 +100,9 @@ export function getDevelopmentRoadmap(input: {
         "Learner capability portfolio with next actions",
         "Certification-style evidence export with privacy-safe verification notes",
         "Admin certification review metrics and process queues",
+        "Persistent per-process assessor decisions and certification approval history",
       ],
-      nextAction: "Add external certification handoff and assessor decision records.",
+      nextAction: "Add external certification issuer handoff and credential verification.",
     }),
     milestone({
       id: "admin-controls",
@@ -115,8 +116,9 @@ export function getDevelopmentRoadmap(input: {
         "Admin-only control plane and operations API",
         "Controlled content release register",
         "Production readiness and observability summaries",
+        "Certification assessor workspace with learner and process audit history",
       ],
-      nextAction: "Add managed release approvals and deeper operational drill-down.",
+      nextAction: "Replace environment-seeded administrators with managed enterprise identity.",
     }),
     milestone({
       id: "production-foundation",

@@ -83,6 +83,7 @@ function certificateIdFor(input: {
   readinessScore: number;
   reviewReadyCapstones: number;
   strongEvidenceCapstones: number;
+  processEvidence: TutorCertificationExport["processEvidence"];
 }) {
   const digest = createHash("sha256")
     .update(
@@ -92,6 +93,17 @@ function certificateIdFor(input: {
         input.readinessScore,
         input.reviewReadyCapstones,
         input.strongEvidenceCapstones,
+        JSON.stringify(
+          input.processEvidence.map((process) => ({
+            processCode: process.processCode,
+            readinessScore: process.readinessScore,
+            guidedProgress: process.guidedProgress,
+            diagnosticProgress: process.diagnosticProgress,
+            evidenceProgress: process.evidenceProgress,
+            latestCapstoneScore: process.latestCapstoneScore,
+            latestCapstoneStatus: process.latestCapstoneStatus,
+          })),
+        ),
       ].join("|"),
     )
     .digest("hex");
@@ -160,6 +172,7 @@ export async function buildTutorCertificationExport(
       readinessScore: readiness.overall.score,
       reviewReadyCapstones: capstones.submissions.reviewReady,
       strongEvidenceCapstones,
+      processEvidence,
     }),
     generatedAt,
     status,
