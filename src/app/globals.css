@@ -194,9 +194,11 @@ button { cursor: pointer; }
 .admin-release-summary strong { display: block; margin-top: 6px; color: var(--foreground); font-size: 11px; }
 .admin-release-summary small { display: block; margin-top: 5px; color: #667784; font-size: 8px; line-height: 1.4; }
 .admin-release-form { padding: 17px; border-top: 1px solid var(--line); }
-.admin-release-form label { color: var(--foreground); font-size: 9px; font-weight: 800; }
-.admin-release-form textarea { width: 100%; min-height: 90px; margin-top: 8px; padding: 11px 12px; resize: vertical; border: 1px solid #ccd6dd; border-radius: 7px; outline: 0; font: inherit; font-size: 10px; line-height: 1.5; }
-.admin-release-form textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 2px #e0f0fd; }
+.admin-release-form label { display: block; margin-top: 10px; color: var(--foreground); font-size: 9px; font-weight: 800; }
+.admin-release-form label:first-child { margin-top: 0; }
+.admin-release-form input, .admin-release-form textarea { width: 100%; margin-top: 8px; padding: 11px 12px; border: 1px solid #ccd6dd; border-radius: 7px; outline: 0; font: inherit; font-size: 10px; line-height: 1.5; }
+.admin-release-form textarea { min-height: 90px; resize: vertical; }
+.admin-release-form input:focus, .admin-release-form textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 2px #e0f0fd; }
 .admin-release-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .admin-release-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1px solid #b8c8d4; border-radius: 7px; background: white; color: var(--foreground); font-size: 9px; font-weight: 750; }
 .admin-release-actions button:disabled { opacity: .42; cursor: not-allowed; }
@@ -1647,6 +1649,18 @@ button.studio-ledger-row.selected { box-shadow: inset 3px 0 var(--blue); }
 .mentor-sources > div > span { color: var(--blue); font-size: 7px; font-weight: 800; text-transform: uppercase; }
 .mentor-sources strong { font-size: 9px; }
 .mentor-sources code { grid-column: 2; color: var(--muted); font-size: 7px; }
+.mentor-quality { display: grid; gap: 8px; margin-top: 10px; padding: 10px 11px; border: 1px solid #dbe8df; border-radius: 8px; background: #f7fbf8; }
+.mentor-quality > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mentor-quality span, .mentor-history > span { color: #607080; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.mentor-quality strong { color: var(--green); font-size: 9px; }
+.mentor-quality small, .mentor-history small { color: var(--muted); font-size: 8px; line-height: 1.4; }
+.mentor-feedback { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mentor-feedback button { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px; border: 1px solid #d6e0e6; border-radius: 6px; background: white; color: #526371; font-size: 8px; font-weight: 750; }
+.mentor-feedback button.active { border-color: #9fcbb1; background: #eaf7ee; color: var(--green); }
+.mentor-feedback button.active.warning { border-color: #e6c778; background: #fff7df; color: #8a6200; }
+.mentor-history { display: grid; gap: 6px; margin-top: 12px; }
+.mentor-history > div { display: grid; gap: 3px; padding: 8px 9px; border-left: 2px solid #c6d9e8; background: #f8fafb; }
+.mentor-history strong { color: #3e5260; font-size: 8px; line-height: 1.4; }
 .mentor-body > p { margin: 18px 0 7px; color: #80909c; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
 .mentor-prompt-group { display: grid; gap: 6px; }
 .mentor-prompt-group button { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: white; color: #425563; font-size: 10px; text-align: left; }

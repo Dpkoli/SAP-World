@@ -76,6 +76,10 @@ import {
   type MentorSource,
 } from "@/data/mentor";
 import type {
+  MentorConversationView,
+  MentorExchange,
+} from "@/data/mentor-conversations";
+import type {
   AdvancedTransactionCase,
   AdvancedTransactionType,
 } from "@/data/advanced-transactions";
@@ -173,6 +177,16 @@ type AdminOperations = {
     model: string | null;
     timeoutMs: number;
   };
+  mentorConversations: {
+    conversations: number;
+    exchanges: number;
+    externallyEnhanced: number;
+    localFallbacks: number;
+    reviewRequired: number;
+    helpfulRatings: number;
+    reviewRatings: number;
+    latestActivityAt: string | null;
+  };
   identityProvider: {
     mode: "local-managed" | "oidc" | "saml";
     configured: boolean;
@@ -220,6 +234,31 @@ type AdminOperations = {
     history: ReleaseDecision[];
     totalDecisions: number;
   };
+  releaseOperations: {
+    automation: {
+      configured: boolean;
+      provider: string;
+      productionTarget: string | null;
+    };
+    totals: {
+      operations: number;
+      promotions: number;
+      rollbacks: number;
+      failures: number;
+      manualActions: number;
+    };
+    latest: Array<{
+      id: string;
+      action: "Promote" | "Rollback";
+      status: "Requested" | "Accepted" | "Succeeded" | "Failed" | "Manual action required";
+      target: string;
+      readinessFingerprint: string;
+      note: string;
+      requestedAt: string;
+      providerUrl: string | null;
+      providerMessage: string | null;
+    }>;
+  };
   development: {
     version: string;
     overallProgress: number;
@@ -248,6 +287,13 @@ type AdminOperations = {
     estimateNote: string;
   };
   observability: {
+    hosted: {
+      runtime: "vercel" | "local";
+      environment: string;
+      webAnalytics: boolean;
+      speedInsights: boolean;
+      eventSinkConfigured: boolean;
+    };
     retention: {
       maxEvents: number;
       storedEvents: number;
@@ -353,6 +399,7 @@ type AdminOperations = {
     documents: number;
     processChains: number;
     latestPersistedAt: string | null;
+    backend: "dedicated-postgresql" | "aggregate-fallback";
   };
   ledgerAnalytics: {
     readModel: {
@@ -360,6 +407,7 @@ type AdminOperations = {
       persisted: boolean;
       refreshedAt: string;
       fingerprint: string;
+      backend: "dedicated-postgresql" | "aggregate-fallback";
     };
     totals: {
       documents: number;
@@ -767,6 +815,9 @@ export function SapWorld({
     "I’m grounded in the Burton Brewery simulation. Ask about the active transaction, its document flow, accounting or inventory impact, or a process exception.",
   );
   const [mentorSources, setMentorSources] = useState<MentorSource[]>([]);
+  const [mentorConversation, setMentorConversation] =
+    useState<MentorConversationView | null>(null);
+  const [mentorFeedbackSubmitting, setMentorFeedbackSubmitting] = useState("");
   const [mentorLoading, setMentorLoading] = useState(false);
   const [mentorError, setMentorError] = useState("");
   const [adminOperations, setAdminOperations] =
@@ -795,6 +846,41 @@ export function SapWorld({
   const [releaseNote, setReleaseNote] = useState("");
   const [releaseSubmitting, setReleaseSubmitting] = useState(false);
   const [releaseMessage, setReleaseMessage] = useState("");
+  const [releaseOperationTarget, setReleaseOperationTarget] = useState("");
+  const [releaseOperationNote, setReleaseOperationNote] = useState("");
+  const [releaseOperationSubmitting, setReleaseOperationSubmitting] =
+    useState(false);
+  const [releaseOperationMessage, setReleaseOperationMessage] = useState("");
+
+  useEffect(() => {
+    if (!mentorOpen) return;
+    let cancelled = false;
+    fetch(`/api/mentor?scenarioId=${encodeURIComponent(activeScenarioId)}`)
+      .then(async (response) => {
+        const result = (await response.json()) as {
+          conversation?: MentorConversationView | null;
+          error?: string;
+        };
+        if (!response.ok) throw new Error(result.error ?? "Mentor history unavailable.");
+        if (cancelled) return;
+        setMentorConversation(result.conversation ?? null);
+        const latest = result.conversation?.exchanges[0];
+        if (latest) {
+          setAnswer(latest.answer);
+          setMentorSources(latest.sources);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setMentorError(
+            error instanceof Error ? error.message : "Mentor history unavailable.",
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeScenarioId, mentorOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1404,6 +1490,54 @@ export function SapWorld({
     }
   }
 
+  async function submitReleaseOperation(action: "Promote" | "Rollback") {
+    if (
+      releaseOperationSubmitting ||
+      releaseOperationTarget.trim().length < 3 ||
+      releaseOperationNote.trim().length < 20
+    ) {
+      return;
+    }
+    setReleaseOperationSubmitting(true);
+    setReleaseOperationMessage("");
+    try {
+      const response = await fetch("/api/admin/release-operations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          target: releaseOperationTarget,
+          note: releaseOperationNote,
+        }),
+      });
+      const result = (await response.json()) as {
+        snapshot?: AdminOperations["releaseOperations"];
+        operation?: AdminOperations["releaseOperations"]["latest"][number];
+        error?: string;
+      };
+      if (!response.ok || !result.snapshot || !result.operation) {
+        throw new Error(result.error ?? "Unable to request release operation.");
+      }
+      setAdminOperations((current) =>
+        current
+          ? { ...current, releaseOperations: result.snapshot! }
+          : current,
+      );
+      setReleaseOperationNote("");
+      setReleaseOperationMessage(
+        `${action} request recorded with status: ${result.operation.status}.`,
+      );
+    } catch (error) {
+      setReleaseOperationMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to request release operation.",
+      );
+    } finally {
+      setReleaseOperationSubmitting(false);
+    }
+  }
+
   async function submitCertificationDecision(
     decision: CertificationDecision["decision"],
   ) {
@@ -1526,6 +1660,8 @@ export function SapWorld({
       const result = (await response.json()) as {
         answer?: string;
         sources?: MentorSource[];
+        conversation?: MentorConversationView;
+        exchange?: MentorExchange;
         error?: string;
       };
       if (!response.ok || !result.answer) {
@@ -1533,6 +1669,7 @@ export function SapWorld({
       }
       setAnswer(result.answer);
       setMentorSources(result.sources ?? []);
+      if (result.conversation) setMentorConversation(result.conversation);
     } catch (error) {
       setMentorError(
         error instanceof Error
@@ -1541,6 +1678,38 @@ export function SapWorld({
       );
     } finally {
       setMentorLoading(false);
+    }
+  }
+
+  async function rateMentorResponse(
+    messageId: string,
+    rating: "helpful" | "needs-review",
+  ) {
+    if (mentorFeedbackSubmitting) return;
+    setMentorFeedbackSubmitting(messageId);
+    setMentorError("");
+    try {
+      const response = await fetch("/api/mentor", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, rating }),
+      });
+      const result = (await response.json()) as {
+        conversation?: MentorConversationView;
+        error?: string;
+      };
+      if (!response.ok || !result.conversation) {
+        throw new Error(result.error ?? "Unable to save mentor feedback.");
+      }
+      setMentorConversation(result.conversation);
+    } catch (error) {
+      setMentorError(
+        error instanceof Error
+          ? error.message
+          : "Unable to save mentor feedback.",
+      );
+    } finally {
+      setMentorFeedbackSubmitting("");
     }
   }
 
@@ -1822,6 +1991,7 @@ export function SapWorld({
   const activeScenario =
     processScenarios.find((scenario) => scenario.id === activeScenarioId) ??
     processScenarios[0];
+  const latestMentorExchange = mentorConversation?.exchanges[0] ?? null;
   const activePlaybook =
     transactionPlaybooks.find(
       (playbook) => playbook.scenarioId === activeScenario.id,
@@ -2758,6 +2928,95 @@ export function SapWorld({
                         </div>
                       ))}
                     </div>
+                    <div className="admin-metrics">
+                      <div><span>Conversations</span><strong>{adminOperations.mentorConversations.conversations}</strong></div>
+                      <div><span>Saved exchanges</span><strong>{adminOperations.mentorConversations.exchanges}</strong></div>
+                      <div><span>Quality review</span><strong>{adminOperations.mentorConversations.reviewRequired}</strong></div>
+                      <div><span>External answers</span><strong>{adminOperations.mentorConversations.externallyEnhanced}</strong></div>
+                      <div><span>Local fallbacks</span><strong>{adminOperations.mentorConversations.localFallbacks}</strong></div>
+                      <div><span>Needs-review ratings</span><strong>{adminOperations.mentorConversations.reviewRatings}</strong></div>
+                    </div>
+                  </article>
+
+                  <article className="panel admin-release-governance">
+                    <div className="panel-header">
+                      <div>
+                        <span className="section-kicker">Release operations</span>
+                        <h2>Promotion and rollback control</h2>
+                      </div>
+                      <strong>
+                        {adminOperations.releaseOperations.automation.configured
+                          ? adminOperations.releaseOperations.automation.provider
+                          : "Manual fallback"}
+                      </strong>
+                    </div>
+                    <div className="admin-release-summary">
+                      <div><span>Operations</span><strong>{adminOperations.releaseOperations.totals.operations}</strong><small>Retained audit records</small></div>
+                      <div><span>Promotions / rollbacks</span><strong>{adminOperations.releaseOperations.totals.promotions} / {adminOperations.releaseOperations.totals.rollbacks}</strong><small>Production actions requested</small></div>
+                      <div><span>Manual / failed</span><strong>{adminOperations.releaseOperations.totals.manualActions} / {adminOperations.releaseOperations.totals.failures}</strong><small>Actions needing attention</small></div>
+                    </div>
+                    <div className="admin-release-form">
+                      <label>
+                        Deployment URL, id, or production alias
+                        <input
+                          value={releaseOperationTarget}
+                          onChange={(event) => setReleaseOperationTarget(event.target.value)}
+                          maxLength={500}
+                          placeholder={adminOperations.releaseOperations.automation.productionTarget ?? "https://preview.example.com or deployment id"}
+                        />
+                      </label>
+                      <label>
+                        Operational note
+                        <textarea
+                          value={releaseOperationNote}
+                          onChange={(event) => setReleaseOperationNote(event.target.value)}
+                          minLength={20}
+                          maxLength={1000}
+                          placeholder="Document smoke-test evidence, promotion intent, rollback trigger, and owner rationale."
+                        />
+                      </label>
+                      <div className="admin-release-actions">
+                        <button
+                          className="primary-button"
+                          disabled={
+                            releaseOperationSubmitting ||
+                            releaseOperationTarget.trim().length < 3 ||
+                            releaseOperationNote.trim().length < 20 ||
+                            !adminOperations.releaseGovernance.currentDecision ||
+                            adminOperations.releaseGovernance.currentDecision.decision === "Rejected"
+                          }
+                          onClick={() => void submitReleaseOperation("Promote")}
+                        >
+                          <ShieldCheck size={15} /> Request promotion
+                        </button>
+                        <button
+                          className="release-reject"
+                          disabled={
+                            releaseOperationSubmitting ||
+                            releaseOperationTarget.trim().length < 3 ||
+                            releaseOperationNote.trim().length < 20
+                          }
+                          onClick={() => void submitReleaseOperation("Rollback")}
+                        >
+                          <Repeat2 size={15} /> Request rollback
+                        </button>
+                        <small>{releaseOperationNote.trim().length}/1000 characters</small>
+                      </div>
+                      {releaseOperationMessage && <p className="admin-release-message" role="status">{releaseOperationMessage}</p>}
+                    </div>
+                    <div className="admin-release-history">
+                      {adminOperations.releaseOperations.latest.length === 0 ? (
+                        <p>No promotion or rollback actions have been requested.</p>
+                      ) : (
+                        adminOperations.releaseOperations.latest.slice(0, 6).map((operation) => (
+                          <div key={operation.id}>
+                            <span className={operation.status === "Failed" ? "rejected" : "approved"}>{operation.action}</span>
+                            <div><strong>{operation.status}</strong><p>{operation.note}</p></div>
+                            <small>{operation.target} / {new Date(operation.requestedAt).toLocaleString("en-GB")}</small>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </article>
 
                   <article className="panel admin-ledger">
@@ -2925,6 +3184,10 @@ export function SapWorld({
                       <div><span>Warnings</span><strong>{adminOperations.observability.totals.warnings.toLocaleString("en-GB")}</strong></div>
                       <div><span>Failures</span><strong>{adminOperations.observability.totals.failures.toLocaleString("en-GB")}</strong></div>
                       <div><span>Retention</span><strong>{adminOperations.observability.retention.storedEvents}/{adminOperations.observability.retention.maxEvents}</strong></div>
+                      <div><span>Runtime</span><strong>{adminOperations.observability.hosted.runtime}</strong></div>
+                      <div><span>Web Analytics</span><strong>{adminOperations.observability.hosted.webAnalytics ? "Enabled" : "Disabled"}</strong></div>
+                      <div><span>Speed Insights</span><strong>{adminOperations.observability.hosted.speedInsights ? "Enabled" : "Disabled"}</strong></div>
+                      <div><span>Event sink</span><strong>{adminOperations.observability.hosted.eventSinkConfigured ? "Connected" : "Local retention"}</strong></div>
                     </div>
                   </article>
 
@@ -2937,12 +3200,13 @@ export function SapWorld({
                       <div><span>Exceptions</span><strong>{adminOperations.ledgerAnalytics.totals.exceptions.toLocaleString("en-GB")}</strong></div>
                       <div><span>Broken links</span><strong>{adminOperations.ledgerAnalytics.integrity.brokenLinks}</strong></div>
                       <div><span>Unique documents</span><strong>{adminOperations.ledgerAnalytics.integrity.uniqueDocumentNumbers.toLocaleString("en-GB")}</strong></div>
-                      <div><span>Read model</span><strong>{adminOperations.ledgerAnalytics.readModel.persisted ? "Persisted" : "Live"}</strong></div>
+                      <div><span>Read model</span><strong>{adminOperations.ledgerAnalytics.readModel.backend}</strong></div>
                       <div><span>Persisted ledgers</span><strong>{adminOperations.ledgerPersistence.ledgers.toLocaleString("en-GB")}</strong></div>
                       <div><span>Persisted docs</span><strong>{adminOperations.ledgerPersistence.documents.toLocaleString("en-GB")}</strong></div>
                       <div><span>Snapshot key</span><strong>{adminOperations.ledgerAnalytics.readModel.key}</strong></div>
                       <div><span>Refreshed</span><strong>{new Date(adminOperations.ledgerAnalytics.readModel.refreshedAt).toLocaleString("en-GB")}</strong></div>
                       <div><span>Ledger persisted</span><strong>{adminOperations.ledgerPersistence.latestPersistedAt ? new Date(adminOperations.ledgerPersistence.latestPersistedAt).toLocaleString("en-GB") : "Not yet"}</strong></div>
+                      <div><span>Ledger backend</span><strong>{adminOperations.ledgerPersistence.backend}</strong></div>
                     </div>
                   </article>
 
@@ -5529,6 +5793,48 @@ export function SapWorld({
                     <span>{source.type}</span>
                     <strong>{source.title}</strong>
                     <code>{source.reference}</code>
+                  </div>
+                ))}
+              </div>
+            )}
+            {latestMentorExchange && (
+              <div className="mentor-quality">
+                <div>
+                  <span>Quality controls</span>
+                  <strong>{latestMentorExchange.quality.status}</strong>
+                </div>
+                <small>
+                  {latestMentorExchange.provider === "external"
+                    ? `External enhancement via ${latestMentorExchange.model ?? "configured model"}`
+                    : latestMentorExchange.fallbackReason ?? "Grounded local answer"}
+                </small>
+                <div className="mentor-feedback">
+                  <button
+                    type="button"
+                    disabled={mentorFeedbackSubmitting === latestMentorExchange.id}
+                    className={latestMentorExchange.feedback?.rating === "helpful" ? "active" : ""}
+                    onClick={() => void rateMentorResponse(latestMentorExchange.id, "helpful")}
+                  >
+                    <Check size={12} /> Helpful
+                  </button>
+                  <button
+                    type="button"
+                    disabled={mentorFeedbackSubmitting === latestMentorExchange.id}
+                    className={latestMentorExchange.feedback?.rating === "needs-review" ? "active warning" : ""}
+                    onClick={() => void rateMentorResponse(latestMentorExchange.id, "needs-review")}
+                  >
+                    <TriangleAlert size={12} /> Needs review
+                  </button>
+                </div>
+              </div>
+            )}
+            {(mentorConversation?.exchanges.length ?? 0) > 1 && (
+              <div className="mentor-history">
+                <span>Conversation history</span>
+                {mentorConversation?.exchanges.slice(1, 6).map((exchange) => (
+                  <div key={exchange.id}>
+                    <strong>{exchange.question}</strong>
+                    <small>{new Date(exchange.answeredAt).toLocaleString("en-GB")} · {exchange.quality.status}</small>
                   </div>
                 ))}
               </div>

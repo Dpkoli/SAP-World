@@ -3,7 +3,10 @@ export type AdvancedTransactionType =
   | "Customer Return"
   | "Asset Accounting"
   | "Tax Adjustment"
-  | "Year-End Close";
+  | "Year-End Close"
+  | "Intercompany Sale"
+  | "Product Costing"
+  | "Maintenance Settlement";
 
 export type AdvancedTransactionStatus =
   | "Not started"
@@ -777,6 +780,256 @@ export const advancedTransactionDefinitions: AdvancedTransactionCase[] = [
           "Opening balance sheet accounts must equal prior-year closing balances.",
           "Retained earnings must agree to the final income statement result.",
         ],
+      },
+    ],
+  },
+  {
+    id: "ADV-ICO-001",
+    type: "Intercompany Sale",
+    title: "Fulfil a cross-company customer order",
+    scenario:
+      "BCB1 sells to a national customer while affiliate company BCD1 supplies and invoices the stock across company-code boundaries.",
+    modules: ["SD", "MM", "TM", "FI", "CO-PA"],
+    businessTrigger:
+      "The customer delivery promise can only be met from affiliate distribution stock.",
+    value: "480 KEG / £71,040 external revenue",
+    priority: "High",
+    status: "Not started",
+    currentStep: 1,
+    completedSteps: [],
+    objectReferences: [
+      "Selling company BCB1",
+      "Delivering company BCD1",
+      "Customer order 182991",
+      "Intercompany price condition PI01",
+    ],
+    validations: [
+      "Selling and delivering company codes are derived correctly.",
+      "External and intercompany invoices reference the same delivery.",
+      "Intercompany revenue and cost eliminate in consolidation.",
+      "Customer receivable remains in the selling company.",
+    ],
+    auditTrail: [],
+    allowedActions: ["complete-step"],
+    steps: [
+      {
+        sequence: 1,
+        title: "Create and validate the cross-company order",
+        role: "Sales operations specialist",
+        app: "Manage Sales Orders",
+        transactionCode: "VA01",
+        instruction:
+          "Create order 182991 in BCB1, confirm BCD1 as delivering plant owner, and validate route, ATP, tax, and intercompany pricing prerequisites.",
+        why:
+          "Correct organizational derivation controls which company owns the customer and which company supplies the goods.",
+        result: "Order 182991 confirms 480 KEG from the affiliate plant.",
+        documentType: "Sales order",
+        documentNumber: "182991",
+        inventoryImpact: "BCD1 stock is allocated; no goods movement is posted.",
+        accountingEntries: [],
+        controlChecks: [
+          "Confirm customer sales area belongs to BCB1.",
+          "Confirm the delivering plant is assigned to BCD1.",
+        ],
+      },
+      {
+        sequence: 2,
+        title: "Deliver and post goods issue",
+        role: "Affiliate shipping coordinator",
+        app: "Run Outbound Process",
+        transactionCode: "VL02N",
+        instruction:
+          "Pick the confirmed batches, complete transport staging, and post goods issue for delivery 800012508 from BCD1.",
+        why:
+          "Goods issue records the supplying company inventory and cost impact while preserving the customer-order reference.",
+        result: "Material document 4900006288 posts the affiliate goods issue.",
+        documentType: "Outbound delivery",
+        documentNumber: "800012508",
+        inventoryImpact: "BCD1 finished-goods inventory decreases by 480 KEG.",
+        accountingEntries: [
+          {
+            debit: "BCD1 cost of intercompany sales",
+            credit: "BCD1 finished goods inventory",
+            amount: "£51,840",
+            explanation: "Records the supplying company standard cost at goods issue.",
+          },
+        ],
+        controlChecks: [
+          "Picking and batch quantities must match the delivery.",
+          "The delivery must retain order and company-code references.",
+        ],
+      },
+      {
+        sequence: 3,
+        title: "Create external and intercompany billing",
+        role: "Intercompany billing accountant",
+        app: "Create Billing Documents",
+        transactionCode: "VF01 / IV",
+        instruction:
+          "Create the BCB1 customer invoice and the BCD1 intercompany invoice, then reconcile delivery quantity, transfer price, tax, and company postings.",
+        why:
+          "Dual billing recognizes the external customer sale and the internal supply relationship without duplicating the customer receivable.",
+        result: "Customer invoice 900001592 and intercompany invoice 910000244 are posted.",
+        documentType: "Billing documents",
+        documentNumber: "900001592 / 910000244",
+        inventoryImpact: "No further quantity movement.",
+        accountingEntries: [
+          { debit: "Customer receivable", credit: "BCB1 external revenue", amount: "£71,040", explanation: "Records the customer-facing sale." },
+          { debit: "BCB1 intercompany cost", credit: "BCD1 intercompany revenue", amount: "£58,320", explanation: "Records the governed affiliate transfer price." },
+        ],
+        controlChecks: [
+          "Both invoices must reference delivery 800012508.",
+          "Intercompany balances must reconcile and eliminate in consolidation.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "ADV-COST-001",
+    type: "Product Costing",
+    title: "Release the annual standard cost estimate",
+    scenario:
+      "Cost the revised Amber Ale recipe, analyse quantity and price changes, and release the approved standard price for the new fiscal year.",
+    modules: ["CO-PC", "PP", "MM", "FI"],
+    businessTrigger:
+      "A recipe revision and supplier-price increase require the FY2026-2027 standard cost update.",
+    value: "£112.40 proposed standard cost per KEG",
+    priority: "High",
+    status: "Not started",
+    currentStep: 1,
+    completedSteps: [],
+    objectReferences: ["Material FG-AMBER-KEG-50", "BOM BOM-FG-AMBER", "Routing RTG-AMBER-01", "Plant BR01"],
+    validations: [
+      "BOM, routing, activity prices, and purchasing prices are valid on the costing date.",
+      "Cost component split reconciles to the calculated standard cost.",
+      "Marked cost is independently approved before release.",
+      "Inventory revaluation posts once at period open.",
+    ],
+    auditTrail: [],
+    allowedActions: ["complete-step"],
+    steps: [
+      {
+        sequence: 1,
+        title: "Calculate the cost estimate",
+        role: "Product cost accountant",
+        app: "Create Material Cost Estimates",
+        transactionCode: "CK11N",
+        instruction:
+          "Cost FG-AMBER-KEG-50 at BR01 using the approved costing variant, FY2026-2027 quantity structure, and current activity and purchasing prices.",
+        why: "The calculation rolls material, labour, machine, overhead, and packaging assumptions into one traceable unit cost.",
+        result: "Cost estimate CE-260701 calculates £112.40 per KEG.",
+        documentType: "Material cost estimate",
+        documentNumber: "CE-260701",
+        inventoryImpact: "No valuation change until release.",
+        accountingEntries: [],
+        controlChecks: ["Resolve missing-price and quantity-structure messages.", "Review lot size and costing dates."],
+      },
+      {
+        sequence: 2,
+        title: "Analyse and mark the approved cost",
+        role: "Costing manager",
+        app: "Edit Costing Runs",
+        transactionCode: "CK40N",
+        instruction:
+          "Compare the component split to the prior standard, document the malt, packaging, and activity-rate drivers, then mark the approved estimate.",
+        why: "Marking separates managerial approval from the financial release that changes inventory valuation.",
+        result: "Costing run CR-BR01-2607 is marked for release.",
+        documentType: "Costing run",
+        documentNumber: "CR-BR01-2607",
+        inventoryImpact: "Future standard price is staged; current inventory remains unchanged.",
+        accountingEntries: [],
+        controlChecks: ["Explain all material component changes above 5%.", "Confirm the release period is not closed."],
+      },
+      {
+        sequence: 3,
+        title: "Release and reconcile inventory revaluation",
+        role: "Financial controller",
+        app: "Release Standard Cost Estimates",
+        transactionCode: "CK24",
+        instruction:
+          "Release the marked estimate, verify the material master standard price, and reconcile the resulting inventory revaluation posting.",
+        why: "Release makes the approved unit cost effective for inventory valuation and future production variances.",
+        result: "FG-AMBER-KEG-50 is released at £112.40 with revaluation document 130000874.",
+        documentType: "Price release document",
+        documentNumber: "130000874",
+        inventoryImpact: "Existing BR01 inventory is revalued to the new standard price.",
+        accountingEntries: [
+          { debit: "Finished goods inventory", credit: "Inventory revaluation gain", amount: "£38,720", explanation: "Illustrative increase from the prior released standard." },
+        ],
+        controlChecks: ["Release only the approved costing run.", "Reconcile material master, cost estimate, and FI document."],
+      },
+    ],
+  },
+  {
+    id: "ADV-MAINT-001",
+    type: "Maintenance Settlement",
+    title: "Settle a brewery overhaul order",
+    scenario:
+      "Complete technical closure, analyse actual overhaul cost, and settle an approved maintenance order to its responsible cost centre and asset.",
+    modules: ["PM", "CO", "MM", "FI-AA"],
+    businessTrigger: "Annual filler overhaul order 40007184 is technically complete and ready for month-end settlement.",
+    value: "£84,600 actual overhaul cost",
+    priority: "Medium",
+    status: "Not started",
+    currentStep: 1,
+    completedSteps: [],
+    objectReferences: ["Maintenance order 40007184", "Equipment PKG-FILL-02", "Cost centre BR01-PACK", "Asset 300184-0"],
+    validations: [
+      "Confirmations, goods issues, services, and invoices are complete.",
+      "Open commitments are resolved before technical completion.",
+      "Settlement rule totals 100% and uses approved receivers.",
+      "Order balance is zero after settlement.",
+    ],
+    auditTrail: [],
+    allowedActions: ["complete-step"],
+    steps: [
+      {
+        sequence: 1,
+        title: "Review technical and commercial completion",
+        role: "Maintenance planner",
+        app: "Manage Maintenance Orders",
+        transactionCode: "IW32",
+        instruction: "Review confirmations, materials, external services, invoices, notifications, and commitments before setting order 40007184 to technically complete.",
+        why: "Technical completion stops routine processing and confirms the equipment history is complete before financial close.",
+        result: "Order 40007184 is technically complete with no open commitment.",
+        documentType: "Maintenance order",
+        documentNumber: "40007184",
+        inventoryImpact: "All issued spare parts remain consumed by the order.",
+        accountingEntries: [],
+        controlChecks: ["Verify final confirmation and malfunction end time.", "Resolve purchase requisitions and open service entries."],
+      },
+      {
+        sequence: 2,
+        title: "Analyse actual cost and settlement rule",
+        role: "Maintenance controller",
+        app: "Display Actual Costs",
+        transactionCode: "KOB1 / IW33",
+        instruction: "Reconcile labour, material, service, and overhead actuals, then validate the approved split between expense cost centre BR01-PACK and capital asset 300184-0.",
+        why: "The settlement rule determines which costs remain period expense and which qualifying improvement costs are capitalized.",
+        result: "£61,600 is assigned to expense and £23,000 to the asset receiver.",
+        documentType: "Settlement rule",
+        documentNumber: "SR-40007184",
+        inventoryImpact: "No inventory movement.",
+        accountingEntries: [],
+        controlChecks: ["Capitalized scope must meet accounting policy.", "Receiver percentages must total 100%."],
+      },
+      {
+        sequence: 3,
+        title: "Execute settlement and close the order",
+        role: "Cost accountant",
+        app: "Settle Orders",
+        transactionCode: "KO88",
+        instruction: "Run settlement in test mode, resolve errors, post the settlement, verify the zero order balance, and complete financial closure.",
+        why: "Settlement transfers accumulated order cost to its final financial owners and prevents duplicate period carryover.",
+        result: "Settlement document 140000392 clears order 40007184.",
+        documentType: "Settlement document",
+        documentNumber: "140000392",
+        inventoryImpact: "No physical stock movement.",
+        accountingEntries: [
+          { debit: "BR01-PACK maintenance expense", credit: "Maintenance order settlement", amount: "£61,600", explanation: "Settles routine overhaul cost to the responsible cost centre." },
+          { debit: "Packaging equipment asset", credit: "Maintenance order settlement", amount: "£23,000", explanation: "Capitalizes the approved improvement component." },
+        ],
+        controlChecks: ["Review test-run messages before posting.", "Confirm order balance and residual commitments are zero."],
       },
     ],
   },

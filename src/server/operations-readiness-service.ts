@@ -6,6 +6,8 @@ import type { LedgerAnalyticsSnapshot } from "@/server/ledger-analytics-reposito
 import type { getContentControlRegister } from "@/server/content-control-service";
 import type { getEnterpriseIdentityProviderStatus } from "@/server/enterprise-identity-provider";
 import type { getMentorProviderStatus } from "@/server/mentor-provider";
+import { getHostedObservabilityStatus } from "@/server/observability-repository";
+import { getReleaseAutomationStatus } from "@/server/release-operations-repository";
 
 export type OperationsReadinessCheck = {
   id: string;
@@ -46,6 +48,8 @@ export function getOperationsReadiness(input: {
   const insecureCookiesEnabled =
     process.env.SAP_WORLD_INSECURE_COOKIES === "true";
   const production = process.env.NODE_ENV === "production";
+  const hostedObservability = getHostedObservabilityStatus();
+  const releaseAutomation = getReleaseAutomationStatus();
 
   const checks = [
     check({
@@ -132,6 +136,20 @@ export function getOperationsReadiness(input: {
           : "Regenerate or repair affected simulation ledgers before release.",
     }),
     check({
+      id: "dedicated-ledger-storage",
+      area: "Enterprise data",
+      status:
+        input.storage.backend === "postgresql" &&
+        input.ledgerAnalytics.readModel.backend === "dedicated-postgresql"
+          ? "Pass"
+          : "Warning",
+      evidence: `Ledger read model backend is ${input.ledgerAnalytics.readModel.backend}.`,
+      action:
+        input.ledgerAnalytics.readModel.backend === "dedicated-postgresql"
+          ? "No action required."
+          : "Configure DATABASE_URL and run npm run db:migrate before hosted release.",
+    }),
+    check({
       id: "mentor-provider",
       area: "AI mentor",
       status: input.mentor.configured ? "Pass" : "Warning",
@@ -141,6 +159,32 @@ export function getOperationsReadiness(input: {
       action: input.mentor.configured
         ? "Monitor provider latency and fallback rate after deployment."
         : "Optional: configure SAP_WORLD_AI_* variables for model-enhanced explanations.",
+    }),
+    check({
+      id: "hosted-observability",
+      area: "Hosted observability",
+      status:
+        hostedObservability.runtime === "vercel" ||
+        hostedObservability.eventSinkConfigured
+          ? "Pass"
+          : "Warning",
+      evidence: `${hostedObservability.runtime} runtime with Web Analytics and Speed Insights enabled; external event sink ${hostedObservability.eventSinkConfigured ? "configured" : "not configured"}.`,
+      action:
+        hostedObservability.runtime === "vercel" ||
+        hostedObservability.eventSinkConfigured
+          ? "Review runtime errors and Core Web Vitals after promotion."
+          : "Link the hosted project or configure SAP_WORLD_OBSERVABILITY_WEBHOOK_URL.",
+    }),
+    check({
+      id: "release-automation",
+      area: "Release operations",
+      status: releaseAutomation.configured ? "Pass" : "Warning",
+      evidence: releaseAutomation.configured
+        ? `${releaseAutomation.provider} promotion and rollback automation is configured.`
+        : "Promotion and rollback requests are retained for manual execution.",
+      action: releaseAutomation.configured
+        ? "Validate the provider callback during preview smoke testing."
+        : "Configure SAP_WORLD_RELEASE_AUTOMATION_URL and its deployment secret.",
     }),
   ];
 

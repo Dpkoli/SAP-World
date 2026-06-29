@@ -41,6 +41,12 @@ PostgreSQL services are supported. It lazily creates the schema in
 `next build`, so initial deployments remain build-safe before environment
 provisioning is complete.
 
+After provisioning the database, apply the idempotent schema explicitly:
+
+```powershell
+npm run db:migrate
+```
+
 When PostgreSQL is enabled and a state aggregate does not yet exist, SAP World
 checks for its matching local `.data` file and imports that content once. Later
 writes use transaction-scoped advisory locks, row locks, and revision increments
@@ -59,11 +65,16 @@ The persisted aggregates are:
 - `tutor-capstone-submissions`
 - `certification-reviews`
 - `release-governance`
+- `release-operations`
 - `observability-events`
+- `mentor-conversations`
 - `ledger-analytics-read-model`
 
-Generated ledger analytics are stored as a persisted read-model aggregate keyed
-by learner and admin scope. The read model fingerprints saved simulations,
+Generated ledger analytics are stored in dedicated
+`sap_world_ledger_analytics_snapshots` rows keyed by learner and admin scope.
+Normalized documents are written to `sap_world_ledger_documents`, while full
+simulation ledgers and summaries are retained in `sap_world_simulation_ledgers`.
+The read model fingerprints saved simulations,
 reuses the stored snapshot while the source simulations are unchanged, and
 refreshes automatically when new simulation signatures are saved. The snapshot
 is exposed to learners through `GET /api/ledger/analytics` and to admins
@@ -204,6 +215,18 @@ fingerprint of the gate evidence. A later configuration or readiness change
 produces a new fingerprint, so an older sign-off cannot approve a changed
 release state.
 
+Promotion and rollback requests are protected through:
+
+```text
+GET /api/admin/release-operations
+POST /api/admin/release-operations
+```
+
+Promotion requires a non-rejected decision for the current readiness
+fingerprint. Configure `SAP_WORLD_RELEASE_AUTOMATION_URL` and
+`SAP_WORLD_RELEASE_AUTOMATION_SECRET` to dispatch requests to a deployment
+controller; without them, requests remain audited as manual actions.
+
 Admins can inspect compact server-side telemetry through:
 
 ```text
@@ -215,11 +238,17 @@ without learner notes, passwords, session tokens, or raw mentor prompts. Guided
 tutor progress events include only process code, active step, completion state,
 and evidence-note counts. Use this endpoint for release smoke checks, support
 triage, and operational trend inspection.
+Vercel Web Analytics and Speed Insights are mounted in the root layout, and all
+server events emit structured runtime logs. An optional authenticated event
+sink can be configured with `SAP_WORLD_OBSERVABILITY_WEBHOOK_URL` and
+`SAP_WORLD_OBSERVABILITY_WEBHOOK_SECRET`.
 
-Mentor answers are handled through:
+Mentor conversations are handled through:
 
 ```text
+GET /api/mentor
 POST /api/mentor
+PATCH /api/mentor
 ```
 
 The route builds a compact learner evidence snapshot from saved progress,
@@ -227,6 +256,10 @@ readiness, and capstone summaries before calling the mentor service. This lets
 the tutor answer questions about next practice actions, readiness, weak areas,
 missing guided evidence steps, and capstone scores while keeping raw note text
 and capstone response text out of the mentor prompt and telemetry.
+Questions and answers are retained per learner/process with evidence sources,
+provider/fallback metadata, sensitive-content redaction, grounding checks, and
+helpful/needs-review feedback. A maximum of 50 exchanges is retained per
+conversation.
 
 Learner tutor readiness reviews are exposed through:
 
@@ -281,22 +314,26 @@ local grounded answer instead.
 1. Import the GitHub repository into Vercel.
 2. Add a Neon integration from the Vercel Marketplace.
 3. Confirm that `DATABASE_URL` is available to Production and Preview.
-4. Add `SAP_WORLD_BOOTSTRAP_ADMIN_EMAILS` for the first platform owner.
-5. Optionally add `SAP_WORLD_AI_ENDPOINT`, `SAP_WORLD_AI_API_KEY`, and
+4. Run `npm run db:migrate` against the production connection.
+5. Add `SAP_WORLD_BOOTSTRAP_ADMIN_EMAILS` for the first platform owner.
+6. Optionally add `SAP_WORLD_AI_ENDPOINT`, `SAP_WORLD_AI_API_KEY`, and
    `SAP_WORLD_AI_MODEL` for enhanced mentor wording.
-6. Deploy the `codex/mvp-foundation` branch or merge it into the production
+7. Configure release automation and observability webhook values when external
+   controllers or event sinks are available.
+8. Deploy the `codex/mvp-foundation` branch or merge it into the production
    branch.
-7. Verify `/api/health` returns `status: "ok"` and
+9. Verify `/api/health` returns `status: "ok"` and
    `storage.backend: "postgresql"`.
-8. Sign in with the bootstrapped admin and verify `/api/admin/identity` returns
+10. Sign in with the bootstrapped admin and verify `/api/admin/identity` returns
    the managed account registry and audit history.
-9. Verify `/api/admin/operations` returns
+11. Verify `/api/admin/operations` returns
    platform counts.
-10. Verify `/api/admin/content-control` returns the content release register.
-11. Verify `/api/admin/readiness` returns `Ready` or an accepted
+12. Verify `/api/admin/content-control` returns the content release register.
+13. Verify `/api/admin/readiness` returns `Ready` or an accepted
     `Ready with warnings` status before go-live.
-12. Verify `/api/admin/observability` returns retained event counts after a
+14. Verify `/api/admin/observability` returns retained event counts after a
     mentor question or simulation action.
+15. Validate promotion from a smoke-tested preview and retain a rollback target.
 
 Secure cookies are enabled automatically in production. Do not configure
 `SAP_WORLD_INSECURE_COOKIES` on a hosted deployment.

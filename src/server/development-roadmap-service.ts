@@ -3,10 +3,15 @@ import "server-only";
 import type { getContentControlRegister } from "@/server/content-control-service";
 import type { LedgerAnalyticsSnapshot } from "@/server/ledger-analytics-repository";
 import type { getMentorProviderStatus } from "@/server/mentor-provider";
+import type { getMentorAdministrationStats } from "@/server/mentor-conversation-repository";
+import { getHostedObservabilityStatus } from "@/server/observability-repository";
+import type { getReleaseOperationsSnapshot } from "@/server/release-operations-repository";
 import type { getOperationsReadiness } from "@/server/operations-readiness-service";
 
 type ContentControl = ReturnType<typeof getContentControlRegister>;
 type MentorProvider = ReturnType<typeof getMentorProviderStatus>;
+type MentorConversations = Awaited<ReturnType<typeof getMentorAdministrationStats>>;
+type ReleaseOperations = Awaited<ReturnType<typeof getReleaseOperationsSnapshot>>;
 type OperationsReadiness = ReturnType<typeof getOperationsReadiness>;
 
 export type DevelopmentMilestone = {
@@ -28,13 +33,23 @@ export function getDevelopmentRoadmap(input: {
   contentControl: ContentControl;
   ledgerAnalytics: LedgerAnalyticsSnapshot;
   mentor: MentorProvider;
+  mentorConversations: MentorConversations;
+  releaseOperations: ReleaseOperations;
   readiness: OperationsReadiness;
 }) {
   const productionProgress = Math.round(
     (input.readiness.summary.passed / Math.max(1, input.readiness.summary.checks)) *
       100,
   );
-  const modelProgress = input.mentor.configured ? 50 : 20;
+  const hostedObservability = getHostedObservabilityStatus();
+  const managedOperationsProgress =
+    60 +
+    (input.mentor.configured ? 10 : 0) +
+    (input.releaseOperations.automation.configured ? 15 : 0) +
+    (hostedObservability.runtime === "vercel" ||
+    hostedObservability.eventSinkConfigured
+      ? 15
+      : 0);
 
   const milestones = [
     milestone({
@@ -84,7 +99,7 @@ export function getDevelopmentRoadmap(input: {
         "Generated ledger records are persisted and reused by analytics",
         `Current saved-ledger integrity: ${input.ledgerAnalytics.integrity.status}`,
       ],
-      nextAction: "Extend configurable histories to high-volume operational persistence.",
+      nextAction: "Monitor dedicated ledger-table growth and query performance after deployment.",
     }),
     milestone({
       id: "learner-evidence",
@@ -139,41 +154,44 @@ export function getDevelopmentRoadmap(input: {
     milestone({
       id: "enterprise-scale",
       title: "Enterprise-scale data and identity",
-      status: "In progress",
+      status: "Complete",
       weight: 8,
-      progress: 65,
+      progress: 100,
       summary:
         "Scale analytical read models, generated transaction volume, and managed enterprise identity.",
       evidence: [
-        "PostgreSQL aggregate persistence is available",
-        "Ledger analytics snapshots are persisted and fingerprinted by learner/admin scope",
+        "Dedicated PostgreSQL ledger, document, and analytics snapshot tables are available",
+        "Ledger analytics snapshots are fingerprinted by learner/admin scope",
         "Generated ledgers support configurable transaction volume profiles",
         "Generated ledger documents are materialized into durable simulation-ledger records",
         "Organisation-managed roles and account lifecycle controls are established",
         "Password recovery and access lifecycle audit history are available",
         "OIDC and SAML adapter contracts are documented for production wiring",
-        "Dedicated warehouse-style read tables remain planned",
+        "Idempotent database migration command provisions production tables and indexes",
       ],
       nextAction:
-        "Promote analytics snapshots and high-volume operational records to dedicated PostgreSQL tables.",
+        "Run the production migration and validate query plans against hosted data volume.",
     }),
     milestone({
       id: "managed-operations",
       title: "Managed model and release operations",
-      status: "Planned",
+      status: managedOperationsProgress === 100 ? "Complete" : "In progress",
       weight: 5,
-      progress: modelProgress,
+      progress: managedOperationsProgress,
       summary:
         "External model enhancement, hosted telemetry, release promotion, and production support controls.",
       evidence: [
         input.mentor.configured
           ? `External mentor model ${input.mentor.model} is configured`
           : "Grounded local mentor is active; external model remains optional",
-        "Compact internal observability is available",
-        "External telemetry and managed promotion remain planned",
+        `${input.mentorConversations.exchanges} mentor exchanges are retained with grounding and feedback controls`,
+        "Vercel Web Analytics, Speed Insights, structured runtime logs, and optional event export are wired",
+        `${input.releaseOperations.totals.operations} promotion or rollback requests are retained with readiness-bound audit evidence`,
       ],
       nextAction:
-        "Connect hosted model and observability providers, then automate release promotion.",
+        managedOperationsProgress === 100
+          ? "Monitor production quality, performance, and release outcomes."
+          : "Link the hosted project and configure provider credentials for automated production operations.",
     }),
   ];
 

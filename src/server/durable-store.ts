@@ -21,6 +21,10 @@ function usesPostgres() {
   return Boolean(process.env.DATABASE_URL?.trim());
 }
 
+export function isPostgresConfigured() {
+  return usesPostgres();
+}
+
 function getPool() {
   const connectionString = process.env.DATABASE_URL?.trim();
   if (!connectionString) {
@@ -34,6 +38,17 @@ function getPool() {
     application_name: "sap-world",
   });
   return pool;
+}
+
+export async function withPostgresClient<T>(
+  operation: (client: PoolClient) => Promise<T>,
+) {
+  const client = await getPool().connect();
+  try {
+    return await operation(client);
+  } finally {
+    client.release();
+  }
 }
 
 async function ensureSchema() {

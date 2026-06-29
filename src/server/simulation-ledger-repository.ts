@@ -4,6 +4,12 @@ import type { GeneratedSimulation } from "@/data/generated-simulations";
 import type { SimulationLedger } from "@/data/simulation-ledger";
 import { createDurableStore } from "@/server/durable-store";
 import { generateEnterpriseLedger } from "@/server/enterprise-ledger-generator";
+import {
+  getDedicatedLedgerStats,
+  readDedicatedLedger,
+  usesDedicatedLedgerStorage,
+  writeDedicatedLedger,
+} from "@/server/ledger-postgres-repository";
 
 type PersistedSimulationLedger = {
   fingerprint: string;
@@ -64,6 +70,33 @@ export async function getPersistedEnterpriseLedger(
 ): Promise<PersistedSimulationLedgerResult> {
   const key = ledgerKey(simulation);
   const fingerprint = fingerprintSimulation(simulation);
+  if (usesDedicatedLedgerStorage()) {
+    const cached = await readDedicatedLedger(key);
+    if (cached?.fingerprint === fingerprint) {
+      return {
+        ...cached.ledger,
+        persistence: {
+          persisted: true,
+          persistedAt: cached.persistedAt,
+          fingerprint,
+        },
+      };
+    }
+
+    const ledger = generateEnterpriseLedger(simulation);
+    const persistedAt = new Date().toISOString();
+    await writeDedicatedLedger({
+      signature: key,
+      fingerprint,
+      persistedAt,
+      ledger,
+    });
+    return {
+      ...ledger,
+      persistence: { persisted: true, persistedAt, fingerprint },
+    };
+  }
+
   const database = await ledgerStore.read();
   const cached = database.ledgers[key];
   if (cached?.fingerprint === fingerprint) {
@@ -97,6 +130,13 @@ export async function getPersistedEnterpriseLedger(
 }
 
 export async function getSimulationLedgerPersistenceStats() {
+  if (usesDedicatedLedgerStorage()) {
+    return {
+      ...(await getDedicatedLedgerStats()),
+      backend: "dedicated-postgresql" as const,
+    };
+  }
+
   const database = await ledgerStore.read();
   const ledgers = Object.values(database.ledgers);
   return {
@@ -111,5 +151,6 @@ export async function getSimulationLedgerPersistenceStats() {
     ),
     latestPersistedAt:
       ledgers.map((entry) => entry.persistedAt).sort().at(-1) ?? null,
+    backend: "aggregate-fallback" as const,
   };
 }

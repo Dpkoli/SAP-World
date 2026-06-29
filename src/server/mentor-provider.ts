@@ -117,6 +117,24 @@ export async function enhanceMentorResponse(input: {
         fallbackReason: "External mentor returned an empty answer.",
       };
     }
+    if (answer.length > 2400) {
+      return {
+        ...input.localResponse,
+        provider: "local",
+        fallbackReason: "External mentor exceeded the governed response length.",
+      };
+    }
+    if (
+      /\b(password|api[_ -]?key|client[_ -]?secret)\s*[:=]\s*[^\s,;]{6,}/i.test(
+        answer,
+      )
+    ) {
+      return {
+        ...input.localResponse,
+        provider: "local",
+        fallbackReason: "External mentor response triggered sensitive-content controls.",
+      };
+    }
 
     return {
       ...input.localResponse,

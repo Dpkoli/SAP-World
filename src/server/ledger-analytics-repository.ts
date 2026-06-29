@@ -12,6 +12,11 @@ import {
   getGeneratedSimulations,
 } from "@/server/generated-simulation-repository";
 import { createDurableStore } from "@/server/durable-store";
+import {
+  readDedicatedAnalytics,
+  usesDedicatedLedgerStorage,
+  writeDedicatedAnalytics,
+} from "@/server/ledger-postgres-repository";
 import { getPersistedEnterpriseLedger } from "@/server/simulation-ledger-repository";
 
 type LedgerScope = "learner" | "admin";
@@ -217,6 +222,7 @@ export type LedgerAnalyticsSnapshot = LedgerAnalyticsBaseSnapshot & {
     persisted: boolean;
     refreshedAt: string;
     fingerprint: string;
+    backend: "dedicated-postgresql" | "aggregate-fallback";
   };
 };
 
@@ -273,6 +279,38 @@ async function getLedgerAnalyticsFromReadModel(
   key: string,
 ) {
   const fingerprint = fingerprintRecords(records, scope);
+  if (usesDedicatedLedgerStorage()) {
+    const cached = await readDedicatedAnalytics<LedgerAnalyticsBaseSnapshot>(
+      key,
+    );
+    if (cached?.fingerprint === fingerprint) {
+      return withReadModel(cached.snapshot, {
+        key,
+        persisted: true,
+        refreshedAt: cached.refreshedAt,
+        fingerprint,
+        backend: "dedicated-postgresql",
+      });
+    }
+
+    const snapshot = await summarizeRecords(records, scope);
+    const refreshedAt = new Date().toISOString();
+    await writeDedicatedAnalytics({
+      key,
+      scope,
+      fingerprint,
+      refreshedAt,
+      snapshot,
+    });
+    return withReadModel(snapshot, {
+      key,
+      persisted: true,
+      refreshedAt,
+      fingerprint,
+      backend: "dedicated-postgresql",
+    });
+  }
+
   const current = await analyticsStore.read();
   const cached = current.entries[key];
   if (cached?.fingerprint === fingerprint) {
@@ -281,6 +319,7 @@ async function getLedgerAnalyticsFromReadModel(
       persisted: true,
       refreshedAt: cached.refreshedAt,
       fingerprint,
+      backend: "aggregate-fallback",
     });
   }
 
@@ -297,6 +336,7 @@ async function getLedgerAnalyticsFromReadModel(
       persisted: true,
       refreshedAt,
       fingerprint,
+      backend: "aggregate-fallback",
     });
   });
 }

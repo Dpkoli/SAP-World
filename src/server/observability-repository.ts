@@ -6,6 +6,7 @@ import { createDurableStore } from "@/server/durable-store";
 
 export type ObservabilityEventType =
   | "mentor.question"
+  | "mentor.feedback"
   | "simulation.generated"
   | "simulation.step.completed"
   | "tutor.guided.progress.saved"
@@ -19,6 +20,8 @@ export type ObservabilityEventType =
   | "governance.decision"
   | "admin.readiness.checked"
   | "admin.release.decision"
+  | "admin.release.promotion"
+  | "admin.release.rollback"
   | "admin.certification.decision"
   | "admin.identity.changed"
   | "auth.password-recovery.requested"
@@ -65,6 +68,61 @@ function hashIdentifier(value: string) {
   return createHash("sha256").update(value).digest("hex").slice(0, 16);
 }
 
+export function getHostedObservabilityStatus() {
+  return {
+    runtime: process.env.VERCEL ? "vercel" as const : "local" as const,
+    environment:
+      process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "development",
+    webAnalytics: true,
+    speedInsights: true,
+    eventSinkConfigured: Boolean(
+      process.env.SAP_WORLD_OBSERVABILITY_WEBHOOK_URL?.trim(),
+    ),
+  };
+}
+
+async function deliverHostedEvent(event: ObservabilityEvent) {
+  console.log(
+    JSON.stringify({
+      level: event.status === "failure" ? "error" : event.status === "warning" ? "warn" : "info",
+      message: event.summary,
+      service: "sap-world",
+      eventId: event.id,
+      eventType: event.type,
+      actorRole: event.actorRole,
+      entityId: event.entityId,
+      status: event.status,
+      metadata: event.metadata,
+      occurredAt: event.occurredAt,
+    }),
+  );
+
+  const endpoint = process.env.SAP_WORLD_OBSERVABILITY_WEBHOOK_URL?.trim();
+  if (!endpoint) return true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2500);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.SAP_WORLD_OBSERVABILITY_WEBHOOK_SECRET
+          ? {
+              Authorization: `Bearer ${process.env.SAP_WORLD_OBSERVABILITY_WEBHOOK_SECRET}`,
+            }
+          : {}),
+      },
+      body: JSON.stringify(event),
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function recordObservabilityEvent(input: {
   type: ObservabilityEventType;
   actorId: string;
@@ -90,7 +148,7 @@ export async function recordObservabilityEvent(input: {
     await observabilityStore.update((database) => {
       database.events = [event, ...database.events].slice(0, 1000);
     });
-    return true;
+    return deliverHostedEvent(event);
   } catch {
     return false;
   }
@@ -115,6 +173,7 @@ export async function getObservabilitySnapshot() {
 
   return {
     generatedAt: new Date().toISOString(),
+    hosted: getHostedObservabilityStatus(),
     retention: {
       maxEvents: 1000,
       storedEvents: events.length,

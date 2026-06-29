@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { normalizeLearnerProgress } from "@/data/progress";
 import { processScenarios } from "@/data/simulation";
 import { answerMentorQuestion } from "@/server/mentor-service";
+import {
+  getMentorConversation,
+  recordMentorExchange,
+  recordMentorFeedback,
+} from "@/server/mentor-conversation-repository";
 import { enhanceMentorResponse } from "@/server/mentor-provider";
 import { getCurrentLearner } from "@/server/auth-session";
 import { recordObservabilityEvent } from "@/server/observability-repository";
@@ -10,6 +15,24 @@ import { getTutorCapstonePortfolio } from "@/server/tutor-capstone-repository";
 import { buildTutorReadinessReview } from "@/server/tutor-readiness-service";
 
 export const runtime = "nodejs";
+
+function validScenarioId(value: unknown) {
+  return typeof value === "string" &&
+    processScenarios.some((scenario) => scenario.id === value)
+    ? value
+    : "p2p";
+}
+
+export async function GET(request: Request) {
+  const learner = await getCurrentLearner();
+  if (!learner) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+  const scenarioId = validScenarioId(new URL(request.url).searchParams.get("scenarioId"));
+  return NextResponse.json({
+    conversation: await getMentorConversation(learner.id, scenarioId),
+  });
+}
 
 export async function POST(request: Request) {
   const learner = await getCurrentLearner();
@@ -32,6 +55,11 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  const scenarioId = validScenarioId(input.scenarioId);
+  const step =
+    typeof input.step === "number" && Number.isInteger(input.step)
+      ? Math.max(0, input.step)
+      : null;
 
   const progress =
     (await getLearnerProgress(learner.id)) ??
@@ -92,17 +120,24 @@ export async function POST(request: Request) {
 
   const localResponse = answerMentorQuestion({
     question,
-    scenarioId: input.scenarioId,
-    step: input.step,
+    scenarioId,
+    step: step ?? undefined,
     portfolio,
   });
 
   const mentorResponse = await enhanceMentorResponse({ question, localResponse });
+  const persisted = await recordMentorExchange({
+    learnerId: learner.id,
+    scenarioId,
+    step,
+    question,
+    response: mentorResponse,
+  });
   await recordObservabilityEvent({
     type: "mentor.question",
     actorId: learner.id,
     actorRole: learner.role,
-    entityId: String(input.scenarioId ?? "p2p"),
+    entityId: scenarioId,
     status: mentorResponse.fallbackReason ? "warning" : "success",
     summary: "Learner received a grounded SAP Mentor answer.",
     metadata: {
@@ -110,8 +145,58 @@ export async function POST(request: Request) {
       model: mentorResponse.model ?? null,
       sources: mentorResponse.sources.length,
       fallback: Boolean(mentorResponse.fallbackReason),
+      quality: persisted.exchange.quality.status,
     },
   });
 
-  return NextResponse.json(mentorResponse);
+  return NextResponse.json({
+    ...mentorResponse,
+    conversation: persisted.conversation,
+    exchange: persisted.exchange,
+  });
+}
+
+export async function PATCH(request: Request) {
+  const learner = await getCurrentLearner();
+  if (!learner) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+  const input = (await request.json().catch(() => null)) as {
+    messageId?: unknown;
+    rating?: unknown;
+    note?: unknown;
+  } | null;
+  if (
+    !input ||
+    typeof input.messageId !== "string" ||
+    (input.rating !== "helpful" && input.rating !== "needs-review") ||
+    (input.note !== undefined && typeof input.note !== "string")
+  ) {
+    return NextResponse.json(
+      { error: "Choose a valid mentor response and feedback rating." },
+      { status: 400 },
+    );
+  }
+  const conversation = await recordMentorFeedback({
+    learnerId: learner.id,
+    messageId: input.messageId,
+    rating: input.rating,
+    note: typeof input.note === "string" ? input.note.trim() : "",
+  });
+  if (!conversation) {
+    return NextResponse.json(
+      { error: "Mentor response not found." },
+      { status: 404 },
+    );
+  }
+  await recordObservabilityEvent({
+    type: "mentor.feedback",
+    actorId: learner.id,
+    actorRole: learner.role,
+    entityId: input.messageId,
+    status: input.rating === "helpful" ? "success" : "warning",
+    summary: "Learner rated a persisted mentor response.",
+    metadata: { rating: input.rating },
+  });
+  return NextResponse.json({ conversation });
 }

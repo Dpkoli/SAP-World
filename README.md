@@ -438,6 +438,9 @@ When `DATABASE_URL` is configured, all mutable repositories use PostgreSQL
 instead of the local files. The schema is created lazily, existing local
 aggregates are imported into an empty database once, and transactional updates
 protect concurrent serverless writes. See `docs/deployment.md`.
+High-volume ledgers, normalized documents, and analytical snapshots use
+dedicated indexed PostgreSQL tables; run `npm run db:migrate` during hosted
+provisioning.
 
 Production cookies are secure by default. For HTTP-only local production
 testing, set `SAP_WORLD_INSECURE_COOKIES=true`; never use this override on a
@@ -470,13 +473,14 @@ plus a high-severity production dependency audit.
 
 ## Product direction
 
-Planned phases include:
+Remaining deployment phases are:
 
-1. Dedicated PostgreSQL tables for high-volume ledgers and analytical read models
-2. Hosted observability plus managed release promotion and rollback
-3. Persistent external AI mentor sessions, controls, and quality monitoring
-4. Production database provisioning, deployment, and hosted smoke testing
-5. Deeper specialist transactions and additional industry enterprises
-6. Cross-browser, accessibility, performance, and security acceptance testing
+1. Provision the production database and run `npm run db:migrate`
+2. Link and deploy the hosted project with production credentials
+3. Run hosted smoke, accessibility, cross-browser, performance, and security acceptance tests
+
+The repository now includes dedicated ledger tables, persistent governed mentor
+conversations, Vercel Web Analytics and Speed Insights, promotion/rollback
+controls, eight specialist transaction labs, and ten industry blueprints.
 
 The source product vision is retained in `Prompt_v2.txt`.

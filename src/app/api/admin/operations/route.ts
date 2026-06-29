@@ -10,10 +10,12 @@ import { getEnterpriseIdentityProviderStatus } from "@/server/enterprise-identit
 import { getGeneratedSimulationStats } from "@/server/generated-simulation-repository";
 import { getPlatformLedgerAnalytics } from "@/server/ledger-analytics-repository";
 import { getMentorProviderStatus } from "@/server/mentor-provider";
+import { getMentorAdministrationStats } from "@/server/mentor-conversation-repository";
 import { getObservabilitySnapshot } from "@/server/observability-repository";
 import { getOperationsReadiness } from "@/server/operations-readiness-service";
 import { getLearningProgressStats } from "@/server/progress-repository";
 import { getReleaseGovernance } from "@/server/release-governance-repository";
+import { getReleaseOperationsSnapshot } from "@/server/release-operations-repository";
 import { getSimulationLedgerPersistenceStats } from "@/server/simulation-ledger-repository";
 import { getEnterpriseSnapshot } from "@/server/simulation-service";
 import { getTutorCapstoneAdministrationStats } from "@/server/tutor-capstone-repository";
@@ -39,6 +41,8 @@ export async function GET() {
     ledgerAnalytics,
     observability,
     capstones,
+    mentorConversations,
+    releaseOperations,
   ] = await Promise.all([
     getStorageHealth(),
     getAuthAdministrationSnapshot(),
@@ -48,6 +52,8 @@ export async function GET() {
     getPlatformLedgerAnalytics(),
     getObservabilitySnapshot(),
     getTutorCapstoneAdministrationStats(),
+    getMentorAdministrationStats(),
+    getReleaseOperationsSnapshot(),
   ]);
   const enterprise = getEnterpriseSnapshot();
   const contentControl = getContentControlRegister();
@@ -65,6 +71,8 @@ export async function GET() {
     contentControl,
     ledgerAnalytics,
     mentor,
+    mentorConversations,
+    releaseOperations,
     readiness,
   });
   const releaseGovernance = await getReleaseGovernance(readiness);
@@ -82,9 +90,11 @@ export async function GET() {
     },
     storage,
     mentor,
+    mentorConversations,
     identityProvider,
     readiness,
     releaseGovernance,
+    releaseOperations,
     development,
     observability,
     accounts,
@@ -118,6 +128,7 @@ export async function GET() {
       "Observability records compact server-side events without storing learner notes, passwords, or session tokens.",
       "Certification review metrics exclude raw learner notes and capstone response text.",
       "External mentor configuration is reported without exposing endpoint or API key values.",
+      "Mentor conversations retain grounded responses, evidence references, quality checks, and learner feedback per account.",
       "This endpoint never returns password hashes, salts, or session tokens.",
     ],
   });
