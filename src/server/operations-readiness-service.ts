@@ -1,8 +1,10 @@
 import "server-only";
 
 import type { getStorageHealth } from "@/server/durable-store";
+import type { getAuthAdministrationSnapshot } from "@/server/auth-repository";
 import type { LedgerAnalyticsSnapshot } from "@/server/ledger-analytics-repository";
 import type { getContentControlRegister } from "@/server/content-control-service";
+import type { getEnterpriseIdentityProviderStatus } from "@/server/enterprise-identity-provider";
 import type { getMentorProviderStatus } from "@/server/mentor-provider";
 
 export type OperationsReadinessCheck = {
@@ -14,7 +16,11 @@ export type OperationsReadinessCheck = {
 };
 
 type StorageHealth = Awaited<ReturnType<typeof getStorageHealth>>;
+type AuthAdministration = Awaited<
+  ReturnType<typeof getAuthAdministrationSnapshot>
+>;
 type ContentControl = ReturnType<typeof getContentControlRegister>;
+type IdentityProvider = ReturnType<typeof getEnterpriseIdentityProviderStatus>;
 type MentorProvider = ReturnType<typeof getMentorProviderStatus>;
 
 function check(input: OperationsReadinessCheck) {
@@ -34,10 +40,9 @@ export function getOperationsReadiness(input: {
   mentor: MentorProvider;
   ledgerAnalytics: LedgerAnalyticsSnapshot;
   contentControl: ContentControl;
+  accounts: AuthAdministration;
+  identityProvider: IdentityProvider;
 }) {
-  const adminEmailsConfigured = Boolean(
-    process.env.SAP_WORLD_ADMIN_EMAILS?.trim(),
-  );
   const insecureCookiesEnabled =
     process.env.SAP_WORLD_INSECURE_COOKIES === "true";
   const production = process.env.NODE_ENV === "production";
@@ -55,15 +60,34 @@ export function getOperationsReadiness(input: {
         : "Configure DATABASE_URL before hosted deployment.",
     }),
     check({
-      id: "admin-allow-list",
+      id: "managed-identity",
       area: "Access control",
-      status: adminEmailsConfigured ? "Pass" : "Fail",
-      evidence: adminEmailsConfigured
-        ? "SAP_WORLD_ADMIN_EMAILS is configured."
-        : "SAP_WORLD_ADMIN_EMAILS is not configured.",
-      action: adminEmailsConfigured
-        ? "Review the allow-list before go-live."
-        : "Set SAP_WORLD_ADMIN_EMAILS for platform owner accounts.",
+      status: input.accounts.lifecycle.activeAdmins > 0 ? "Pass" : "Fail",
+      evidence: `${input.accounts.lifecycle.activeAdmins} active administrator accounts are stored in the managed identity registry.`,
+      action:
+        input.accounts.lifecycle.activeAdmins > 0
+          ? "Review organisation role assignments and lifecycle audit history before go-live."
+          : "Bootstrap or reactivate at least one managed platform administrator.",
+    }),
+    check({
+      id: "enterprise-identity-provider",
+      area: "Enterprise identity",
+      status:
+        input.identityProvider.mode === "local-managed"
+          ? "Warning"
+          : input.identityProvider.configured
+            ? "Pass"
+            : "Fail",
+      evidence:
+        input.identityProvider.mode === "local-managed"
+          ? "Durable local managed identity is active; external SSO is not selected."
+          : `${input.identityProvider.mode.toUpperCase()} provider configuration is ${input.identityProvider.configured ? "complete" : "incomplete"}.`,
+      action:
+        input.identityProvider.mode === "local-managed"
+          ? "Connect the documented OIDC or SAML adapter before enterprise rollout."
+          : input.identityProvider.configured
+            ? "Complete provider metadata and assertion smoke testing."
+            : "Complete all required enterprise identity provider settings.",
     }),
     check({
       id: "cookie-security",

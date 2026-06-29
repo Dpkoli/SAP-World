@@ -82,8 +82,10 @@ The first release demonstrates a brewery enterprise with:
   historical simulation evidence
 - A role-based learning centre across MM, SD, PP, FI, QM, PM, HCM, EWM, and TM
 - Learner registration and sign-in with hashed passwords and secure sessions
-- Role-based authorization with learner and admin roles, admin-only operations
-  APIs, and environment-seeded platform administrators
+- Durable organisation-managed learner and administrator roles, account
+  suspension/reactivation, recovery, and access lifecycle audit history
+- A provider-neutral enterprise identity contract for production OIDC or SAML
+  integration without changing SAP World authorization or session boundaries
 - Admin-only controlled content register covering release readiness, owners,
   versions, evidence gates, blockers, and content-domain status
 - Filterable Admin Control Plane content inspector with domain ownership,
@@ -358,8 +360,8 @@ external chat-completion provider for learner-friendly explanation. The external
 model is never treated as the source of truth; failures fall back to the local
 answer.
 
-Admin operations are available only to users whose normalized email appears in
-`SAP_WORLD_ADMIN_EMAILS`:
+Admin operations are available only to active accounts with a durably assigned
+`admin` role:
 
 `GET /api/admin/operations`
 
@@ -371,6 +373,18 @@ notes, or raw capstone response text.
 The admin Control Plane also shows AI mentor model readiness, including whether
 the external endpoint, API key, and model name are configured, while keeping
 secret values out of the response.
+
+Organisation identity administration is available through:
+
+`GET /api/admin/identity`
+
+`PATCH /api/admin/identity`
+
+Administrators can assign roles, suspend or reactivate accounts, and inspect
+the access lifecycle audit trail. Password recovery uses one-time, hashed,
+30-minute tokens through `/api/auth/password-recovery/request` and
+`/api/auth/password-recovery/reset`; completing recovery revokes every existing
+session for that account.
 
 The full controlled content register is available to admins at:
 
@@ -385,8 +399,9 @@ Production readiness can be checked through:
 `GET /api/admin/readiness`
 
 The readiness gate reports pass, warning, and fail checks across durable
-storage, admin allow-list, cookie security, controlled content release, ledger
-integrity, and mentor-provider configuration.
+storage, managed administrators, enterprise identity provider readiness,
+cookie security, controlled content release, ledger integrity, and mentor
+provider configuration.
 
 Operational telemetry is available to admins at:
 
@@ -428,14 +443,15 @@ Production cookies are secure by default. For HTTP-only local production
 testing, set `SAP_WORLD_INSECURE_COOKIES=true`; never use this override on a
 hosted environment.
 
-To seed platform administrators, configure a comma-separated list:
+To bootstrap the first platform owner, configure a comma-separated list:
 
-`SAP_WORLD_ADMIN_EMAILS=admin@example.com,owner@example.com`
+`SAP_WORLD_BOOTSTRAP_ADMIN_EMAILS=admin@example.com,owner@example.com`
 
-For local development, create or sign in with an account whose email appears in
-that list. The left navigation then shows the Admin Control Plane, where owners
-can review storage mode, build readiness, learner activity, generated
-simulations, content release coverage, capstone aggregates, and observability.
+The first matching registration stores the administrator role durably. The
+environment value is not consulted for later authorization, and subsequent role
+or lifecycle changes are made from the Control Plane and retained in the audit
+history. `SAP_WORLD_ADMIN_EMAILS` remains supported only as a one-time migration
+source for older installations.
 
 Learner readiness is calculated from demonstrated performance rather than a
 static catalogue value: guided transaction progress contributes 50%,
@@ -456,12 +472,11 @@ plus a high-severity production dependency audit.
 
 Planned phases include:
 
-1. Managed identity, account lifecycle controls, and SSO integration
-2. Dedicated PostgreSQL tables for high-volume ledgers and analytical read models
-3. Hosted observability plus managed release promotion and rollback
-4. Persistent external AI mentor sessions, controls, and quality monitoring
-5. Production database provisioning, deployment, and hosted smoke testing
-6. Deeper specialist transactions and additional industry enterprises
-7. Cross-browser, accessibility, performance, and security acceptance testing
+1. Dedicated PostgreSQL tables for high-volume ledgers and analytical read models
+2. Hosted observability plus managed release promotion and rollback
+3. Persistent external AI mentor sessions, controls, and quality monitoring
+4. Production database provisioning, deployment, and hosted smoke testing
+5. Deeper specialist transactions and additional industry enterprises
+6. Cross-browser, accessibility, performance, and security acceptance testing
 
 The source product vision is retained in `Prompt_v2.txt`.

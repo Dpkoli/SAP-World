@@ -117,8 +117,9 @@ export function getDevelopmentRoadmap(input: {
         "Controlled content release register",
         "Production readiness and observability summaries",
         "Certification assessor workspace with learner and process audit history",
+        "Durable role assignment, suspension, reactivation, and identity audit history",
       ],
-      nextAction: "Replace environment-seeded administrators with managed enterprise identity.",
+      nextAction: "Connect deployment-specific OIDC or SAML provider credentials.",
     }),
     milestone({
       id: "production-foundation",
@@ -138,9 +139,9 @@ export function getDevelopmentRoadmap(input: {
     milestone({
       id: "enterprise-scale",
       title: "Enterprise-scale data and identity",
-      status: "Planned",
+      status: "In progress",
       weight: 8,
-      progress: 45,
+      progress: 65,
       summary:
         "Scale analytical read models, generated transaction volume, and managed enterprise identity.",
       evidence: [
@@ -148,11 +149,13 @@ export function getDevelopmentRoadmap(input: {
         "Ledger analytics snapshots are persisted and fingerprinted by learner/admin scope",
         "Generated ledgers support configurable transaction volume profiles",
         "Generated ledger documents are materialized into durable simulation-ledger records",
-        "Role-based authorization is established",
-        "Dedicated warehouse-style read tables and managed identity remain planned",
+        "Organisation-managed roles and account lifecycle controls are established",
+        "Password recovery and access lifecycle audit history are available",
+        "OIDC and SAML adapter contracts are documented for production wiring",
+        "Dedicated warehouse-style read tables remain planned",
       ],
       nextAction:
-        "Promote analytics snapshots to dedicated read tables, persist high-volume operational records, and integrate managed identity.",
+        "Promote analytics snapshots and high-volume operational records to dedicated PostgreSQL tables.",
     }),
     milestone({
       id: "managed-operations",

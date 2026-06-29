@@ -173,6 +173,29 @@ type AdminOperations = {
     model: string | null;
     timeoutMs: number;
   };
+  identityProvider: {
+    mode: "local-managed" | "oidc" | "saml";
+    configured: boolean;
+    provider: string | null;
+    allowedDomains: string[];
+    oidc: {
+      issuerConfigured: boolean;
+      clientIdConfigured: boolean;
+      clientSecretConfigured: boolean;
+    };
+    saml: {
+      metadataConfigured: boolean;
+      entityIdConfigured: boolean;
+      certificateConfigured: boolean;
+    };
+    connection: {
+      signInPath: string;
+      callbackPath: string;
+      accountLinkKey: string;
+      roleClaim: string;
+    };
+    architecture: string[];
+  };
   readiness: {
     generatedAt: string;
     status: "Ready" | "Ready with warnings" | "Blocked";
@@ -240,13 +263,39 @@ type AdminOperations = {
   accounts: {
     users: number;
     roles: { learner: number; admin: number };
+    lifecycle: { active: number; suspended: number; activeAdmins: number };
+    bootstrap: {
+      completedAt: string;
+      source: "existing-role" | "legacy-environment" | "bootstrap-environment";
+      emails: string[];
+    } | null;
     sessions: { total: number; active: number; expired: number };
     recentUsers: Array<{
       id: string;
       name: string;
       email: string;
       role: LearnerProfile["role"];
+      status: "active" | "suspended";
       createdAt: string;
+      updatedAt: string;
+    }>;
+    managedUsers: Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: LearnerProfile["role"];
+      status: "active" | "suspended";
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    audit: Array<{
+      id: string;
+      occurredAt: string;
+      action: string;
+      actor: { id: string; name: string; email: string };
+      target: { id: string; name: string; email: string };
+      previousValue: string | null;
+      newValue: string | null;
     }>;
   };
   progress: {
@@ -412,6 +461,13 @@ type CertificationReview = {
       history: CertificationDecision[];
     }>;
   }>;
+};
+
+type ManagedIdentityResponse = {
+  generatedAt: string;
+  provider: AdminOperations["identityProvider"];
+  permissions: Record<LearnerProfile["role"], string[]>;
+  accounts: AdminOperations["accounts"];
 };
 
 type ReleaseDecision = {
@@ -732,6 +788,8 @@ export function SapWorld({
     useState("");
   const [certificationDecisionSubmitting, setCertificationDecisionSubmitting] =
     useState(false);
+  const [identityMessage, setIdentityMessage] = useState("");
+  const [identitySubmitting, setIdentitySubmitting] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
   const [releaseNote, setReleaseNote] = useState("");
@@ -1400,6 +1458,52 @@ export function SapWorld({
       );
     } finally {
       setCertificationDecisionSubmitting(false);
+    }
+  }
+
+  async function updateManagedIdentity(
+    userId: string,
+    action: "set-role" | "suspend" | "reactivate",
+    role?: LearnerProfile["role"],
+  ) {
+    if (identitySubmitting) return;
+    setIdentitySubmitting(`${userId}:${action}`);
+    setIdentityMessage("");
+    try {
+      const response = await fetch("/api/admin/identity", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, action, role }),
+      });
+      const result = (await response.json()) as
+        | ManagedIdentityResponse
+        | { error?: string };
+      if (!response.ok || ("error" in result && result.error)) {
+        throw new Error(
+          "error" in result && result.error
+            ? result.error
+            : "Unable to update managed identity.",
+        );
+      }
+      const identity = result as ManagedIdentityResponse;
+      setAdminOperations((current) =>
+        current
+          ? {
+              ...current,
+              accounts: identity.accounts,
+              identityProvider: identity.provider,
+            }
+          : current,
+      );
+      setIdentityMessage("Managed identity access updated and audited.");
+    } catch (error) {
+      setIdentityMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to update managed identity.",
+      );
+    } finally {
+      setIdentitySubmitting("");
     }
   }
 
@@ -2937,6 +3041,66 @@ export function SapWorld({
                         </p>
                       </>
                     )}
+                  </article>
+
+                  <article className="panel admin-ledger">
+                    <div className="panel-header"><div><span className="section-kicker">Organisation access</span><h2>Managed identity and account lifecycle</h2></div><strong>{adminOperations.identityProvider.mode}</strong></div>
+                    <div className="admin-metrics">
+                      <div><span>Active accounts</span><strong>{adminOperations.accounts.lifecycle.active}</strong></div>
+                      <div><span>Suspended</span><strong>{adminOperations.accounts.lifecycle.suspended}</strong></div>
+                      <div><span>Active admins</span><strong>{adminOperations.accounts.lifecycle.activeAdmins}</strong></div>
+                      <div><span>Role assignments</span><strong>{adminOperations.accounts.roles.admin}</strong></div>
+                      <div><span>Identity events</span><strong>{adminOperations.accounts.audit.length}</strong></div>
+                      <div><span>Provider ready</span><strong>{adminOperations.identityProvider.configured ? "Yes" : "No"}</strong></div>
+                    </div>
+                    <div className="admin-identity-provider">
+                      <div>
+                        <span>Current identity mode</span>
+                        <strong>{adminOperations.identityProvider.provider ?? adminOperations.identityProvider.mode}</strong>
+                        <p>{adminOperations.identityProvider.mode === "local-managed" ? "Durable organisation roles and account state are active. OIDC or SAML can replace credential verification without changing SAP World authorization." : `Enterprise ${adminOperations.identityProvider.mode.toUpperCase()} settings are ${adminOperations.identityProvider.configured ? "complete" : "incomplete"}.`}</p>
+                      </div>
+                      <div>
+                        <span>Production connection</span>
+                        <code>{adminOperations.identityProvider.connection.callbackPath}</code>
+                        <p>Provider subject maps to a durable account; approved claims use <code>{adminOperations.identityProvider.connection.roleClaim}</code>.</p>
+                      </div>
+                    </div>
+                    <div className="admin-identity-users">
+                      {adminOperations.accounts.managedUsers.map((account) => (
+                        <div key={account.id} className={account.status === "suspended" ? "suspended" : ""}>
+                          <div><strong>{account.name}</strong><small>{account.email}</small></div>
+                          <span>{account.status}</span>
+                          <code>{roleLabels[account.role]}</code>
+                          <div className="admin-identity-actions">
+                            <button
+                              disabled={Boolean(identitySubmitting)}
+                              onClick={() => void updateManagedIdentity(account.id, "set-role", account.role === "admin" ? "learner" : "admin")}
+                            >
+                              {account.role === "admin" ? "Make learner" : "Make admin"}
+                            </button>
+                            <button
+                              disabled={Boolean(identitySubmitting) || account.id === user.id}
+                              onClick={() => void updateManagedIdentity(account.id, account.status === "active" ? "suspend" : "reactivate")}
+                            >
+                              {account.status === "active" ? "Suspend" : "Reactivate"}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {identityMessage && <p className="admin-identity-message" role="status">{identityMessage}</p>}
+                    <div className="admin-identity-audit">
+                      <div><span className="section-kicker">Access lifecycle audit</span><strong>{adminOperations.accounts.audit.length} events</strong></div>
+                      {adminOperations.accounts.audit.slice(0, 8).map((event) => (
+                        <article key={event.id}>
+                          <span>{event.action.replaceAll(".", " ")}</span>
+                          <strong>{event.target.name}</strong>
+                          <small>by {event.actor.name}</small>
+                          <code>{new Date(event.occurredAt).toLocaleString("en-GB")}</code>
+                          <p>{event.previousValue ?? "none"} -&gt; {event.newValue ?? "none"}</p>
+                        </article>
+                      ))}
+                    </div>
                   </article>
 
                   <div className="admin-layout">

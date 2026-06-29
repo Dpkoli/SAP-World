@@ -20,6 +20,9 @@ export type ObservabilityEventType =
   | "admin.readiness.checked"
   | "admin.release.decision"
   | "admin.certification.decision"
+  | "admin.identity.changed"
+  | "auth.password-recovery.requested"
+  | "auth.password-recovery.completed"
   | "admin.content.checked"
   | "admin.observability.checked";
 

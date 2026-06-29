@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { requireLearnerRole } from "@/server/auth-session";
+import { getAuthAdministrationSnapshot } from "@/server/auth-repository";
 import { getContentControlRegister } from "@/server/content-control-service";
 import { getStorageHealth } from "@/server/durable-store";
+import { getEnterpriseIdentityProviderStatus } from "@/server/enterprise-identity-provider";
 import { getPlatformLedgerAnalytics } from "@/server/ledger-analytics-repository";
 import { getMentorProviderStatus } from "@/server/mentor-provider";
 import { recordObservabilityEvent } from "@/server/observability-repository";
@@ -19,9 +21,10 @@ export async function GET() {
     );
   }
 
-  const [storage, ledgerAnalytics] = await Promise.all([
+  const [storage, ledgerAnalytics, accounts] = await Promise.all([
     getStorageHealth(),
     getPlatformLedgerAnalytics(),
+    getAuthAdministrationSnapshot(),
   ]);
 
   const readiness = getOperationsReadiness({
@@ -29,6 +32,8 @@ export async function GET() {
     mentor: getMentorProviderStatus(),
     ledgerAnalytics,
     contentControl: getContentControlRegister(),
+    accounts,
+    identityProvider: getEnterpriseIdentityProviderStatus(),
   });
   const eventStatus =
     readiness.summary.failed > 0

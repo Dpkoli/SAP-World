@@ -16,7 +16,8 @@ For local development:
 Copy-Item .env.example .env.local
 ```
 
-Edit `.env.local` with the administrator email you will register. Leave
+Edit `.env.local` with the one-time bootstrap administrator email you will
+register. Leave
 `DATABASE_URL` and the `SAP_WORLD_AI_*` values empty to use local JSON storage
 and the built-in grounded mentor. `.env.local` is ignored by Git and must hold
 all real secrets.
@@ -81,17 +82,27 @@ fingerprint is unchanged.
 mode. PostgreSQL mode performs a live query and returns HTTP `503` when the
 database cannot be reached.
 
-## Admin access
+## Managed identity and admin access
 
-Admin access is granted by email allow-list. Configure:
+Bootstrap the first platform owner with:
 
 ```text
-SAP_WORLD_ADMIN_EMAILS=admin@example.com,owner@example.com
+SAP_WORLD_BOOTSTRAP_ADMIN_EMAILS=admin@example.com,owner@example.com
 ```
 
-Any matching registered account receives the `admin` role at session read time,
-so adding an email to the environment can elevate an existing account without a
-database migration. Admin-only operations are exposed at:
+The first matching registration persists the `admin` role in the auth aggregate.
+After bootstrap, environment changes cannot elevate accounts. Administrators
+assign organisation roles, suspend/reactivate accounts, and inspect the audit
+trail through:
+
+```text
+GET /api/admin/identity
+PATCH /api/admin/identity
+```
+
+The legacy `SAP_WORLD_ADMIN_EMAILS` value is read once only to migrate older
+installations that have no persisted administrator. Admin-only operations are
+exposed at:
 
 ```text
 GET /api/admin/operations
@@ -108,6 +119,40 @@ certification counts, process queues, evidence coverage, and open evidence
 gaps. Guided tutor evidence notes are exposed only as aggregate
 learning-progress counts, reached-step coverage, open evidence gaps, and
 averages.
+
+Password recovery is available through
+`POST /api/auth/password-recovery/request` and
+`POST /api/auth/password-recovery/reset`. Tokens are random, stored only as a
+SHA-256 digest, expire after 30 minutes, are single use, and revoke every active
+session after completion. In hosted environments configure
+`SAP_WORLD_PASSWORD_RESET_WEBHOOK_URL` to deliver the generated reset URL; add
+`SAP_WORLD_PASSWORD_RESET_WEBHOOK_SECRET` when the receiver requires a bearer
+token. Responses never reveal whether an account exists.
+
+### Enterprise SSO adapter
+
+SAP World keeps authorization and opaque database sessions behind a
+provider-neutral identity boundary. Set `SAP_WORLD_IDENTITY_MODE` to `oidc` or
+`saml` and complete the matching settings:
+
+```text
+SAP_WORLD_IDENTITY_PROVIDER=organisation-provider-name
+SAP_WORLD_IDENTITY_ALLOWED_DOMAINS=example.com
+SAP_WORLD_OIDC_ISSUER=
+SAP_WORLD_OIDC_CLIENT_ID=
+SAP_WORLD_OIDC_CLIENT_SECRET=
+SAP_WORLD_SAML_METADATA_URL=
+SAP_WORLD_SAML_ENTITY_ID=
+SAP_WORLD_SAML_CERTIFICATE=
+```
+
+The production adapter starts at `/api/auth/sso/start` and returns to
+`/api/auth/sso/callback`. It must validate signed provider assertions, map the
+immutable issuer/subject pair to a durable account, accept only approved
+domains and `sap_world_roles` claims, then create the existing SAP World opaque
+session. Secrets and assertion payloads must stay server-side. The current
+repository exposes and audits this contract but intentionally leaves the live
+provider exchange for deployment-specific credentials and metadata.
 
 Certification exports are registered as durable learner submissions. Admins
 can inspect submissions and record approval, rejection, or revision requests
@@ -139,9 +184,10 @@ Admins can also run the production readiness gate:
 GET /api/admin/readiness
 ```
 
-The readiness response combines deployment checks for durable storage, admin
-allow-list, cookie security, content release, ledger integrity, and mentor
-provider configuration. A `Blocked` status should stop deployment until failed
+The readiness response combines deployment checks for durable storage, managed
+administrators, enterprise identity provider configuration, cookie security,
+content release, ledger integrity, and mentor provider configuration. A
+`Blocked` status should stop deployment until failed
 checks are resolved. `Ready with warnings` can be released only when the owner
 has accepted the documented warnings.
 
@@ -235,19 +281,21 @@ local grounded answer instead.
 1. Import the GitHub repository into Vercel.
 2. Add a Neon integration from the Vercel Marketplace.
 3. Confirm that `DATABASE_URL` is available to Production and Preview.
-4. Add `SAP_WORLD_ADMIN_EMAILS` for the platform owner accounts.
+4. Add `SAP_WORLD_BOOTSTRAP_ADMIN_EMAILS` for the first platform owner.
 5. Optionally add `SAP_WORLD_AI_ENDPOINT`, `SAP_WORLD_AI_API_KEY`, and
    `SAP_WORLD_AI_MODEL` for enhanced mentor wording.
 6. Deploy the `codex/mvp-foundation` branch or merge it into the production
    branch.
 7. Verify `/api/health` returns `status: "ok"` and
    `storage.backend: "postgresql"`.
-8. Sign in with an admin email and verify `/api/admin/operations` returns
+8. Sign in with the bootstrapped admin and verify `/api/admin/identity` returns
+   the managed account registry and audit history.
+9. Verify `/api/admin/operations` returns
    platform counts.
-9. Verify `/api/admin/content-control` returns the content release register.
-10. Verify `/api/admin/readiness` returns `Ready` or an accepted
+10. Verify `/api/admin/content-control` returns the content release register.
+11. Verify `/api/admin/readiness` returns `Ready` or an accepted
     `Ready with warnings` status before go-live.
-11. Verify `/api/admin/observability` returns retained event counts after a
+12. Verify `/api/admin/observability` returns retained event counts after a
     mentor question or simulation action.
 
 Secure cookies are enabled automatically in production. Do not configure

@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import type { LearnerProfile } from "@/data/auth";
 import { SapWorld } from "@/components/sap-world";
 
-type AuthMode = "login" | "register";
+type AuthMode = "login" | "register" | "recover";
 
 export function AuthGate() {
   const [user, setUser] = useState<LearnerProfile | null>(null);
@@ -13,6 +13,7 @@ export function AuthGate() {
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState<AuthMode>("login");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +37,7 @@ export function AuthGate() {
     event.preventDefault();
     setSubmitting(true);
     setError("");
+    setMessage("");
 
     const form = new FormData(event.currentTarget);
     const payload = {
@@ -45,6 +47,33 @@ export function AuthGate() {
     };
 
     try {
+      if (mode === "recover") {
+        const response = await fetch("/api/auth/password-recovery/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: payload.email }),
+        });
+        const result = (await response.json()) as {
+          message?: string;
+          developmentToken?: string | null;
+          error?: string;
+        };
+        if (!response.ok) {
+          setError(result.error ?? "Unable to request password recovery.");
+          return;
+        }
+        if (result.developmentToken) {
+          window.location.assign(
+            `/reset-password/${encodeURIComponent(result.developmentToken)}`,
+          );
+          return;
+        }
+        setMessage(
+          result.message ??
+            "If the account is active, recovery instructions are on their way.",
+        );
+        return;
+      }
       const response = await fetch(
         mode === "login" ? "/api/auth/login" : "/api/auth/register",
         {
@@ -118,11 +147,19 @@ export function AuthGate() {
           <span className="auth-icon"><LockKeyhole size={22} /></span>
           <div>
             <span className="section-kicker">Learner workspace</span>
-            <h2>{mode === "login" ? "Welcome back" : "Create your account"}</h2>
+            <h2>
+              {mode === "login"
+                ? "Welcome back"
+                : mode === "register"
+                  ? "Create your account"
+                  : "Recover your password"}
+            </h2>
             <p>
               {mode === "login"
                 ? "Continue your SAP learning journey."
-                : "Start with a private, progress-tracked workspace."}
+                : mode === "register"
+                  ? "Start with a private, progress-tracked workspace."
+                  : "Request a secure, one-time recovery link."}
             </p>
           </div>
 
@@ -136,37 +173,58 @@ export function AuthGate() {
             Email address
             <input name="email" type="email" autoComplete="email" required placeholder="you@company.com" />
           </label>
-          <label>
-            Password
-            <input
-              name="password"
-              type="password"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              required
-              minLength={mode === "register" ? 10 : 1}
-              placeholder={mode === "register" ? "10+ characters, letter and number" : "Your password"}
-            />
-          </label>
+          {mode !== "recover" && (
+            <label>
+              Password
+              <input
+                name="password"
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                required
+                minLength={mode === "register" ? 10 : 1}
+                placeholder={mode === "register" ? "10+ characters, letter and number" : "Your password"}
+              />
+            </label>
+          )}
 
           {error && <p className="auth-error" role="alert">{error}</p>}
+          {message && <p className="auth-success" role="status">{message}</p>}
           <button className="primary-button auth-submit" disabled={submitting}>
             {submitting
               ? "Please wait..."
               : mode === "login"
                 ? "Sign in"
-                : "Create learner account"}
+                : mode === "register"
+                  ? "Create learner account"
+                  : "Request recovery link"}
           </button>
+          {mode === "login" && (
+            <button
+              className="auth-mode"
+              type="button"
+              onClick={() => {
+                setMode("recover");
+                setError("");
+                setMessage("");
+              }}
+            >
+              Forgot your password?
+            </button>
+          )}
           <button
             className="auth-mode"
             type="button"
             onClick={() => {
               setMode(mode === "login" ? "register" : "login");
               setError("");
+              setMessage("");
             }}
           >
             {mode === "login"
               ? "New to SAP World? Create an account"
-              : "Already have an account? Sign in"}
+              : mode === "register"
+                ? "Already have an account? Sign in"
+                : "Return to sign in"}
           </button>
           <small>
             Local development accounts are stored only on this machine.
@@ -176,9 +234,9 @@ export function AuthGate() {
             <div>
               <strong>Admin development login</strong>
               <span>
-                Sign in with an email listed in SAP_WORLD_ADMIN_EMAILS to open
-                the Control Plane for build status, storage, learner activity,
-                content readiness, and telemetry.
+                Administrator roles and account lifecycle controls are managed
+                from the Control Plane. Environment emails are used only for
+                the first owner bootstrap.
               </span>
             </div>
           </div>

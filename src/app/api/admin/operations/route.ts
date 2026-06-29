@@ -6,6 +6,7 @@ import { requireLearnerRole } from "@/server/auth-session";
 import { getContentControlRegister } from "@/server/content-control-service";
 import { getDevelopmentRoadmap } from "@/server/development-roadmap-service";
 import { getStorageHealth } from "@/server/durable-store";
+import { getEnterpriseIdentityProviderStatus } from "@/server/enterprise-identity-provider";
 import { getGeneratedSimulationStats } from "@/server/generated-simulation-repository";
 import { getPlatformLedgerAnalytics } from "@/server/ledger-analytics-repository";
 import { getMentorProviderStatus } from "@/server/mentor-provider";
@@ -51,11 +52,14 @@ export async function GET() {
   const enterprise = getEnterpriseSnapshot();
   const contentControl = getContentControlRegister();
   const mentor = getMentorProviderStatus();
+  const identityProvider = getEnterpriseIdentityProviderStatus();
   const readiness = getOperationsReadiness({
     storage,
     mentor,
     ledgerAnalytics,
     contentControl,
+    accounts,
+    identityProvider,
   });
   const development = getDevelopmentRoadmap({
     contentControl,
@@ -78,6 +82,7 @@ export async function GET() {
     },
     storage,
     mentor,
+    identityProvider,
     readiness,
     releaseGovernance,
     development,
@@ -101,7 +106,8 @@ export async function GET() {
       masterDataPartners: enterprise.businessPartners.length,
     },
     controls: [
-      "Admin access is granted only by SAP_WORLD_ADMIN_EMAILS.",
+      "Admin roles and account lifecycle state are stored in the managed identity registry.",
+      "Legacy administrator emails are used only for one-time bootstrap migration.",
       "Learner mutations remain scoped to the authenticated learner id.",
       "Storage health is verified server-side before this response is returned.",
       "Ledger analytics are projected from deterministic simulation documents with link-integrity checks.",
