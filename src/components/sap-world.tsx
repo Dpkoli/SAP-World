@@ -142,6 +142,7 @@ import type {
   WorkflowAction,
   WorkflowCase,
 } from "@/data/workflows";
+import { IndustryMasterJourney } from "@/components/industry-master-journey";
 
 type View =
   | "overview"
@@ -3767,6 +3768,18 @@ export function SapWorld({
                   {selectedIndustryEnterprise.modules.map((module) => <span key={module}>{module}</span>)}
                 </div>
               </article>
+
+              <IndustryMasterJourney
+                key={selectedIndustryBlueprintId}
+                industryId={selectedIndustryBlueprintId}
+                onNavigate={(target, scenarioId) => {
+                  if (scenarioId) setActiveScenarioId(scenarioId);
+                  if (target === "studio") {
+                    setStudioIndustryId(selectedIndustryBlueprintId);
+                  }
+                  navigateTo(target);
+                }}
+              />
 
               <div className="industry-blueprint-grid">
                 <article className="industry-value-chain panel">
