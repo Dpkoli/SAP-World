@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { industryBlueprints } from "@/data/industry-blueprints";
 import {
+  industryPracticeCoverage,
+  industryPracticePack,
+} from "@/data/industry-practice-data";
+import {
   industryEnterprises,
   isIndustryId,
 } from "@/data/industries";
@@ -22,6 +26,12 @@ export function GET(request: NextRequest) {
       blueprint: industryBlueprints.find(
         (blueprint) => blueprint.id === industry.id,
       ),
+      practiceCoverage: industryPracticeCoverage.find(
+        (coverage) => coverage.industryId === industry.id,
+      ),
+      practicePack: id && isIndustryId(id)
+        ? industryPracticePack(industry.id)
+        : undefined,
     }));
 
   return NextResponse.json({
@@ -32,6 +42,9 @@ export function GET(request: NextRequest) {
       planned: industries.filter((enterprise) => enterprise.status === "planned").length,
       blueprintCoverage: industries.filter((enterprise) => enterprise.blueprint)
         .length,
+      practiceDataCoverage: industries.filter(
+        (enterprise) => enterprise.practiceCoverage?.monthlyRecords === 36,
+      ).length,
     },
     industries,
   });

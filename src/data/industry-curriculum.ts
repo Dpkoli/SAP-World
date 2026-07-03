@@ -3,6 +3,7 @@ import {
   type IndustryId,
 } from "@/data/industries";
 import { industryBlueprintById } from "@/data/industry-blueprints";
+import { industryPracticePack } from "@/data/industry-practice-data";
 import type { ScenarioId } from "@/data/progress";
 
 export type CurriculumLevel = "Foundation" | "Practitioner" | "Expert";
@@ -331,6 +332,7 @@ export function industryCurriculumTasks(
 ): IndustryCurriculumTask[] {
   const industry = industryById(industryId);
   const blueprint = industryBlueprintById(industryId);
+  const practicePack = industryPracticePack(industryId);
   const companyCode = industry.companyCode ?? "the training company code defined in your design workbook";
   const primaryLocation = blueprint.organizationalTemplate[1] ?? "the primary operating location";
   const masterDataExamples = blueprint.masterData.slice(0, 4);
@@ -658,6 +660,38 @@ export function industryCurriculumTasks(
           expectedInput: process.inputs,
           expectedResult: process.results,
           evidence: process.evidence,
+        }),
+      }),
+    );
+  }
+
+  for (const specialist of practicePack.specialistTransactions) {
+    tasks.push(
+      task(industryId, {
+        id: `specialist-${specialist.id.toLowerCase()}`,
+        phaseId: "transactions",
+        year: 1,
+        level: "Practitioner",
+        title: specialist.title,
+        objective: specialist.businessTrigger,
+        target: "industries",
+        externalSap: instruction({
+          workspace: `${specialist.module} specialist workspace`,
+          appOrTransaction: specialist.appOrTransaction,
+          navigation: `Industry Master Journey -> Complete practice data -> Specialist transactions -> ${specialist.id}`,
+          prerequisites: specialist.prerequisites,
+          steps: specialist.steps,
+          expectedInput: specialist.expectedInput,
+          expectedResult: [
+            ...specialist.expectedResult,
+            `Accounting impact understood: ${specialist.accountingImpact}`,
+          ],
+          evidence: [
+            "Transaction and document numbers",
+            "Input and result screenshots",
+            "Accounting or cost-object drill-down",
+            ...specialist.controls,
+          ],
         }),
       }),
     );

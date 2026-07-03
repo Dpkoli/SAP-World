@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".codex-chrome-profile/**",
+    ".codex-industry-*.log",
+    ".codex-industry-*.png",
   ]),
 ]);
 

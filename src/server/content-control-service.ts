@@ -5,6 +5,7 @@ import { analyticsPeriods, performanceDrivers } from "@/data/analytics";
 import { governanceDefinitions } from "@/data/governance";
 import { implementationBlueprints } from "@/data/implementation";
 import { industryBlueprints } from "@/data/industry-blueprints";
+import { industryPracticeCoverage } from "@/data/industry-practice-data";
 import { industryEnterprises } from "@/data/industries";
 import {
   batches,
@@ -101,7 +102,7 @@ export function getContentControlRegister() {
       id: "industry-blueprints",
       domain: "Industry blueprints",
       owner: "SAP Industry Architect",
-      version: "sap-world-industry-v1",
+      version: "sap-world-industry-v2",
       records: industryBlueprints.length,
       gates: [
         gate(
@@ -110,9 +111,19 @@ export function getContentControlRegister() {
           `${industryBlueprints.length}/10 industry blueprints`,
         ),
         gate(
-          "Live enterprise marked",
-          liveIndustries > 0,
-          `${liveIndustries} live industry enterprise`,
+          "All industry enterprises live",
+          liveIndustries === 10,
+          `${liveIndustries}/10 live industry enterprises`,
+        ),
+        gate(
+          "Three-year practice data complete",
+          industryPracticeCoverage.every(
+            (coverage) =>
+              coverage.monthlyRecords === 36 &&
+              coverage.fiscalYears === 3 &&
+              coverage.specialistTransactions >= 3,
+          ),
+          `${industryPracticeCoverage.reduce((total, coverage) => total + coverage.monthlyRecords, 0)} monthly industry records`,
         ),
         gate(
           "Compliance and seasonality documented",
@@ -126,7 +137,7 @@ export function getContentControlRegister() {
       ],
       releaseNotes: [
         "Industry models define operating model, value chain, compliance, KPIs, dependencies, and common failures.",
-        "Non-live industries are available as controlled generation templates before full UI rollout.",
+        "All ten industries include three fiscal years, monthly operating and financial data, SAP configuration workstreams, costing models, and specialist transaction chains.",
       ],
     }),
     item({

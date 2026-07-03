@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { IndustryPracticeWorkbench } from "@/components/industry-practice-workbench";
 import {
   industryClosingCalendar,
   industryCurriculumPhases,
@@ -488,6 +489,8 @@ export function IndustryMasterJourney({
           </article>
         </div>
       )}
+
+      {progress && <IndustryPracticeWorkbench industryId={industryId} />}
     </section>
   );
 }
