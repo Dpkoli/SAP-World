@@ -21,6 +21,15 @@ function usesPostgres() {
   return Boolean(process.env.DATABASE_URL?.trim());
 }
 
+function secureConnectionString(connectionString: string) {
+  const url = new URL(connectionString);
+  const sslMode = url.searchParams.get("sslmode");
+  if (["prefer", "require", "verify-ca"].includes(sslMode ?? "")) {
+    url.searchParams.set("sslmode", "verify-full");
+  }
+  return url.toString();
+}
+
 export function isPostgresConfigured() {
   return usesPostgres();
 }
@@ -31,7 +40,7 @@ function getPool() {
     throw new Error("DATABASE_URL is required for PostgreSQL storage.");
   }
   pool ??= new Pool({
-    connectionString,
+    connectionString: secureConnectionString(connectionString),
     max: 5,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
